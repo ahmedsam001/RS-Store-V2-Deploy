@@ -51,7 +51,7 @@ export class CatalogService {
     );
   }
 
-  private async getSubCategoryProductCounts(): Promise<Map<string, Array<{ id: string; slug: string; name: string; count: number; image: string | null }>>> {
+  private async getSubCategoryProductCounts(): Promise<Map<string, Array<{ id: string; slug: string; name: string; nameAr: string; nameEn: string | null; count: number; image: string | null }>>> {
     const childCategories = await this.prisma.category.findMany({
       where: {
         ...this.activeCategoryWhere(),
@@ -69,7 +69,7 @@ export class CatalogService {
       orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }],
     });
 
-    const map = new Map<string, Array<{ id: string; slug: string; name: string; count: number; image: string | null }>>();
+    const map = new Map<string, Array<{ id: string; slug: string; name: string; nameAr: string; nameEn: string | null; count: number; image: string | null }>>();
     childCategories.forEach((category) => {
       if (!category.parentId || category._count.subCategoryProducts <= 0) return;
       const existing = map.get(category.parentId) ?? [];
@@ -77,6 +77,8 @@ export class CatalogService {
         id: category.id,
         slug: category.slug,
         name: category.nameAr,
+        nameAr: category.nameAr,
+        nameEn: category.nameEn,
         count: category._count.subCategoryProducts,
         image: category.image ?? null,
       });

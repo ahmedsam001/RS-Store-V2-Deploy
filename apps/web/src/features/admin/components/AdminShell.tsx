@@ -403,6 +403,8 @@ function MobileDrawerLink({
 }
 
 function resolvePageTitle(pathname: string): string {
+  if (pathname === PATHS.adminSheinBatchesNew) return 'Create New SHEIN Batch';
+
   const current = [...ADMIN_NAV_LINKS]
     .sort((a, b) => b.to.length - a.to.length)
     .find((link) => pathname === link.to || (!link.end && pathname.startsWith(`${link.to}/`)));

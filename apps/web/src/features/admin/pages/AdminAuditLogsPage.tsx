@@ -176,7 +176,7 @@ export function AdminAuditLogsPage() {
                     <td dir="ltr">{item.entityId ?? '-'}</td>
                     <td>{formatActor(item)}</td>
                     <td className="max-w-xs truncate" dir="ltr">{formatMetadata(item.metadata)}</td>
-                    <td>{new Date(item.createdAt).toLocaleString()}</td>
+                    <td>{new Date(item.createdAt).toLocaleString('en-US')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -200,7 +200,7 @@ function AuditCard({ item }: { item: AdminAuditLog }) {
       meta={<span dir="ltr">{item.entityId ?? '-'}</span>}
     >
       <AdminMobileField label="User" value={formatActor(item)} />
-      <AdminMobileField label="Date" value={new Date(item.createdAt).toLocaleString()} />
+      <AdminMobileField label="Date" value={new Date(item.createdAt).toLocaleString('en-US')} />
       <AdminMobileField label="Entity ID" value={item.entityId ?? '-'} dir="ltr" />
       <AdminMobileField label="Metadata" value={formatMetadata(item.metadata)} dir="ltr" />
     </AdminMobileDataCard>

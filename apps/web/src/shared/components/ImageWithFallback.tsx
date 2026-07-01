@@ -44,7 +44,7 @@ export function ImageWithFallback({
         {...props}
         src={normalizedSrc}
         alt={alt}
-        className={className}
+        className={className ? `rs-image-real ${className}` : 'rs-image-real'}
         height={height}
         width={width}
         style={style}

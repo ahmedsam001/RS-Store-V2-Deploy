@@ -72,7 +72,7 @@ export function FlashSalesPage() {
                 <p className="text-sm font-semibold text-[#ff3f6c]">Up to {sale.discountPercent}% off</p>
               </div>
               <p className="text-xs font-semibold text-muted-foreground">
-                Ends {new Date(sale.endsAt).toLocaleString()}
+                Ends {new Date(sale.endsAt).toLocaleString('en-US')}
               </p>
             </div>
             <ProductGrid products={sale.products} />

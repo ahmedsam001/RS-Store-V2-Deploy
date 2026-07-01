@@ -399,6 +399,17 @@ function OrderDetails({
                 <p className="mt-2 text-xs font-black text-muted-foreground">Not added to a batch yet</p>
               )}
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                {item.product?.sourceSheinUrl ? (
+                  <Button asChild size="sm" variant="outline" className="font-black text-[#c7831e]">
+                    <a href={item.product.sourceSheinUrl} target="_blank" rel="noreferrer">
+                      Open SHEIN Product
+                    </a>
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" type="button" disabled>
+                    Missing SHEIN Link
+                  </Button>
+                )}
                 {validItemActions(item.status).map((status) => (
                   <Button
                     key={status}

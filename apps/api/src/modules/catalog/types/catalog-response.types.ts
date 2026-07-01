@@ -37,6 +37,8 @@ export type CatalogSubCategory = {
   id: string;
   slug: string;
   name: string;
+  nameAr: string;
+  nameEn: string | null;
   productCount: number;
   image: string | null;
 };

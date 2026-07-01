@@ -587,7 +587,7 @@ export function AdminSheinBatchesPage() {
                   <AdminInfoItem label="Carrier" value={selected.trackingCarrier ?? '-'} />
                   <AdminInfoItem label="Tracking URL" value={selected.trackingUrl ?? '-'} />
                   <AdminInfoItem label="Exchange rate" value={String(selected.exchangeRateSarToEgp)} />
-                  <AdminInfoItem label="Collection date" value={new Date(selected.createdAt).toLocaleString()} />
+                  <AdminInfoItem label="Collection date" value={new Date(selected.createdAt).toLocaleString('en-US')} />
                   <AdminInfoItem label="Created by" value={selected.createdBy?.name ?? '-'} />
                   <AdminInfoItem label="Updated by" value={selected.updatedBy?.name ?? '-'} />
                   <AdminInfoItem label="Customer paid" value={formatMinorMoney(selectedPayments.depositPaid + selectedPayments.finalPaid, 'EGP')} />
@@ -639,7 +639,7 @@ export function AdminSheinBatchesPage() {
                         {history.note ? <p className="text-sm text-muted-foreground">{history.note}</p> : null}
                         {history.changedBy ? <p className="text-xs font-semibold text-muted-foreground">By {history.changedBy.name}</p> : null}
                       </div>
-                      <span className="text-xs font-bold text-muted-foreground">{new Date(history.createdAt).toLocaleString()}</span>
+                      <span className="text-xs font-bold text-muted-foreground">{new Date(history.createdAt).toLocaleString('en-US')}</span>
                     </AdminSoftPanel>
                   ))}
                   {(selected.statusHistory ?? []).length > 5 ? (

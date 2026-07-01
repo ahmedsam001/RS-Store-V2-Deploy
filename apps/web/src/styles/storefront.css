@@ -3174,3 +3174,15 @@
     justify-content: center;
   }
 }
+
+/* Real category/subcategory uploads should fill the circular thumbnail.
+   The fallback logo keeps its own constrained sizing from ImageWithFallback. */
+.rs-subcategory-circle-image > img.rs-image-real,
+.rs-category-circle-image > img.rs-image-real,
+.rs-subcategory-dock .rs-subcategory-circle-image > img.rs-image-real {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  padding: 0;
+}

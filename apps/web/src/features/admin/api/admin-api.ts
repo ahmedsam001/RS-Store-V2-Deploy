@@ -130,6 +130,13 @@ export type AdminOrderItemSheinBatchTracking = {
     updatedAt: string;
   };
 };
+export type AdminOrderItemProduct = {
+  id: string;
+  slug?: string | null;
+  nameAr?: string | null;
+  nameEn?: string | null;
+  sourceSheinUrl?: string | null;
+};
 export type AdminOrderItem = {
   id: string;
   productNameSnapshot: string;
@@ -139,6 +146,7 @@ export type AdminOrderItem = {
   unitPriceAmount: string | number;
   lineTotalAmount: string | number;
   status: string;
+  product?: AdminOrderItemProduct | null;
   sheinBatchItems?: AdminOrderItemSheinBatchTracking[];
 };
 export type AdminPaymentProof = {
@@ -170,6 +178,7 @@ export type AdminOrder = {
   remainingAmount?: string | number;
   finalAmountDue?: string | number;
   finalPaidAmount?: string | number;
+  depositPaymentMethod?: 'INSTAPAY' | 'VODAFONE' | null;
   finalPaymentMethod?: 'INSTAPAY' | 'VODAFONE' | 'CASH_AT_SHOP' | null;
   depositApprovedAt?: string | null;
   finalPaymentApprovedAt?: string | null;
@@ -413,6 +422,7 @@ export type AdminAvailableSheinOrderItem = AdminOrderItem & {
   orderId: string;
   productId?: string | null;
   productVariantId?: string | null;
+  suggestedUnitSarAmount?: string | number | null;
   productSkuSnapshot?: string | null;
   productVariantNameSnapshot?: string | null;
   productVariantSkuSnapshot?: string | null;
@@ -431,7 +441,7 @@ export type AdminAvailableSheinOrderItem = AdminOrderItem & {
     customerPhoneSnapshot: string;
     createdAt: string;
   };
-  product?: { id: string; slug: string; nameAr: string; nameEn?: string | null } | null;
+  product?: { id: string; slug: string; nameAr: string; nameEn?: string | null; sourceSheinUrl?: string | null } | null;
   productVariant?: { id: string; sku?: string | null; nameAr: string; nameEn?: string | null; size?: string | null; color?: string | null } | null;
 };
 

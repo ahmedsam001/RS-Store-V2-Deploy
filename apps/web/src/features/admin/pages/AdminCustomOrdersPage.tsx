@@ -216,7 +216,7 @@ function CustomOrderAdminCard({
         <div className="min-w-0 flex-1 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <AdminStatusBadge value={item.status}>{STATUS_LABELS[item.status]}</AdminStatusBadge>
-            <span className="text-xs font-bold text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</span>
+            <span className="text-xs font-bold text-muted-foreground">{new Date(item.createdAt).toLocaleString('en-US')}</span>
           </div>
           <div>
             <p className="text-sm font-black text-rs-ink">{item.user?.name ?? 'Customer'}</p>

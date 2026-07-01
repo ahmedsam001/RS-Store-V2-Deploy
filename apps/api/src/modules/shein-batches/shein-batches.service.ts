@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { OrderItemStatus, OrderPaymentStatus, OrderStatus, Prisma, SheinBatchStatus } from '@prisma/client';
+import { OrderItemStatus, OrderPaymentStatus, OrderStatus, Prisma, SheinBatchStatus, SheinImportStatus } from '@prisma/client';
 import { buildPaginationMeta } from '../../common/pagination/paginated-response';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
@@ -43,6 +43,35 @@ type BatchWithItems = Prisma.SheinBatchGetPayload<{
     updatedBy: { select: { id: true; name: true; email: true; phone: true } };
   };
 }>;
+
+type SheinImportPayloadSource = {
+  editedPayload: Prisma.JsonValue | null;
+  previewPayload: Prisma.JsonValue | null;
+};
+
+type AvailableOrderItemPricingInput = {
+  productSkuSnapshot?: string | null;
+  productVariantNameSnapshot?: string | null;
+  productVariantSkuSnapshot?: string | null;
+  productVariantSizeSnapshot?: string | null;
+  productVariantColorSnapshot?: string | null;
+  product?: {
+    id?: string;
+    slug?: string;
+    nameAr?: string;
+    nameEn?: string | null;
+    sourceSheinUrl?: string | null;
+    sheinImports?: SheinImportPayloadSource[];
+  } | null;
+  productVariant?: {
+    id?: string;
+    sku?: string | null;
+    nameAr?: string | null;
+    nameEn?: string | null;
+    size?: string | null;
+    color?: string | null;
+  } | null;
+};
 
 const terminalStatuses = new Set<SheinBatchStatus>([SheinBatchStatus.DELIVERED, SheinBatchStatus.CANCELLED]);
 
@@ -530,7 +559,21 @@ export class SheinBatchesService {
               createdAt: true,
             },
           },
-          product: { select: { id: true, slug: true, nameAr: true, nameEn: true, sourceSheinUrl: true } },
+          product: {
+            select: {
+              id: true,
+              slug: true,
+              nameAr: true,
+              nameEn: true,
+              sourceSheinUrl: true,
+              sheinImports: {
+                where: { status: { in: [SheinImportStatus.PUBLISHED, SheinImportStatus.PRODUCT_CREATED, SheinImportStatus.SUCCEEDED] } },
+                select: { editedPayload: true, previewPayload: true, publishedAt: true, createdAt: true },
+                orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+                take: 1,
+              },
+            },
+          },
           productVariant: { select: { id: true, sku: true, nameAr: true, nameEn: true, size: true, color: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -540,7 +583,105 @@ export class SheinBatchesService {
       this.prisma.orderItem.count({ where }),
     ]);
 
-    return { items, meta: buildPaginationMeta(query, total) };
+    return { items: items.map((item) => this.mapAvailableOrderItem(item)), meta: buildPaginationMeta(query, total) };
+  }
+
+  private mapAvailableOrderItem<T extends AvailableOrderItemPricingInput>(item: T) {
+    const product = item.product
+      ? {
+          id: item.product.id,
+          slug: item.product.slug,
+          nameAr: item.product.nameAr,
+          nameEn: item.product.nameEn,
+          sourceSheinUrl: item.product.sourceSheinUrl,
+        }
+      : null;
+
+    return {
+      ...item,
+      product,
+      suggestedUnitSarAmount: this.resolveSuggestedUnitSarAmount(item),
+    };
+  }
+
+  private resolveSuggestedUnitSarAmount(item: AvailableOrderItemPricingInput): string | null {
+    const payload = this.resolveSheinImportPayload(item.product?.sheinImports ?? []);
+    if (!payload) return null;
+
+    return this.resolveSheinVariantPrice(payload, item) ?? this.normalizeMajorMoney(payload.priceAmount);
+  }
+
+  private resolveSheinImportPayload(imports: SheinImportPayloadSource[]): Record<string, unknown> | null {
+    for (const item of imports) {
+      if (this.isRecord(item.editedPayload)) return item.editedPayload;
+      if (this.isRecord(item.previewPayload)) return item.previewPayload;
+    }
+    return null;
+  }
+
+  private resolveSheinVariantPrice(payload: Record<string, unknown>, item: AvailableOrderItemPricingInput): string | null {
+    if (!Array.isArray(payload.variants)) return null;
+
+    const variants = payload.variants.filter((variant): variant is Record<string, unknown> => this.isRecord(variant));
+    const skuCandidates = new Set([
+      this.normalizeComparable(item.productVariantSkuSnapshot),
+      this.normalizeComparable(item.productVariant?.sku),
+    ].filter((value): value is string => Boolean(value)));
+
+    for (const variant of variants) {
+      const price = this.normalizeMajorMoney(variant.priceAmount);
+      const sku = this.normalizeComparable(variant.sku);
+      if (price && sku && skuCandidates.has(sku)) return price;
+    }
+
+    const size = this.normalizeComparable(item.productVariantSizeSnapshot ?? item.productVariant?.size);
+    const color = this.normalizeComparable(item.productVariantColorSnapshot ?? item.productVariant?.color);
+    if (size || color) {
+      for (const variant of variants) {
+        const price = this.normalizeMajorMoney(variant.priceAmount);
+        if (!price) continue;
+        const variantSize = this.normalizeComparable(variant.size);
+        const variantColor = this.normalizeComparable(variant.color);
+        const sizeMatches = !size || variantSize === size;
+        const colorMatches = !color || variantColor === color;
+        if (sizeMatches && colorMatches) return price;
+      }
+    }
+
+    const nameCandidates = new Set([
+      this.normalizeComparable(item.productVariantNameSnapshot),
+      this.normalizeComparable(item.productVariant?.nameEn),
+      this.normalizeComparable(item.productVariant?.nameAr),
+    ].filter((value): value is string => Boolean(value)));
+
+    for (const variant of variants) {
+      const price = this.normalizeMajorMoney(variant.priceAmount);
+      if (!price) continue;
+      const variantNames = [
+        this.normalizeComparable(variant.nameEn),
+        this.normalizeComparable(variant.nameAr),
+        this.normalizeComparable(variant.name),
+      ].filter((value): value is string => Boolean(value));
+      if (variantNames.some((name) => nameCandidates.has(name))) return price;
+    }
+
+    return null;
+  }
+
+  private normalizeMajorMoney(value: unknown): string | null {
+    const number = Number(String(value ?? '').replace(/,/g, '').trim());
+    if (!Number.isFinite(number) || number <= 0) return null;
+    return number.toFixed(2).replace(/\.00$/, '');
+  }
+
+  private normalizeComparable(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const normalized = value.replace(/\s+/g, ' ').trim().toLowerCase();
+    return normalized || null;
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
   }
 
   private async createBatchItem(tx: Prisma.TransactionClient, batch: { id: string; batchCode: string; status: SheinBatchStatus; exchangeRateSarToEgp: Prisma.Decimal }, dto: AddSheinBatchItemDto) {
@@ -573,8 +714,18 @@ export class SheinBatchesService {
             customerPhoneSnapshot: true,
           },
         },
-        product: { select: { id: true } },
-        productVariant: { select: { id: true } },
+        product: {
+          select: {
+            id: true,
+            sheinImports: {
+              where: { status: { in: [SheinImportStatus.PUBLISHED, SheinImportStatus.PRODUCT_CREATED, SheinImportStatus.SUCCEEDED] } },
+              select: { editedPayload: true, previewPayload: true, publishedAt: true, createdAt: true },
+              orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+              take: 1,
+            },
+          },
+        },
+        productVariant: { select: { id: true, sku: true, nameAr: true, nameEn: true, size: true, color: true } },
       },
     });
     if (!orderItem) {
@@ -595,7 +746,13 @@ export class SheinBatchesService {
       throw new BadRequestException('Quantity must be between 1 and the order item quantity');
     }
 
-    const unitSarAmount = dto.unitSarAmount ? this.parseMoney(dto.unitSarAmount) : 0;
+    const requestedUnitSarAmount = dto.unitSarAmount?.trim();
+    const suggestedUnitSarAmount = this.resolveSuggestedUnitSarAmount(orderItem);
+    const unitSarAmount = requestedUnitSarAmount
+      ? this.parseMoney(requestedUnitSarAmount)
+      : suggestedUnitSarAmount
+        ? this.parseMoney(suggestedUnitSarAmount)
+        : 0;
     const unitEgpAmount = dto.unitEgpAmount ? this.parseMoney(dto.unitEgpAmount) : this.convertSarToEgp(unitSarAmount, batch.exchangeRateSarToEgp);
     const totalSarAmount = unitSarAmount * quantity;
     const totalEgpAmount = unitEgpAmount * quantity;

@@ -37,6 +37,15 @@ const orderInclude = {
   items: {
     orderBy: { createdAt: 'asc' as const },
     include: {
+      product: {
+        select: {
+          id: true,
+          slug: true,
+          nameAr: true,
+          nameEn: true,
+          sourceSheinUrl: true,
+        },
+      },
       sheinBatchItems: {
         include: {
           batch: {

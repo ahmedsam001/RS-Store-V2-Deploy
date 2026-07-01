@@ -528,7 +528,7 @@ function liveStateLabel(sale: AdminFlashSale): string {
   return 'Visible to customers';
 }
 function formatDate(value: string): string {
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString('en-US');
 }
 function toDateTimeLocal(value: string): string {
   const date = new Date(value);

@@ -347,7 +347,7 @@ function PaymentReviewDetails({
 
       <section className="grid gap-3 sm:grid-cols-3">
         <AdminInfoItem label="Amount to review" value={formatMoney(getReviewAmount(order, queue), order.currency)} />
-        <AdminInfoItem label="Payment method" value={paymentMethodLabel(isCashFinalQueue ? 'CASH_AT_SHOP' : order.finalPaymentMethod)} />
+        <AdminInfoItem label="Payment method" value={paymentMethodLabel(reviewPaymentMethod(order, queue))} />
         <AdminInfoItem label="Order total" value={formatMoney(order.totalAmount, order.currency)} />
       </section>
 
@@ -705,6 +705,18 @@ function paymentMethodLabel(method?: string | null): string {
     CASH_AT_SHOP: 'Cash at store',
   };
   return method ? map[method] ?? method : '-';
+}
+
+function reviewPaymentMethod(order: AdminOrder, queue: PaymentReviewQueue): string | null | undefined {
+  if (queue === 'DEPOSIT_SUBMITTED' || queue === 'DEPOSIT_REJECTED') {
+    return order.depositPaymentMethod;
+  }
+
+  if (queue === 'CASH_FINAL_PAYMENT_PENDING') {
+    return 'CASH_AT_SHOP';
+  }
+
+  return order.finalPaymentMethod;
 }
 
 function getReviewAmount(order: AdminOrder, queue: PaymentReviewQueue): string | number {

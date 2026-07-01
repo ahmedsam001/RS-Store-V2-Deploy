@@ -215,8 +215,8 @@ export function CheckoutPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-        <form onSubmit={handleSubmit} className="rs-panel overflow-hidden" noValidate>
+      <form onSubmit={handleSubmit} className="rs-panel overflow-hidden" noValidate>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
           <div className="space-y-5 p-4 sm:p-6">
             <div className="rounded-2xl border border-rs-peach bg-rs-cream-warm p-4 text-sm leading-7 text-muted-foreground">
               Estimated delivery time{' '}
@@ -335,7 +335,92 @@ export function CheckoutPage() {
               </section>
             </div>
 
-            <section className="rounded-2xl border border-rs-peach-light bg-card p-3 shadow-sm sm:rounded-3xl sm:p-4">
+            <label className="block">
+              <span className="block text-sm font-extrabold text-rs-ink mb-1.5">
+                Notes (optional)
+              </span>
+              <textarea
+                value={form.notes ?? ''}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, notes: event.target.value }))
+                }
+                rows={3}
+                className="mt-0.5 w-full rounded-2xl border border-rs-peach bg-card px-4 py-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground hover:border-rs-gold-light focus:outline-none focus:border-rs-gold focus:ring-2 focus:ring-rs-gold/20"
+              />
+            </label>
+          </div>
+
+          <aside className="rs-panel p-4 sm:p-5 lg:sticky lg:top-28">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rs-green-bg text-rs-green">
+                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-rs-ink">Order Summary</h2>
+                <p className="text-[11px] text-muted-foreground">Snapshot before confirmation</p>
+              </div>
+            </div>
+
+            <div className="mt-5 max-h-[420px] space-y-2.5 overflow-auto pe-1 premium-scrollbar">
+              {cart.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-rs-peach-light bg-card p-3 text-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <CatalogLink
+                        href={productPath(item.product.slug)}
+                        className="line-clamp-2 font-extrabold transition hover:text-rs-gold"
+                      >
+                        {item.product.name}
+                      </CatalogLink>
+                      <p className="mt-1 text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                    </div>
+                    <span className="shrink-0 break-words text-end font-black rs-price-primary">
+                      {formatPrice(item.lineTotal)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 border-t pt-5" style={{ borderColor: 'hsl(var(--rs-peach-light))' }}>
+              <div className="flex items-center justify-between text-lg font-black">
+                <span>Total</span>
+                <span className="rs-price-primary">{formatPrice(cart.summary.subtotal)}</span>
+              </div>
+              <div className="mt-3 space-y-2 rounded-2xl border border-rs-peach bg-rs-cream-warm p-3 text-xs leading-5">
+                <SummaryLine
+                  label={`Deposit ${form.depositPercent}%`}
+                  value={formatCheckoutMoney(
+                    checkoutTotals.depositBaseAmount,
+                    checkoutTotals.currency,
+                  )}
+                />
+                {form.paymentMethod === 'vodafone' ? (
+                  <SummaryLine
+                    label={`Vodafone Cash fee ${vodafoneFeePercent}%`}
+                    value={formatCheckoutMoney(
+                      checkoutTotals.vodafoneFeeAmount,
+                      checkoutTotals.currency,
+                    )}
+                  />
+                ) : null}
+                <SummaryLine
+                  label="Pay now"
+                  value={formatCheckoutMoney(checkoutTotals.depositAmount, checkoutTotals.currency)}
+                  isStrong
+                />
+                <SummaryLine
+                  label="Remaining after deposit"
+                  value={formatCheckoutMoney(checkoutTotals.remainingAmount, checkoutTotals.currency)}
+                  isStrong
+                />
+              </div>
+            </div>
+
+            <section className="mt-6 rounded-2xl border border-rs-peach-light bg-card p-3 shadow-sm sm:rounded-3xl sm:p-4">
               <h2 className="text-base font-black text-rs-ink">Payment Proof</h2>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 Upload a clear image of your deposit transfer for admin review
@@ -351,23 +436,9 @@ export function CheckoutPage() {
               />
             </section>
 
-            <label className="block">
-              <span className="block text-sm font-extrabold text-rs-ink mb-1.5">
-                Notes (optional)
-              </span>
-              <textarea
-                value={form.notes ?? ''}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, notes: event.target.value }))
-                }
-                rows={3}
-                className="mt-0.5 w-full rounded-2xl border border-rs-peach bg-card px-4 py-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground hover:border-rs-gold-light focus:outline-none focus:border-rs-gold focus:ring-2 focus:ring-rs-gold/20"
-              />
-            </label>
-
             {submitError ? (
               <p
-                className="rounded-2xl bg-destructive/10 p-3 text-sm font-semibold text-destructive"
+                className="mt-4 rounded-2xl bg-destructive/10 p-3 text-sm font-semibold text-destructive"
                 role="alert"
               >
                 {submitError}
@@ -376,87 +447,16 @@ export function CheckoutPage() {
 
             <Button
               type="submit"
-              className="rs-btn-primary w-full"
+              className="rs-btn-primary mt-4 w-full"
               size="lg"
               disabled={!canSubmit || isSubmitting}
             >
               {isSubmitting ? 'Creating order...' : 'Confirm Order & Upload Deposit'}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
-          </div>
-        </form>
-
-        <aside className="rs-panel p-4 sm:p-5 lg:sticky lg:top-28">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rs-green-bg text-rs-green">
-              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-rs-ink">Order Summary</h2>
-              <p className="text-[11px] text-muted-foreground">Snapshot before confirmation</p>
-            </div>
-          </div>
-
-          <div className="mt-5 max-h-[420px] space-y-2.5 overflow-auto pe-1 premium-scrollbar">
-            {cart.items.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-rs-peach-light bg-card p-3 text-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <CatalogLink
-                      href={productPath(item.product.slug)}
-                      className="line-clamp-2 font-extrabold transition hover:text-rs-gold"
-                    >
-                      {item.product.name}
-                    </CatalogLink>
-                    <p className="mt-1 text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                  </div>
-                  <span className="shrink-0 break-words text-end font-black rs-price-primary">
-                    {formatPrice(item.lineTotal)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 border-t pt-5" style={{ borderColor: 'hsl(var(--rs-peach-light))' }}>
-            <div className="flex items-center justify-between text-lg font-black">
-              <span>Total</span>
-              <span className="rs-price-primary">{formatPrice(cart.summary.subtotal)}</span>
-            </div>
-            <div className="mt-3 space-y-2 rounded-2xl border border-rs-peach bg-rs-cream-warm p-3 text-xs leading-5">
-              <SummaryLine
-                label={`Deposit ${form.depositPercent}%`}
-                value={formatCheckoutMoney(
-                  checkoutTotals.depositBaseAmount,
-                  checkoutTotals.currency,
-                )}
-              />
-              {form.paymentMethod === 'vodafone' ? (
-                <SummaryLine
-                  label={`Vodafone Cash fee ${vodafoneFeePercent}%`}
-                  value={formatCheckoutMoney(
-                    checkoutTotals.vodafoneFeeAmount,
-                    checkoutTotals.currency,
-                  )}
-                />
-              ) : null}
-              <SummaryLine
-                label="Pay now"
-                value={formatCheckoutMoney(checkoutTotals.depositAmount, checkoutTotals.currency)}
-                isStrong
-              />
-              <SummaryLine
-                label="Remaining after deposit"
-                value={formatCheckoutMoney(checkoutTotals.remainingAmount, checkoutTotals.currency)}
-                isStrong
-              />
-            </div>
-          </div>
-        </aside>
-      </div>
+          </aside>
+        </div>
+      </form>
     </div>
   );
 }

@@ -31,12 +31,14 @@ export type CatalogPricingContext = {
 export function mapCategory(
   category: Category & { parent?: Pick<Category, 'slug' | 'nameAr'> | null },
   productCount: number,
-  subCategoryItems: Array<{ id: string; slug: string; name: string; count: number; image: string | null }> = [],
+  subCategoryItems: Array<{ id: string; slug: string; name: string; nameAr: string; nameEn: string | null; count: number; image: string | null }> = [],
 ): CatalogCategory {
   const subCategories: CatalogSubCategory[] = subCategoryItems.map((item) => ({
     id: item.id,
     slug: item.slug,
     name: item.name,
+    nameAr: item.nameAr,
+    nameEn: item.nameEn,
     productCount: item.count,
     image: item.image,
   }));

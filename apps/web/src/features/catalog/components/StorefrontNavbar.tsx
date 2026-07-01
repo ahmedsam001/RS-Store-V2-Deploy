@@ -5,7 +5,6 @@ import {
   LogOut,
   MessageCircle,
   PackageSearch,
-  Phone,
   ShieldCheck,
   ShoppingCart,
   Sparkles,
@@ -299,7 +298,6 @@ function StorefrontFooter({
     whatsapp || phone,
     `Hello ${storeName}, I need help with my order.`,
   );
-  const phoneHref = buildPhoneHref(phone || whatsapp);
   const footerAccountLinks = STORE_FOOTER_ACCOUNT_LINKS.filter(
     (link) => !(link.guestOnly && isCustomer),
   );
@@ -403,13 +401,6 @@ function buildWhatsAppHref(value: string, message: string) {
   const normalized = normalizeWhatsAppPhone(value);
   if (!normalized) return '';
   return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
-}
-
-function buildPhoneHref(value: string) {
-  const digits = digitsOnly(value);
-  if (!digits) return '';
-  const normalized = digits.startsWith('2') ? `+${digits}` : `+2${digits}`;
-  return `tel:${normalized}`;
 }
 
 function digitsOnly(value: string) {
