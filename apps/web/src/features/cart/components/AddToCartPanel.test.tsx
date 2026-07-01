@@ -77,8 +77,6 @@ describe('AddToCartPanel', () => {
     expect(screen.getByRole('alert').textContent).toContain('Please select a size first');
   });
 
-
-
   it('does not allow adding products without a purchasable variant', async () => {
     renderWithRouter(<AddToCartPanel product={createDetailProduct({ variantCount: 0, availableColors: [], availableSizes: [], variants: [] })} />);
 
@@ -147,7 +145,12 @@ describe('AddToCartPanel', () => {
   });
 
   it('shows API errors returned by the shared add to cart hook', () => {
-    hookState.value = { ...hookState.value, error: 'Requested quantity is not available right now' };
+    hookState.value = {
+      ...hookState.value,
+      error: 'Requested quantity is not available right now',
+    };
+
+    renderWithRouter(<AddToCartPanel product={createDetailProduct()} />);
 
     expect(screen.getByRole('alert').textContent).toContain('Requested quantity is not available right now');
   });

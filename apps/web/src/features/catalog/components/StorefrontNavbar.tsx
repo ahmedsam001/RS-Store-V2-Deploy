@@ -7,7 +7,6 @@ import {
   PackageSearch,
   ShieldCheck,
   ShoppingCart,
-  Sparkles,
   Truck,
   User,
   UserRound,
@@ -387,10 +386,16 @@ function StorefrontFooter({
 
       <div className="rs-footer-bottom">
         <p>
-          © {new Date().getFullYear()} {storeName}. All rights reserved.
-        </p>
-        <p className="rs-footer-bottom-note">
-          <Sparkles aria-hidden="true" /> Built for smooth shopping and clear order tracking.
+          Developed by{' '}
+          <a
+            href="https://wa.me/201152887590"
+            target="_blank"
+            rel="noreferrer"
+            className="rs-footer-developer-link"
+            aria-label="Contact Ahmed Sami on WhatsApp"
+          >
+            Ahmed Sami
+          </a>
         </p>
       </div>
     </footer>

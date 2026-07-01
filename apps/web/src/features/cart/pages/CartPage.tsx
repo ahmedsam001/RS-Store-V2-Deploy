@@ -5,7 +5,6 @@ import { PATHS } from '@/shared/constants/routes';
 import { Button } from '@/shared/components/ui/Button';
 import { CatalogLink } from '@/features/catalog/components/CatalogLink';
 import { CatalogState } from '@/features/catalog/components/CatalogState';
-import { ResponsiveImage } from '@/features/catalog/components/ResponsiveImage';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 import { formatPrice, getProductUrl } from '@/features/catalog/utils/format';
 import { useCart } from '@/features/cart/CartContext';
@@ -53,27 +52,26 @@ export function CartPage() {
         <div className="space-y-3">
           {cart.items.map((item) => (
             <article key={item.id} className="rs-panel p-3 sm:p-4">
-              <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-3 sm:grid-cols-[100px_minmax(0,1fr)_auto]">
+              <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-3 sm:grid-cols-[80px_minmax(0,1fr)_auto]">
                 <CatalogLink
                   href={getProductUrl(item.product.slug)}
-                  className="overflow-hidden rounded-xl bg-rs-cream-warm"
+                  className="rs-cart-item-image"
                   aria-label={`View ${item.product.name}`}
                 >
                   {item.product.primaryImage ? (
-                    <ResponsiveImage
+                    <ImageWithFallback
                       src={item.product.primaryImage.url}
                       alt={item.product.primaryImage.altText ?? item.product.name}
-                      className="aspect-square w-full object-cover"
-                      widths={[160, 240, 320]}
-                      sizes="120px"
-                      width={240}
-                      height={240}
+                      className="rs-cart-item-image-media"
+                      width={160}
+                      height={348}
+                      fallbackVariant="product"
                     />
                   ) : (
                     <ImageWithFallback
                       src={null}
                       alt={item.product.name}
-                      className="aspect-square w-full"
+                      className="rs-cart-item-image-media"
                       fallbackVariant="product"
                     />
                   )}
