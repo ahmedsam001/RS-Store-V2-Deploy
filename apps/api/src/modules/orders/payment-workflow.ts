@@ -22,6 +22,13 @@ export type CheckoutPaymentSnapshot = {
   remainingAmount: number;
 };
 
+export type FinalPaymentSnapshot = {
+  finalPaymentMethod: PaymentMethod;
+  finalPaymentFeeAmount: number;
+  finalAmountDue: number;
+  totalAmount: number;
+};
+
 export function assertDepositPercent(percent: DepositPercent, minPercent: DepositPercent): void {
   if (!DEPOSIT_PERCENT_CHOICES.includes(percent) || percent < minPercent) {
     throw new BadRequestException(`Deposit must be at least ${minPercent}%`);
@@ -70,5 +77,31 @@ export function buildCheckoutPaymentSnapshot(
     totalAmount,
     depositAmount,
     remainingAmount,
+  };
+}
+
+export function buildFinalPaymentSnapshot({
+  currentTotalAmount,
+  currentFinalPaymentFeeAmount,
+  remainingAmount,
+  finalPaymentMethod,
+  settings,
+}: {
+  currentTotalAmount: number;
+  currentFinalPaymentFeeAmount: number;
+  remainingAmount: number;
+  finalPaymentMethod: PaymentMethod;
+  settings: Pick<PaymentSettingsSnapshot, 'vodafoneFeePercent'>;
+}): FinalPaymentSnapshot {
+  const finalPaymentFeeAmount =
+    finalPaymentMethod === PaymentMethod.VODAFONE
+      ? calculatePercentAmount(remainingAmount, settings.vodafoneFeePercent)
+      : 0;
+
+  return {
+    finalPaymentMethod,
+    finalPaymentFeeAmount,
+    finalAmountDue: remainingAmount + finalPaymentFeeAmount,
+    totalAmount: currentTotalAmount - currentFinalPaymentFeeAmount + finalPaymentFeeAmount,
   };
 }

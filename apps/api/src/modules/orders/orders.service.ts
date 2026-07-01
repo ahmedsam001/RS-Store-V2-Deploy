@@ -29,7 +29,7 @@ import { UpdateOrderItemStatusDto } from './dto/update-order-item-status.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { assertOrderItemTransition, assertOrderTransition, assertPaymentProofCanBeReviewed } from './order-state-machine';
 import { ORDER_PAYMENT_PROOFS_FOLDER } from './orders.constants';
-import { calculatePercentAmount, buildCheckoutPaymentSnapshot, normalizeDepositPercent, toFinalPaymentMethod } from './payment-workflow';
+import { buildCheckoutPaymentSnapshot, buildFinalPaymentSnapshot, normalizeDepositPercent, toFinalPaymentMethod } from './payment-workflow';
 import { PAYMENT_PROOF_STATUS_APPROVED, PAYMENT_PROOF_STATUS_REJECTED } from './payment-proof-status.constants';
 
 const orderInclude = {
@@ -366,7 +366,8 @@ export class OrdersService {
       const order = await tx.order.findFirst({ where: { id: orderId, userId: user.id }, include: orderInclude });
       if (!order) throw new NotFoundException('Order not found');
       this.assertFinalPaymentAllowed(order);
-      const updated = await tx.order.update({ where: { id: orderId }, data: { finalPaymentMethod: PaymentMethod.CASH_AT_SHOP, finalPaymentFeeAmount: 0, finalAmountDue: order.remainingAmount, finalPaidAmount: 0, totalAmount: order.totalAmount - order.finalPaymentFeeAmount, paymentStatus: OrderPaymentStatus.FINAL_PAYMENT_PENDING }, include: orderInclude });
+      const finalPaymentSnapshot = buildFinalPaymentSnapshot({ currentTotalAmount: order.totalAmount, currentFinalPaymentFeeAmount: order.finalPaymentFeeAmount, remainingAmount: order.remainingAmount, finalPaymentMethod: PaymentMethod.CASH_AT_SHOP, settings: { vodafoneFeePercent: 0 } });
+      const updated = await tx.order.update({ where: { id: orderId }, data: { ...finalPaymentSnapshot, finalPaidAmount: 0, paymentStatus: OrderPaymentStatus.FINAL_PAYMENT_PENDING }, include: orderInclude });
       await tx.auditLog.create({ data: { actorUserId: user.id, action: 'FINAL_PAYMENT_CASH_SELECTED', entityType: 'ORDER', entityId: orderId, metadata: { orderNumber: order.orderNumber, amountDue: order.remainingAmount } } });
       return updated;
     }).then((order) => this.attachTimeline(order));
@@ -449,8 +450,8 @@ export class OrdersService {
     if (!finalPaymentMethod || finalPaymentMethod === PaymentMethod.CASH_AT_SHOP) throw new BadRequestException('Choose Instapay or Vodafone Cash for online final payment');
     this.assertFinalPaymentAllowed(order);
     const settings = await this.getPaymentSettings(tx);
-    const feeAmount = finalPaymentMethod === PaymentMethod.VODAFONE ? calculatePercentAmount(order.remainingAmount, settings.vodafoneFeePercent) : 0;
-    return { paymentStatus: OrderPaymentStatus.FINAL_PAYMENT_SUBMITTED, finalPaymentMethod, finalPaymentFeeAmount: feeAmount, finalAmountDue: order.remainingAmount + feeAmount, finalPaidAmount: 0, finalPaymentApprovedAt: null, totalAmount: order.totalAmount - order.finalPaymentFeeAmount + feeAmount };
+    const finalPaymentSnapshot = buildFinalPaymentSnapshot({ currentTotalAmount: order.totalAmount, currentFinalPaymentFeeAmount: order.finalPaymentFeeAmount, remainingAmount: order.remainingAmount, finalPaymentMethod, settings });
+    return { paymentStatus: OrderPaymentStatus.FINAL_PAYMENT_SUBMITTED, ...finalPaymentSnapshot, finalPaidAmount: 0, finalPaymentApprovedAt: null };
   }
 
   private async findCustomerOrder(userId: string, where: { id?: string; orderNumber?: string }): Promise<OrderWithTimeline> {
