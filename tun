@@ -1,0 +1,27 @@
+ui 
+export VITE_API_BASE_URL="http://localhost:3000/api/v1"
+npm run dev -w @rs-store/web
+
+
+# export DATABASE_URL="postgresql://rs_store:rs_store_password@127.0.0.1:5432/rs_store?schema=public"
+# export REDIS_URL="redis://127.0.0.1:6379"
+# export SHEIN_BROWSER_MODE=local
+# export SHEIN_BROWSER_HEADLESS=false
+# export SHEIN_BROWSER_VISIBLE=true
+# npm run start:dev -w @rs-store/api
+
+
+export DATABASE_URL="postgresql://rs_store:rs_store_password@127.0.0.1:5432/rs_store?schema=public"
+export REDIS_URL="redis://127.0.0.1:6379"
+export PORT=3000
+export API_PREFIX="api/v1"
+export FRONTEND_ORIGIN="http://localhost:5173"
+
+npm run db:generate -w @rs-store/api
+npm run db:push -w @rs-store/api
+npm run start:dev -w @rs-store/api
+
+
+
+sudo systemctl stop postgresql
+docker compose up -d postgres redis

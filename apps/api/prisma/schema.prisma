@@ -1,0 +1,774 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  OWNER
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProductVariantStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+}
+
+enum ImageSource {
+  ADMIN_UPLOAD
+  SHEIN_IMPORT
+  MIGRATION
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderItemStatus {
+  PENDING
+  SHEIN
+  KUWAIT
+  CUSTOMS
+  EGYPT
+  SHOP
+  CANCELLED
+}
+
+enum OrderPaymentStatus {
+  DEPOSIT_PENDING
+  DEPOSIT_SUBMITTED
+  DEPOSIT_REJECTED
+  DEPOSIT_APPROVED
+  FINAL_PAYMENT_PENDING
+  FINAL_PAYMENT_SUBMITTED
+  FINAL_PAYMENT_REJECTED
+  PAID
+}
+
+enum PaymentProofType {
+  DEPOSIT
+  FINAL_PAYMENT
+}
+
+enum PaymentProofStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum PaymentMethod {
+  INSTAPAY
+  VODAFONE
+  CASH_AT_SHOP
+}
+
+enum InventoryStatus {
+  NONE
+  RESERVED
+  DEDUCTED
+  RELEASED
+}
+
+enum CheckoutIdempotencyStatus {
+  STARTED
+  COMPLETED
+}
+
+enum FlashSaleStatus {
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  EXPIRED
+  CANCELLED
+}
+
+enum SettingScope {
+  PUBLIC
+  ADMIN
+  SYSTEM
+}
+
+enum SheinImportStatus {
+  PENDING
+  EXTRACTING
+  PREVIEW_READY
+  FAILED
+  MANUAL_REVIEW
+  REVIEWING
+  REVIEWED
+  APPROVED
+  PROCESSING
+  PRODUCT_CREATED
+  PUBLISHED
+  SUCCEEDED
+  CANCELLED
+}
+
+enum SheinBatchStatus {
+  DRAFT
+  ORDERED_FROM_SHEIN
+  SHIPPING
+  CUSTOMS
+  ARRIVED_EGYPT
+  ARRIVED_STORE
+  READY_FOR_PICKUP
+  DELIVERED
+  CANCELLED
+}
+
+enum CustomOrderStatus {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String       @db.VarChar(160)
+  email        String?      @unique @db.VarChar(320)
+  phone        String?      @unique @db.VarChar(32)
+  passwordHash String?      @map("password_hash")
+  address      String?
+  language     String       @default("ar") @db.VarChar(5)
+  role         UserRole     @default(CUSTOMER)
+  status       UserStatus   @default(ACTIVE)
+  lastLoginAt  DateTime?    @map("last_login_at") @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz(3)
+
+  sessions     Session[]
+  carts        Cart[]
+  wishlists    Wishlist[]
+  orders       Order[]
+  settings     Setting[]
+  auditLogs    AuditLog[]
+  notifications Notification[]
+  sheinImports SheinImport[]
+  createdSheinBatches SheinBatch[] @relation("SheinBatchCreator")
+  updatedSheinBatches SheinBatch[] @relation("SheinBatchUpdater")
+  sheinBatchStatusChanges SheinBatchStatusHistory[] @relation("SheinBatchStatusChanger")
+  reviewedPaymentProofs OrderPaymentProof[] @relation("PaymentProofReviewer")
+  checkoutIdempotencyKeys CheckoutIdempotencyKey[]
+  customOrderRequests CustomOrderRequest[]
+  reviewedCustomOrderRequests CustomOrderRequest[] @relation("CustomOrderReviewer")
+
+  @@index([role, status], map: "idx_users_role_status")
+  @@index([createdAt], map: "idx_users_created_at")
+  @@map("users")
+}
+
+model Session {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  tokenHash     String    @unique @map("token_hash")
+  csrfTokenHash String    @map("csrf_token_hash")
+  rememberMe    Boolean   @default(false) @map("remember_me")
+  ipAddress     String?   @map("ip_address") @db.Inet
+  userAgent     String?   @map("user_agent")
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  lastSeenAt    DateTime? @map("last_seen_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt], map: "idx_sessions_user_expires_at")
+  @@index([expiresAt], map: "idx_sessions_expires_at")
+  @@index([revokedAt], map: "idx_sessions_revoked_at")
+  @@map("sessions")
+}
+
+model Category {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug        String    @unique @db.VarChar(180)
+  nameAr      String    @map("name_ar") @db.VarChar(160)
+  nameEn      String?   @map("name_en") @db.VarChar(160)
+  description String?
+  image       String?
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  parentId    String?   @map("parent_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryHierarchy")
+  products            Product[] @relation("ProductMainCategory")
+  subCategoryProducts Product[] @relation("ProductSubCategory")
+
+  @@index([isActive, sortOrder], map: "idx_categories_active_sort_order")
+  @@index([deletedAt, isActive], map: "idx_categories_deleted_active")
+  @@index([parentId], map: "idx_categories_parent_id")
+  @@map("categories")
+}
+
+model Product {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId  String?            @map("category_id") @db.Uuid
+  sku         String?            @unique @db.VarChar(80)
+  slug        String             @unique @db.VarChar(220)
+  nameAr      String             @map("name_ar") @db.VarChar(220)
+  nameEn      String?            @map("name_en") @db.VarChar(220)
+  description String?
+  sourceSheinUrl String?         @map("source_shein_url")
+  subCategory String?            @map("sub_category") @db.VarChar(120)
+  subCategoryId String?          @map("sub_category_id") @db.Uuid
+  priceAmount Int                @map("price_amount")
+  discountPercent Decimal        @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  rating      Decimal?           @db.Decimal(3, 2)
+  currency    String             @default("EGP") @db.Char(3)
+  status      ProductStatus      @default(DRAFT)
+  isInStock   Boolean            @default(true) @map("is_in_stock")
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime?          @map("deleted_at") @db.Timestamptz(3)
+
+  category    Category?          @relation("ProductMainCategory", fields: [categoryId], references: [id], onDelete: SetNull)
+  subCategoryRef Category?       @relation("ProductSubCategory", fields: [subCategoryId], references: [id], onDelete: SetNull)
+  images      ProductImage[]
+  orderItems  OrderItem[]
+  sheinBatchItems SheinBatchItem[]
+  flashSales  FlashSaleProduct[]
+  sheinImports SheinImport[]
+  variants    ProductVariant[]
+  cartItems   CartItem[]
+  wishlistItems WishlistItem[]
+
+  @@index([status, categoryId], map: "idx_products_status_category")
+  @@index([categoryId, subCategory], map: "idx_products_category_sub_category")
+  @@index([categoryId, subCategoryId], map: "idx_products_category_sub_category_id")
+  @@index([subCategoryId], map: "idx_products_sub_category_id")
+  @@index([categoryId], map: "idx_products_category_id")
+  @@index([priceAmount], map: "idx_products_price_amount")
+  @@index([createdAt], map: "idx_products_created_at")
+  @@index([deletedAt, status], map: "idx_products_deleted_status")
+  @@map("products")
+}
+
+
+model ProductVariant {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId   String    @map("product_id") @db.Uuid
+  sku         String?   @unique @db.VarChar(100)
+  nameAr      String    @map("name_ar") @db.VarChar(160)
+  nameEn      String?   @map("name_en") @db.VarChar(160)
+  priceAmount Int?      @map("price_amount")
+  size        String?   @db.VarChar(80)
+  color       String?   @db.VarChar(80)
+  stockQuantity Int     @default(0) @map("stock_quantity")
+  reservedQuantity Int   @default(0) @map("reserved_quantity")
+  status      ProductVariantStatus @default(ACTIVE)
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  sheinBatchItems SheinBatchItem[]
+
+  @@index([productId, status, deletedAt, sortOrder], map: "idx_product_variants_product_status_deleted_sort")
+  @@index([productId, isActive, sortOrder], map: "idx_product_variants_product_active_sort_order")
+  @@index([deletedAt, isActive, stockQuantity, updatedAt], map: "idx_product_variants_low_stock")
+  @@index([deletedAt, isActive, status, stockQuantity, reservedQuantity], map: "idx_product_variants_available_stock")
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId          String      @map("product_id") @db.Uuid
+  cloudinaryPublicId String      @unique @map("cloudinary_public_id")
+  secureUrl          String      @map("secure_url")
+  width              Int?
+  height             Int?
+  byteSize           Int?        @map("byte_size")
+  format             String?     @db.VarChar(40)
+  altTextAr          String?     @map("alt_text_ar") @db.VarChar(220)
+  altTextEn          String?     @map("alt_text_en") @db.VarChar(220)
+  sortOrder          Int         @default(0) @map("sort_order")
+  isPrimary          Boolean     @default(false) @map("is_primary")
+  source             ImageSource @default(ADMIN_UPLOAD)
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  product            Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder], map: "idx_product_images_product_sort_order")
+  @@map("product_images")
+}
+
+
+model Cart {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?    @map("user_id") @db.Uuid
+  guestKey  String?    @map("guest_key") @db.Char(64)
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+
+  @@unique([userId], map: "uq_carts_user_id")
+  @@unique([guestKey], map: "uq_carts_guest_key")
+  @@index([updatedAt], map: "idx_carts_updated_at")
+  @@map("carts")
+}
+
+model CartItem {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cartId           String          @map("cart_id") @db.Uuid
+  productId        String          @map("product_id") @db.Uuid
+  productVariantId String?         @map("product_variant_id") @db.Uuid
+  quantity         Int
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  cart             Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+
+  @@index([cartId], map: "idx_cart_items_cart_id")
+  @@index([productId], map: "idx_cart_items_product_id")
+  @@index([productVariantId], map: "idx_cart_items_product_variant_id")
+  @@map("cart_items")
+}
+
+model Wishlist {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?        @map("user_id") @db.Uuid
+  guestKey  String?        @map("guest_key") @db.Char(64)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WishlistItem[]
+
+  @@unique([userId], map: "uq_wishlists_user_id")
+  @@unique([guestKey], map: "uq_wishlists_guest_key")
+  @@index([updatedAt], map: "idx_wishlists_updated_at")
+  @@map("wishlists")
+}
+
+model WishlistItem {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wishlistId String   @map("wishlist_id") @db.Uuid
+  productId  String   @map("product_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, productId], map: "uq_wishlist_items_wishlist_product")
+  @@index([productId], map: "idx_wishlist_items_product_id")
+  @@map("wishlist_items")
+}
+
+model Order {
+  id                      String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNumber             String             @unique @map("order_number") @db.VarChar(40)
+  userId                  String             @map("user_id") @db.Uuid
+  status                  OrderStatus        @default(PENDING)
+  paymentStatus           OrderPaymentStatus @default(DEPOSIT_PENDING) @map("payment_status")
+  currency                String             @default("EGP") @db.Char(3)
+  subtotalAmount          Int                @map("subtotal_amount")
+  discountAmount          Int                @default(0) @map("discount_amount")
+  totalAmount             Int                @map("total_amount")
+  depositPercent          Int                @default(50) @map("deposit_percent")
+  depositAmount           Int                @default(0) @map("deposit_amount")
+  remainingAmount         Int                @default(0) @map("remaining_amount")
+  depositPaymentMethod    PaymentMethod      @default(INSTAPAY) @map("deposit_payment_method")
+  depositPaymentFeeAmount Int                @default(0) @map("deposit_payment_fee_amount")
+  depositPaidAmount       Int                @default(0) @map("deposit_paid_amount")
+  finalPaymentMethod      PaymentMethod?     @map("final_payment_method")
+  finalPaymentFeeAmount   Int                @default(0) @map("final_payment_fee_amount")
+  finalAmountDue          Int                @default(0) @map("final_amount_due")
+  finalPaidAmount         Int                @default(0) @map("final_paid_amount")
+  inventoryStatus         InventoryStatus    @default(NONE) @map("inventory_status")
+  depositApprovedAt       DateTime?          @map("deposit_approved_at") @db.Timestamptz(3)
+  finalPaymentApprovedAt  DateTime?          @map("final_payment_approved_at") @db.Timestamptz(3)
+  customerNameSnapshot    String             @map("customer_name_snapshot") @db.VarChar(160)
+  customerPhoneSnapshot   String             @map("customer_phone_snapshot") @db.VarChar(32)
+  customerEmailSnapshot   String?            @map("customer_email_snapshot") @db.VarChar(320)
+  shippingAddressSnapshot String             @map("shipping_address_snapshot")
+  notes                   String?
+  createdAt               DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cancelledAt             DateTime?          @map("cancelled_at") @db.Timestamptz(3)
+  completedAt             DateTime?          @map("completed_at") @db.Timestamptz(3)
+
+  user                    User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items                   OrderItem[]
+  paymentProofs           OrderPaymentProof[]
+  checkoutIdempotencyKeys CheckoutIdempotencyKey[]
+  sheinBatchItems        SheinBatchItem[]
+  customOrderRequests     CustomOrderRequest[]
+
+  @@index([userId, createdAt], map: "idx_orders_user_created_at")
+  @@index([status, createdAt], map: "idx_orders_status_created_at")
+  @@index([paymentStatus, createdAt], map: "idx_orders_payment_status_created_at")
+  @@index([createdAt, id], map: "idx_orders_created_at")
+  @@index([inventoryStatus, createdAt], map: "idx_orders_inventory_status_created_at")
+  @@map("orders")
+}
+model OrderItem {
+  id                         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId                    String          @map("order_id") @db.Uuid
+  productId                  String?         @map("product_id") @db.Uuid
+  productVariantId           String?         @map("product_variant_id") @db.Uuid
+  productNameSnapshot        String          @map("product_name_snapshot") @db.VarChar(220)
+  productSkuSnapshot         String?         @map("product_sku_snapshot") @db.VarChar(100)
+  productVariantNameSnapshot String?         @map("product_variant_name_snapshot") @db.VarChar(160)
+  productVariantSkuSnapshot  String?         @map("product_variant_sku_snapshot") @db.VarChar(100)
+  productVariantSizeSnapshot String?         @map("product_variant_size_snapshot") @db.VarChar(80)
+  productVariantColorSnapshot String?        @map("product_variant_color_snapshot") @db.VarChar(80)
+  quantity                   Int
+  unitPriceAmount            Int             @map("unit_price_amount")
+  lineTotalAmount            Int             @map("line_total_amount")
+  status                     OrderItemStatus @default(PENDING)
+  createdAt                  DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                  DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  order                      Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product                    Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productVariant             ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+  sheinBatchItems            SheinBatchItem[]
+
+  @@index([orderId], map: "idx_order_items_order_id")
+  @@index([productId], map: "idx_order_items_product_id")
+  @@index([productVariantId], map: "idx_order_items_product_variant_id")
+  @@index([status], map: "idx_order_items_status")
+  @@map("order_items")
+}
+
+model CustomOrderRequest {
+  id                      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                  String            @map("user_id") @db.Uuid
+  productUrl              String            @map("product_url")
+  requestedColor          String?           @map("requested_color") @db.VarChar(80)
+  requestedSize           String?           @map("requested_size") @db.VarChar(80)
+  quantity                Int               @default(1)
+  customerNote            String?           @map("customer_note")
+  customerImageUrl        String?           @map("customer_image_url")
+  customerImagePublicId   String?           @unique @map("customer_image_public_id")
+  status                  CustomOrderStatus @default(PENDING_REVIEW)
+  adminTitle              String?           @map("admin_title") @db.VarChar(220)
+  adminImageUrl           String?           @map("admin_image_url")
+  adminImagePublicId      String?           @unique @map("admin_image_public_id")
+  adminPriceAmount        Int?              @map("admin_price_amount")
+  adminShippingAmount     Int?              @map("admin_shipping_amount")
+  adminTotalAmount        Int?              @map("admin_total_amount")
+  adminNote               String?           @map("admin_note")
+  reviewedById            String?           @map("reviewed_by_id") @db.Uuid
+  reviewedAt              DateTime?         @map("reviewed_at") @db.Timestamptz(3)
+  convertedOrderId        String?           @map("converted_order_id") @db.Uuid
+  createdAt               DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user                    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy              User?             @relation("CustomOrderReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  convertedOrder          Order?            @relation(fields: [convertedOrderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt], map: "idx_custom_order_requests_user_created")
+  @@index([status, createdAt], map: "idx_custom_order_requests_status_created")
+  @@index([reviewedById], map: "idx_custom_order_requests_reviewed_by")
+  @@index([convertedOrderId], map: "idx_custom_order_requests_converted_order")
+  @@map("custom_order_requests")
+}
+
+model OrderPaymentProof {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId            String             @map("order_id") @db.Uuid
+  type               PaymentProofType
+  status             PaymentProofStatus @default(SUBMITTED)
+  cloudinaryPublicId String             @unique @map("cloudinary_public_id")
+  secureUrl          String             @map("secure_url")
+  width              Int?
+  height             Int?
+  byteSize           Int?               @map("byte_size")
+  format             String?            @db.VarChar(40)
+  rejectionReason    String?            @map("rejection_reason")
+  reviewedById       String?            @map("reviewed_by_id") @db.Uuid
+  reviewedAt         DateTime?          @map("reviewed_at") @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  order              Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reviewedBy         User?              @relation("PaymentProofReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([orderId, type, createdAt], map: "idx_order_payment_proofs_order_type_created")
+  @@index([status, createdAt], map: "idx_order_payment_proofs_status_created")
+  @@index([reviewedById, reviewedAt], map: "idx_order_payment_proofs_reviewer_reviewed")
+  @@map("order_payment_proofs")
+}
+model CheckoutIdempotencyKey {
+  id          String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String                    @map("user_id") @db.Uuid
+  key         String                    @db.VarChar(128)
+  requestHash String                    @map("request_hash") @db.Char(64)
+  status      CheckoutIdempotencyStatus @default(STARTED)
+  orderId     String?                   @map("order_id") @db.Uuid
+  createdAt   DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime                  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order       Order?                    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, key], map: "uq_checkout_idempotency_user_key")
+  @@index([orderId], map: "idx_checkout_idempotency_order_id")
+  @@index([createdAt], map: "idx_checkout_idempotency_created_at")
+  @@map("checkout_idempotency_keys")
+}
+
+model FlashSale {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titleAr         String             @map("title_ar") @db.VarChar(180)
+  titleEn         String?            @map("title_en") @db.VarChar(180)
+  discountPercent Decimal            @map("discount_percent") @db.Decimal(5, 2)
+  startsAt        DateTime           @map("starts_at") @db.Timestamptz(3)
+  endsAt          DateTime           @map("ends_at") @db.Timestamptz(3)
+  status          FlashSaleStatus    @default(SCHEDULED)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  products        FlashSaleProduct[]
+
+  @@index([status, startsAt, endsAt], map: "idx_flash_sales_status_window")
+  @@index([endsAt], map: "idx_flash_sales_ends_at")
+  @@map("flash_sales")
+}
+
+model FlashSaleProduct {
+  flashSaleId String    @map("flash_sale_id") @db.Uuid
+  productId   String    @map("product_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  flashSale   FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([flashSaleId, productId])
+  @@index([productId], map: "idx_flash_sale_products_product_id")
+  @@map("flash_sale_products")
+}
+
+model SheinBatch {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  batchCode            String           @unique @map("batch_code") @db.VarChar(40)
+  title                String?          @db.VarChar(180)
+  sheinOrderReference  String?          @map("shein_order_reference") @db.VarChar(120)
+  trackingNumber       String?          @map("tracking_number") @db.VarChar(120)
+  trackingCarrier      String?          @map("tracking_carrier") @db.VarChar(120)
+  trackingUrl          String?          @map("tracking_url") @db.VarChar(500)
+  status               SheinBatchStatus @default(DRAFT)
+  exchangeRateSarToEgp Decimal          @default(0) @map("exchange_rate_sar_to_egp") @db.Decimal(12, 4)
+  totalQuantity        Int              @default(0) @map("total_quantity")
+  totalSarAmount       Int              @default(0) @map("total_sar_amount")
+  totalEgpAmount       Int              @default(0) @map("total_egp_amount")
+  notes                String?
+  orderedAt            DateTime?        @map("ordered_at") @db.Timestamptz(3)
+  shippedAt            DateTime?        @map("shipped_at") @db.Timestamptz(3)
+  customsAt            DateTime?        @map("customs_at") @db.Timestamptz(3)
+  arrivedEgyptAt       DateTime?        @map("arrived_egypt_at") @db.Timestamptz(3)
+  arrivedStoreAt       DateTime?        @map("arrived_store_at") @db.Timestamptz(3)
+  readyForPickupAt     DateTime?        @map("ready_for_pickup_at") @db.Timestamptz(3)
+  deliveredAt          DateTime?        @map("delivered_at") @db.Timestamptz(3)
+  cancelledAt          DateTime?        @map("cancelled_at") @db.Timestamptz(3)
+  createdById          String?          @map("created_by_id") @db.Uuid
+  updatedById          String?          @map("updated_by_id") @db.Uuid
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdBy            User?            @relation("SheinBatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy            User?            @relation("SheinBatchUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  items                SheinBatchItem[]
+  statusHistory        SheinBatchStatusHistory[]
+
+  @@index([status, createdAt], map: "idx_shein_batches_status_created_at")
+  @@index([createdAt, id], map: "idx_shein_batches_created_at")
+  @@index([orderedAt], map: "idx_shein_batches_ordered_at")
+  @@index([createdById, createdAt], map: "idx_shein_batches_created_by_created_at")
+  @@map("shein_batches")
+}
+
+model SheinBatchItem {
+  id                         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  batchId                    String          @map("batch_id") @db.Uuid
+  orderId                    String          @map("order_id") @db.Uuid
+  orderItemId                String          @map("order_item_id") @db.Uuid
+  productId                  String?         @map("product_id") @db.Uuid
+  productVariantId           String?         @map("product_variant_id") @db.Uuid
+  orderNumberSnapshot        String          @map("order_number_snapshot") @db.VarChar(40)
+  customerNameSnapshot       String          @map("customer_name_snapshot") @db.VarChar(160)
+  customerPhoneSnapshot      String          @map("customer_phone_snapshot") @db.VarChar(32)
+  productNameSnapshot        String          @map("product_name_snapshot") @db.VarChar(220)
+  productVariantNameSnapshot String?         @map("product_variant_name_snapshot") @db.VarChar(160)
+  quantity                   Int
+  unitSarAmount              Int             @default(0) @map("unit_sar_amount")
+  totalSarAmount             Int             @default(0) @map("total_sar_amount")
+  unitEgpAmount              Int             @default(0) @map("unit_egp_amount")
+  totalEgpAmount             Int             @default(0) @map("total_egp_amount")
+  whatsappMessageTemplate    String?         @map("whatsapp_message_template")
+  notes                      String?
+  createdAt                  DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                  DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  batch                      SheinBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  order                      Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem                  OrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  product                    Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productVariant             ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, orderItemId], map: "uq_shein_batch_items_batch_order_item")
+  @@index([batchId], map: "idx_shein_batch_items_batch_id")
+  @@index([orderId], map: "idx_shein_batch_items_order_id")
+  @@index([orderItemId], map: "idx_shein_batch_items_order_item_id")
+  @@index([productId], map: "idx_shein_batch_items_product_id")
+  @@index([productVariantId], map: "idx_shein_batch_items_product_variant_id")
+  @@index([customerPhoneSnapshot], map: "idx_shein_batch_items_customer_phone")
+  @@map("shein_batch_items")
+}
+
+model SheinBatchStatusHistory {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  batchId         String            @map("batch_id") @db.Uuid
+  fromStatus      SheinBatchStatus? @map("from_status")
+  toStatus        SheinBatchStatus  @map("to_status")
+  note            String?
+  changedById     String?           @map("changed_by_id") @db.Uuid
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  batch           SheinBatch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  changedBy       User?             @relation("SheinBatchStatusChanger", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([batchId, createdAt], map: "idx_shein_batch_status_history_batch_created")
+  @@index([toStatus, createdAt], map: "idx_shein_batch_status_history_to_status_created")
+  @@index([changedById, createdAt], map: "idx_shein_batch_status_history_changed_by_created")
+  @@map("shein_batch_status_history")
+}
+
+model SheinBatchNumberCounter {
+  batchMonth DateTime @id @map("batch_month") @db.Date
+  nextNumber Int      @default(1) @map("next_number")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("shein_batch_number_counters")
+}
+
+model OrderNumberCounter {
+  orderDate DateTime @id @map("order_date") @db.Date
+  nextNumber Int     @default(1) @map("next_number")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("order_number_counters")
+}
+
+model Setting {
+  key         String       @id @db.VarChar(120)
+  value       Json         @db.JsonB
+  scope       SettingScope @default(SYSTEM)
+  description String?
+  updatedById String?      @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  updatedBy   User?        @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([scope], map: "idx_settings_scope")
+  @@map("settings")
+}
+
+model AuditLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  action      String   @db.VarChar(120)
+  entityType  String   @map("entity_type") @db.VarChar(120)
+  entityId    String?  @map("entity_id") @db.VarChar(120)
+  ipAddress   String?  @map("ip_address") @db.Inet
+  userAgent   String?  @map("user_agent")
+  metadata    Json     @default("{}") @db.JsonB
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actorUser   User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt], map: "idx_audit_logs_created_at")
+  @@index([actorUserId, createdAt], map: "idx_audit_logs_actor_created_at")
+  @@index([entityType, entityId, createdAt], map: "idx_audit_logs_entity_created_at")
+  @@index([action, createdAt], map: "idx_audit_logs_action_created_at")
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?   @map("user_id") @db.Uuid
+  titleAr   String    @map("title_ar") @db.VarChar(180)
+  titleEn   String?   @map("title_en") @db.VarChar(180)
+  messageAr String    @map("message_ar")
+  messageEn String?   @map("message_en")
+  type      String    @default("INFO") @db.VarChar(40)
+  entityType String?  @map("entity_type") @db.VarChar(120)
+  entityId  String?   @map("entity_id") @db.VarChar(120)
+  readAt    DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt], map: "idx_notifications_user_read_created")
+  @@index([readAt, createdAt], map: "idx_notifications_read_created")
+  @@index([entityType, entityId, createdAt], map: "idx_notifications_entity_created")
+  @@map("notifications")
+}
+
+model SheinImport {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestedById       String?           @map("requested_by_id") @db.Uuid
+  sourceUrl           String            @map("source_url")
+  normalizedUrlKey    String?           @map("normalized_url_key") @db.VarChar(300)
+  status              SheinImportStatus @default(PENDING)
+  rawPayload          Json?             @map("raw_payload") @db.JsonB
+  previewPayload      Json?             @map("preview_payload") @db.JsonB
+  editedPayload       Json?             @map("edited_payload") @db.JsonB
+  errors              Json?             @db.JsonB
+  retryCount          Int               @default(0) @map("retry_count")
+  approvedAt          DateTime?         @map("approved_at") @db.Timestamptz(3)
+  publishedAt         DateTime?         @map("published_at") @db.Timestamptz(3)
+  createdProductId    String?           @map("created_product_id") @db.Uuid
+  importedImagesCount Int               @default(0) @map("imported_images_count")
+  errorCode           String?           @map("error_code") @db.VarChar(80)
+  errorMessage        String?           @map("error_message")
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  completedAt         DateTime?         @map("completed_at") @db.Timestamptz(3)
+
+  requestedBy         User?             @relation(fields: [requestedById], references: [id], onDelete: SetNull)
+  createdProduct      Product?          @relation(fields: [createdProductId], references: [id], onDelete: SetNull)
+
+  @@index([requestedById, createdAt], map: "idx_shein_imports_requested_by_created_at")
+  @@index([status, createdAt], map: "idx_shein_imports_status_created_at")
+  @@index([normalizedUrlKey], map: "idx_shein_imports_normalized_url_key")
+  @@index([createdProductId], map: "idx_shein_imports_created_product_id")
+  @@index([createdAt, id], map: "idx_shein_imports_created_at")
+  @@map("shein_imports")
+}

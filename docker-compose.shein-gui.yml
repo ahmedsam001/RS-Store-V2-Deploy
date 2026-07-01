@@ -1,0 +1,19 @@
+# Optional development-only override for V1-style automatic SHEIN import.
+# It lets the API container open a visible Chromium window on the Linux host via X11.
+# Use only locally. Do not use this override in production.
+services:
+  api:
+    environment:
+      SHEIN_BROWSER_IMPORT: ${SHEIN_BROWSER_IMPORT:-interactive}
+      SHEIN_ASSIST_HEADLESS: ${SHEIN_ASSIST_HEADLESS:-0}
+      SHEIN_BROWSER_NO_SANDBOX: ${SHEIN_BROWSER_NO_SANDBOX:-true}
+      SHEIN_BROWSER_PATH: ${SHEIN_BROWSER_PATH:-/usr/bin/chromium-browser}
+      DISPLAY: ${DISPLAY:-:0}
+      WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - shein_chrome_profile:/tmp/rsstore-v2-shein-browser-node
+    shm_size: "1gb"
+
+volumes:
+  shein_chrome_profile:

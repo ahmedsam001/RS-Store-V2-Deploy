@@ -1,0 +1,51 @@
+{
+  "name": "rs-store-v2",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "db:generate": "npm run db:generate -w @rs-store/api",
+    "db:push": "npm run db:push -w @rs-store/api",
+    "db:migrate": "npm run db:migrate -w @rs-store/api",
+    "prebuild": "npm run db:generate",
+    "pretypecheck": "npm run db:generate",
+    "test": "npm run test -w @rs-store/api",
+    "db:deploy": "npm run db:deploy -w @rs-store/api",
+    "db:status": "npm run db:status -w @rs-store/api",
+    "db:validate": "npm run db:validate -w @rs-store/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.20.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "prisma": {
+    "schema": "apps/api/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@nestjs/platform-express": "^11.1.27",
+    "cloudinary": "^2.10.0",
+    "multer": "^2.2.0"
+  }
+}
