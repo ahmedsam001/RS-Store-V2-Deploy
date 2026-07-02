@@ -22,7 +22,8 @@
     "test": "npm run test -w @rs-store/api",
     "db:deploy": "npm run db:deploy -w @rs-store/api",
     "db:status": "npm run db:status -w @rs-store/api",
-    "db:validate": "npm run db:validate -w @rs-store/api"
+    "db:validate": "npm run db:validate -w @rs-store/api",
+    "start": "npm run start:prod -w @rs-store/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
@@ -37,8 +38,8 @@
     "typescript-eslint": "^8.20.0"
   },
   "engines": {
-    "node": ">=22.0.0",
-    "npm": ">=10.0.0"
+    "node": "24.x",
+    "npm": "11.x"
   },
   "prisma": {
     "schema": "apps/api/prisma/schema.prisma"
