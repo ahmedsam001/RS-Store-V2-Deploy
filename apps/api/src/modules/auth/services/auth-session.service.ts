@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { Request, Response } from 'express';
+import type { CookieOptions, Request, Response } from 'express';
 import { sha256 } from '../../../common/utils/hash.util';
 import { clientIp, parseCookieHeader, userAgent } from '../../../common/utils/request.util';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
@@ -140,18 +140,14 @@ export class AuthSessionService {
   }
 
   clearAuthCookies(response: Response): void {
-    const secure = this.configService.getOrThrow<boolean>('COOKIE_SECURE');
+    const cookieOptions = this.authCookieOptions;
     response.clearCookie(this.sessionCookieName, {
-      path: '/',
+      ...cookieOptions,
       httpOnly: true,
-      sameSite: 'lax',
-      secure,
     });
     response.clearCookie(this.csrfCookieName, {
-      path: '/',
+      ...cookieOptions,
       httpOnly: false,
-      sameSite: 'strict',
-      secure,
     });
   }
 
@@ -161,19 +157,15 @@ export class AuthSessionService {
     csrfToken: string,
     maxAgeSeconds: number,
   ): void {
-    const secure = this.configService.getOrThrow<boolean>('COOKIE_SECURE');
+    const cookieOptions = this.authCookieOptions;
     response.cookie(this.sessionCookieName, sessionToken, {
+      ...cookieOptions,
       httpOnly: true,
-      secure,
-      sameSite: 'lax',
-      path: '/',
       maxAge: maxAgeSeconds * 1000,
     });
     response.cookie(this.csrfCookieName, csrfToken, {
+      ...cookieOptions,
       httpOnly: false,
-      secure,
-      sameSite: 'strict',
-      path: '/',
       maxAge: maxAgeSeconds * 1000,
     });
   }
@@ -221,5 +213,16 @@ export class AuthSessionService {
 
   private get csrfCookieName(): string {
     return this.configService.getOrThrow<string>('CSRF_COOKIE_NAME');
+  }
+
+  private get authCookieOptions(): Pick<CookieOptions, 'domain' | 'path' | 'sameSite' | 'secure'> {
+    const domain = this.configService.get<string>('COOKIE_DOMAIN')?.trim();
+
+    return {
+      ...(domain ? { domain } : {}),
+      path: '/',
+      sameSite: 'lax',
+      secure: this.configService.getOrThrow<boolean>('COOKIE_SECURE'),
+    };
   }
 }

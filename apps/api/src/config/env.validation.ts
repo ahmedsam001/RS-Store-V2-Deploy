@@ -18,6 +18,7 @@ type ValidatedEnvironment = {
   SESSION_TTL_SECONDS: number;
   REMEMBER_ME_TTL_SECONDS: number;
   COOKIE_SECURE: boolean;
+  COOKIE_DOMAIN?: string;
   UPLOAD_MAX_IMAGE_BYTES: number;
   UPLOAD_ALLOWED_FOLDERS: string;
   ADMIN_BOOTSTRAP_ENABLED: boolean;
@@ -275,6 +276,7 @@ export function validateEnvironment(config: Record<string, unknown>): ValidatedE
   const cloudinaryApiKey = String(config.CLOUDINARY_API_KEY);
   const cloudinaryApiSecret = String(config.CLOUDINARY_API_SECRET);
   const cookieSecure = optionalBoolean(config.COOKIE_SECURE, typedNodeEnvironment === 'production');
+  const cookieDomain = optionalTrimmed(config.COOKIE_DOMAIN);
   const sessionTtlSeconds = requirePositiveInteger(
     'SESSION_TTL_SECONDS',
     config.SESSION_TTL_SECONDS,
@@ -332,7 +334,10 @@ export function validateEnvironment(config: Record<string, unknown>): ValidatedE
   }
 
   const uploadAllowedFolders = validateFolders(
-    optionalString(config.UPLOAD_ALLOWED_FOLDERS, 'rs-store/products,rs-store/order-proofs'),
+    optionalString(
+      config.UPLOAD_ALLOWED_FOLDERS,
+      'rs-store/products,rs-store/order-proofs,rs-store/categories,rs-store/shein-imports',
+    ),
   );
   const bootstrapConfig = validateBootstrap(config, typedNodeEnvironment);
   const sheinImportCurrency = optionalString(config.SHEIN_IMPORT_CURRENCY, 'SAR').toUpperCase();
@@ -358,6 +363,7 @@ export function validateEnvironment(config: Record<string, unknown>): ValidatedE
     SESSION_TTL_SECONDS: sessionTtlSeconds,
     REMEMBER_ME_TTL_SECONDS: rememberMeTtlSeconds,
     COOKIE_SECURE: cookieSecure,
+    COOKIE_DOMAIN: cookieDomain,
     UPLOAD_MAX_IMAGE_BYTES: uploadMaxImageBytes,
     UPLOAD_ALLOWED_FOLDERS: uploadAllowedFolders,
     ADMIN_BOOTSTRAP_ENABLED: bootstrapConfig.ADMIN_BOOTSTRAP_ENABLED ?? false,
