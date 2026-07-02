@@ -14,6 +14,7 @@
     "format:check": "prettier --check .",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
+    "heroku-postbuild": "npm run build -w @rs-store/web",
     "db:generate": "npm run db:generate -w @rs-store/api",
     "db:push": "npm run db:push -w @rs-store/api",
     "db:migrate": "npm run db:migrate -w @rs-store/api",
@@ -23,7 +24,7 @@
     "db:deploy": "npm run db:deploy -w @rs-store/api",
     "db:status": "npm run db:status -w @rs-store/api",
     "db:validate": "npm run db:validate -w @rs-store/api",
-    "start": "npm run start:prod -w @rs-store/api"
+    "start": "npm run start -w @rs-store/web"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
