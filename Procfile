@@ -1,1 +1,1 @@
-web: npm run start:prod -w @rs-store/api
+web: npm run start -w @rs-store/web
