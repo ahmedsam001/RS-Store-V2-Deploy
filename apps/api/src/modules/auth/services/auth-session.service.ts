@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { Request, Response } from 'express';
+import type { CookieOptions, Request, Response } from 'express';
 import { sha256 } from '../../../common/utils/hash.util';
 import { clientIp, parseCookieHeader, userAgent } from '../../../common/utils/request.util';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
@@ -140,18 +140,14 @@ export class AuthSessionService {
   }
 
   clearAuthCookies(response: Response): void {
-    const secure = this.configService.getOrThrow<boolean>('COOKIE_SECURE');
+    const cookiePolicy = this.authCookiePolicy;
     response.clearCookie(this.sessionCookieName, {
-      path: '/',
+      ...cookiePolicy,
       httpOnly: true,
-      sameSite: 'lax',
-      secure,
     });
     response.clearCookie(this.csrfCookieName, {
-      path: '/',
+      ...cookiePolicy,
       httpOnly: false,
-      sameSite: 'strict',
-      secure,
     });
   }
 
@@ -161,19 +157,15 @@ export class AuthSessionService {
     csrfToken: string,
     maxAgeSeconds: number,
   ): void {
-    const secure = this.configService.getOrThrow<boolean>('COOKIE_SECURE');
+    const cookiePolicy = this.authCookiePolicy;
     response.cookie(this.sessionCookieName, sessionToken, {
+      ...cookiePolicy,
       httpOnly: true,
-      secure,
-      sameSite: 'lax',
-      path: '/',
       maxAge: maxAgeSeconds * 1000,
     });
     response.cookie(this.csrfCookieName, csrfToken, {
+      ...cookiePolicy,
       httpOnly: false,
-      secure,
-      sameSite: 'strict',
-      path: '/',
       maxAge: maxAgeSeconds * 1000,
     });
   }
@@ -221,5 +213,15 @@ export class AuthSessionService {
 
   private get csrfCookieName(): string {
     return this.configService.getOrThrow<string>('CSRF_COOKIE_NAME');
+  }
+
+  private get authCookiePolicy(): Pick<CookieOptions, 'path' | 'sameSite' | 'secure'> {
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+
+    return {
+      path: '/',
+      sameSite: isProduction ? 'none' : 'lax',
+      secure: isProduction,
+    };
   }
 }
