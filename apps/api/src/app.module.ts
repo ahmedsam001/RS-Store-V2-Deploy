@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AppController } from './app.controller';
 import { AdminModule } from './modules/admin/admin.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -56,5 +57,6 @@ import { CloudinaryModule } from './infrastructure/storage/cloudinary/cloudinary
     HealthModule,
     SeoModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}

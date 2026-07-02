@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -20,7 +20,9 @@ async function bootstrap(): Promise<void> {
   expressApp.set('trust proxy', 1);
   app.use(requestIdMiddleware);
   app.use(securityHeadersMiddleware);
-  app.setGlobalPrefix(configService.getOrThrow<string>('API_PREFIX'));
+  app.setGlobalPrefix(configService.getOrThrow<string>('API_PREFIX'), {
+    exclude: [{ path: '', method: RequestMethod.GET }],
+  });
   app.enableCors({
     origin: parseAllowedOrigins(configService.getOrThrow<string>('FRONTEND_ORIGIN')),
     credentials: true,
