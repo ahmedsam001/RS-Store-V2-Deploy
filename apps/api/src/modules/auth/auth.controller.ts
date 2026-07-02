@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import { CurrentSession } from '../../common/decorators/current-session.decorator';
 import { RateLimit } from '../../common/decorators/rate-limit.decorator';
@@ -33,7 +44,11 @@ export class AuthController {
   @Post('customer/login')
   @SkipCsrf()
   @RateLimit({ bucket: 'customer_login', limit: 10, windowMs: 15 * 60 * 1000 })
-  customerLogin(@Body() dto: CustomerLoginDto, @Req() request: Request, @Res({ passthrough: true }) response: Response) {
+  customerLogin(
+    @Body() dto: CustomerLoginDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     this.setNoStoreHeaders(response);
     return this.authService.customerLogin(dto, request, response);
   }
@@ -41,7 +56,11 @@ export class AuthController {
   @Post('admin/login')
   @SkipCsrf()
   @RateLimit({ bucket: 'admin_login', limit: 10, windowMs: 15 * 60 * 1000 })
-  adminLogin(@Body() dto: AdminLoginDto, @Req() request: Request, @Res({ passthrough: true }) response: Response) {
+  adminLogin(
+    @Body() dto: AdminLoginDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     this.setNoStoreHeaders(response);
     return this.authService.adminLogin(dto, request, response);
   }

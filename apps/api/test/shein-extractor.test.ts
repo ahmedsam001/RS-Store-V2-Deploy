@@ -22,7 +22,11 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/Floral-Dress-p-123.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/Floral-Dress-p-123.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.nameAr, 'Floral Dress');
     assert.equal(preview.priceAmount, '299.50');
@@ -44,7 +48,11 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://ar.shein.com/Casual-Shirt-p-456.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://ar.shein.com/Casual-Shirt-p-456.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.nameAr, 'Casual Shirt');
     assert.equal(preview.description, 'Cotton shirt');
@@ -62,7 +70,11 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/Avif-Dress-p-789.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/Avif-Dress-p-789.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.images[0]?.url, 'https://img.shein.com/images20240301/pi/12345/1.avif');
   });
@@ -78,23 +90,37 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/Star-Shirt-p-999.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/Star-Shirt-p-999.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.images.length, 1);
     assert.equal(preview.images[0]?.url, 'https://img.shein.com/images20240301/pi/12345/1.jpg');
   });
 
   it('keeps ordered gallery images up to the SHEIN import limit', () => {
-    const images = Array.from({ length: 25 }, (_, i) => `https://img.shein.com/images20240301/pi/12345/${i + 1}.jpg`).join(',');
+    const images = Array.from(
+      { length: 25 },
+      (_, i) => `https://img.shein.com/images20240301/pi/12345/${i + 1}.jpg`,
+    ).join(',');
     const html = `
       <html><head>
       <script type="application/ld+json">
-        {"@type":"Product","name":"Multi Image","image":[${images.split(',').map((url) => `"${url}"`).join(',')}],"offers":{"price":"300.00","priceCurrency":"SAR"}}
+        {"@type":"Product","name":"Multi Image","image":[${images
+          .split(',')
+          .map((url) => `"${url}"`)
+          .join(',')}],"offers":{"price":"300.00","priceCurrency":"SAR"}}
       </script>
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/Multi-Image-p-111.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/Multi-Image-p-111.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.images.length, 20);
     assert.equal(preview.images[0]?.url, 'https://img.shein.com/images20240301/pi/12345/1.jpg');
@@ -122,7 +148,11 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/Price-Test-p-222.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/Price-Test-p-222.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.priceAmount, '50.00');
   });
@@ -144,7 +174,11 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/Currency-Name-p-333.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/Currency-Name-p-333.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.priceAmount, '120.00');
   });
@@ -158,7 +192,11 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/External-Image-p-444.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/External-Image-p-444.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.images.length, 0);
   });
@@ -172,7 +210,11 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/Path-Test-p-555.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/Path-Test-p-555.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.images.length, 1);
     assert.equal(preview.images[0]?.url, 'https://img.shein.com/images20240301/pi/12345/b.jpg');
@@ -196,7 +238,11 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/Discount-Dress-p-777.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/Discount-Dress-p-777.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.priceAmount, '45.00');
   });
@@ -222,16 +268,23 @@ describe('SHEIN extractor', () => {
       </body></html>
     `;
 
-    const preview = createExtractor().extract('https://www.shein.com/test-dress-p-123456.html', html, marketplace);
+    const preview = createExtractor().extract(
+      'https://www.shein.com/test-dress-p-123456.html',
+      html,
+      marketplace,
+    );
 
     assert.equal(preview.nameAr, 'Test SHEIN Dress');
     assert.equal(preview.priceAmount, '94.21');
     assert.equal(preview.originalPriceAmount, '129.99');
-    assert.deepEqual(preview.images.map((image) => image.url), [
-      'https://img.ltwebstatic.com/v4/j/pi/a/itemA_thumbnail_405x552.jpg',
-      'https://img.ltwebstatic.com/v4/j/pi/a/itemB_thumbnail_405x552.jpg',
-      'https://img.ltwebstatic.com/v4/j/pi/a/itemC_thumbnail_405x552.webp',
-    ]);
+    assert.deepEqual(
+      preview.images.map((image) => image.url),
+      [
+        'https://img.ltwebstatic.com/v4/j/pi/a/itemA_thumbnail_405x552.jpg',
+        'https://img.ltwebstatic.com/v4/j/pi/a/itemB_thumbnail_405x552.jpg',
+        'https://img.ltwebstatic.com/v4/j/pi/a/itemC_thumbnail_405x552.webp',
+      ],
+    );
   });
 
   it('rejects detected marketplace currency that is not SAR', () => {
@@ -244,7 +297,14 @@ describe('SHEIN extractor', () => {
       </head></html>
     `;
 
-    assert.throws(() => createExtractor().extract('https://www.shein.com/Wrong-Market-Dress-p-888.html', html, marketplace), /visible price does not match selected currency/);
+    assert.throws(
+      () =>
+        createExtractor().extract(
+          'https://www.shein.com/Wrong-Market-Dress-p-888.html',
+          html,
+          marketplace,
+        ),
+      /visible price does not match (the )?selected currency/i,
+    );
   });
-
 });

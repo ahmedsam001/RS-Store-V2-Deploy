@@ -104,7 +104,9 @@ export class CatalogSearchService {
     }
 
     if (query.categorySlug) {
-      conditions.push(Prisma.sql`(c.slug = ${query.categorySlug} OR sc.slug = ${query.categorySlug})`);
+      conditions.push(
+        Prisma.sql`(c.slug = ${query.categorySlug} OR sc.slug = ${query.categorySlug})`,
+      );
     }
 
     if (query.subCategorySlug) {

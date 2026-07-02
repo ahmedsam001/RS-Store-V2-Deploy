@@ -47,7 +47,14 @@ export class AuditService {
       return metadata;
     }
 
-    const blockedKeys = new Set(['password', 'passwordHash', 'token', 'accessToken', 'refreshToken', 'secret']);
+    const blockedKeys = new Set([
+      'password',
+      'passwordHash',
+      'token',
+      'accessToken',
+      'refreshToken',
+      'secret',
+    ]);
     const clone: Record<string, Prisma.InputJsonValue> = {};
     for (const [key, value] of Object.entries(metadata)) {
       clone[key] = blockedKeys.has(key) ? '[REDACTED]' : (value as Prisma.InputJsonValue);

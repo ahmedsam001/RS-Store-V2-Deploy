@@ -1,6 +1,16 @@
 import { SheinBatchStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsDate, IsDecimal, IsEnum, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsDate,
+  IsDecimal,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
 import { AddSheinBatchItemDto } from './add-shein-batch-item.dto';
 
 export class CreateSheinBatchDto {

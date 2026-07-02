@@ -39,10 +39,7 @@ export class CloudinaryController {
       throw new BadRequestException('Image file is required');
     }
 
-    const result = await this.cloudinaryService.uploadImage(
-      file.buffer,
-      'rs-store/test',
-    );
+    const result = await this.cloudinaryService.uploadImage(file.buffer, 'rs-store/test');
 
     return {
       success: true,

@@ -156,17 +156,25 @@ export function CheckoutPage() {
         return;
       }
 
-      const orderWithDepositProof = await ordersApi.checkoutWithDepositProof(form, depositProofFile, {
-        csrfToken,
-        idempotencyKey: form.idempotencyKey,
-      });
+      const orderWithDepositProof = await ordersApi.checkoutWithDepositProof(
+        form,
+        depositProofFile,
+        {
+          csrfToken,
+          idempotencyKey: form.idempotencyKey,
+        },
+      );
       await refresh();
       navigate(orderPath(orderWithDepositProof.id), {
         replace: true,
-        state: { message: 'Order created and deposit proof uploaded successfully, awaiting admin review' },
+        state: {
+          message: 'Order created and deposit proof uploaded successfully, awaiting admin review',
+        },
       });
     } catch (caughtError) {
-      setSubmitError(caughtError instanceof Error ? caughtError.message : 'Failed to complete checkout');
+      setSubmitError(
+        caughtError instanceof Error ? caughtError.message : 'Failed to complete checkout',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -178,11 +186,17 @@ export function CheckoutPage() {
         <CatalogState title="Preparing payment" message="Loading cart" />
       </div>
     );
-  if (error) return (
-    <div className="rs-page-stack">
-      <CatalogState title="Failed to load cart" message={error} ctaLabel="Try Again" ctaHref={PATHS.cart} />
-    </div>
-  );
+  if (error)
+    return (
+      <div className="rs-page-stack">
+        <CatalogState
+          title="Failed to load cart"
+          message={error}
+          ctaLabel="Try Again"
+          ctaHref={PATHS.cart}
+        />
+      </div>
+    );
   if (!cart || cart.items.length === 0) return <EmptyCheckoutCart />;
   if (status !== 'authenticated')
     return (
@@ -303,7 +317,11 @@ export function CheckoutPage() {
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
                   Choose payment method and upload proof image
                 </p>
-                <div className="mt-4 grid gap-2" role="radiogroup" aria-label="Deposit payment method">
+                <div
+                  className="mt-4 grid gap-2"
+                  role="radiogroup"
+                  aria-label="Deposit payment method"
+                >
                   <PaymentMethodButton
                     label="Instapay"
                     value="instapay"
@@ -385,7 +403,10 @@ export function CheckoutPage() {
               ))}
             </div>
 
-            <div className="mt-5 border-t pt-5" style={{ borderColor: 'hsl(var(--rs-peach-light))' }}>
+            <div
+              className="mt-5 border-t pt-5"
+              style={{ borderColor: 'hsl(var(--rs-peach-light))' }}
+            >
               <div className="flex items-center justify-between text-lg font-black">
                 <span>Total</span>
                 <span className="rs-price-primary">{formatPrice(cart.summary.subtotal)}</span>
@@ -414,7 +435,10 @@ export function CheckoutPage() {
                 />
                 <SummaryLine
                   label="Remaining after deposit"
-                  value={formatCheckoutMoney(checkoutTotals.remainingAmount, checkoutTotals.currency)}
+                  value={formatCheckoutMoney(
+                    checkoutTotals.remainingAmount,
+                    checkoutTotals.currency,
+                  )}
                   isStrong
                 />
               </div>
@@ -468,7 +492,8 @@ function staticCartBlockReason(cart: Cart | null): string | null {
   }
 
   const hasStaticProduct = cart.items.some(
-    (item) => !isDatabaseId(item.product.id) || (item.variant?.id ? !isDatabaseId(item.variant.id) : false),
+    (item) =>
+      !isDatabaseId(item.product.id) || (item.variant?.id ? !isDatabaseId(item.variant.id) : false),
   );
   return hasStaticProduct
     ? 'Checkout is blocked because the cart contains products without real database IDs. Remove static preview products and add live catalog products.'
@@ -478,7 +503,7 @@ function staticCartBlockReason(cart: Cart | null): string | null {
 function isDatabaseId(value: string | null | undefined): boolean {
   return Boolean(
     value &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
   );
 }
 
@@ -616,7 +641,15 @@ function SummaryLine({
       className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 ${isStrong ? 'font-black text-rs-ink' : 'text-muted-foreground'}`}
     >
       <span className="min-w-0 break-words">{label}</span>
-      <span className={isStrong ? 'break-words text-end rs-price-primary' : 'break-words text-end font-semibold text-rs-ink'}>{value}</span>
+      <span
+        className={
+          isStrong
+            ? 'break-words text-end rs-price-primary'
+            : 'break-words text-end font-semibold text-rs-ink'
+        }
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -641,7 +674,8 @@ function calculateCheckoutTotals({
   const vodafoneFeeAmount =
     paymentMethod === 'vodafone'
       ? roundMoney(
-          (depositBaseAmount * (Number.isFinite(vodafoneFeePercent) ? vodafoneFeePercent : 1)) / 100,
+          (depositBaseAmount * (Number.isFinite(vodafoneFeePercent) ? vodafoneFeePercent : 1)) /
+            100,
         )
       : 0;
   const depositAmount = roundMoney(depositBaseAmount + vodafoneFeeAmount);

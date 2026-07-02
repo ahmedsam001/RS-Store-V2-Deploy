@@ -379,8 +379,12 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 42%, hsl(var(--rs-cream)) 0%, hsl(var(--rs-cream-warm)) 48%, hsl(var(--rs-peach-light) / 0.55) 100%);
+  background: radial-gradient(
+    circle at 50% 42%,
+    hsl(var(--rs-cream)) 0%,
+    hsl(var(--rs-cream-warm)) 48%,
+    hsl(var(--rs-peach-light) / 0.55) 100%
+  );
   color: hsl(var(--rs-ink-soft));
 }
 

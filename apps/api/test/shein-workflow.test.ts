@@ -42,14 +42,18 @@ describe('SHEIN URL normalization and market params', () => {
   const market = { countryCode: 'KW', currencyCode: 'SAR', language: 'ar' };
 
   it('normalizes V1-style SHEIN appjump links and strips tracking noise', () => {
-    const link = 'api-shein.shein.com/h5/sharejump/appjump?link=RqlfknoE7CJ_&localcountry=KW&shc=2_RqlfknoE7CJ&url_from=GM71181054314';
+    const link =
+      'api-shein.shein.com/h5/sharejump/appjump?link=RqlfknoE7CJ_&localcountry=KW&shc=2_RqlfknoE7CJ&url_from=GM71181054314';
     assert.equal(service.normalizeUrlKey(link), 'share:rqlfknoe7cj_');
     assert.equal(service.productSlugFromUrl(link, 'fallback-product'), 'shein-71181054314');
     assert.match(service.parseSheinUrl(link).toString(), /^https:\/\/api-shein\.shein\.com/);
   });
 
   it('adds market parameters to full product URLs', () => {
-    const prepared = service.applyV1MarketToSheinUrl('www.shein.com/Floral-Dress-p-123456.html?currency=SAR&lang=en', market);
+    const prepared = service.applyV1MarketToSheinUrl(
+      'www.shein.com/Floral-Dress-p-123456.html?currency=SAR&lang=en',
+      market,
+    );
     assert.equal(prepared.searchParams.get('country'), 'KW');
     assert.equal(prepared.searchParams.get('localcountry'), 'KW');
     assert.equal(prepared.searchParams.get('currency'), 'SAR');
@@ -57,14 +61,20 @@ describe('SHEIN URL normalization and market params', () => {
   });
 
   it('uses the selected GCC country while keeping SAR fixed', () => {
-    const prepared = service.applyV1MarketToSheinUrl('www.shein.com/Floral-Dress-p-123456.html?currency=CHF&country=CH', { countryCode: 'SA', currencyCode: 'SAR', language: 'ar' });
+    const prepared = service.applyV1MarketToSheinUrl(
+      'www.shein.com/Floral-Dress-p-123456.html?currency=CHF&country=CH',
+      { countryCode: 'SA', currencyCode: 'SAR', language: 'ar' },
+    );
     assert.equal(prepared.searchParams.get('country'), 'SA');
     assert.equal(prepared.searchParams.get('localcountry'), 'SA');
     assert.equal(prepared.searchParams.get('currency'), 'SAR');
   });
 
   it('supports query-only share links', () => {
-    const prepared = service.applyV1MarketToSheinUrl('link=abc123&url_from=GM987654321&currency=SAR', market);
+    const prepared = service.applyV1MarketToSheinUrl(
+      'link=abc123&url_from=GM987654321&currency=SAR',
+      market,
+    );
     assert.equal(prepared.hostname, 'api-shein.shein.com');
     assert.equal(prepared.pathname, '/h5/sharejump/appjump');
     assert.equal(prepared.searchParams.get('currency'), 'SAR');
@@ -72,7 +82,10 @@ describe('SHEIN URL normalization and market params', () => {
   });
 
   it('supports partial appjump links without https', () => {
-    const prepared = service.applyV1MarketToSheinUrl('h5/sharejump/appjump?link=abc&goods_id=123456', market);
+    const prepared = service.applyV1MarketToSheinUrl(
+      'h5/sharejump/appjump?link=abc&goods_id=123456',
+      market,
+    );
     assert.equal(prepared.hostname, 'api-shein.shein.com');
     assert.equal(prepared.searchParams.get('goods_id'), '123456');
     assert.equal(prepared.searchParams.get('lang'), 'ar');

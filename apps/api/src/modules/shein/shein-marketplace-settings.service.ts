@@ -27,12 +27,23 @@ export class SheinMarketplaceSettingsService {
 
   async getSettings(): Promise<SheinMarketplaceSettings> {
     const rows = await this.prisma.setting.findMany({
-      where: { key: { in: [SHEIN_COUNTRY_SETTING_KEY, SHEIN_CURRENCY_SETTING_KEY, SHEIN_LANGUAGE_SETTING_KEY] } },
+      where: {
+        key: {
+          in: [SHEIN_COUNTRY_SETTING_KEY, SHEIN_CURRENCY_SETTING_KEY, SHEIN_LANGUAGE_SETTING_KEY],
+        },
+      },
     });
     const map = new Map(rows.map((row) => [row.key, row.value]));
-    const envCountry = normalizeSheinCountry(this.configService.get<string>('SHEIN_IMPORT_COUNTRY_CODE'), DEFAULT_SHEIN_COUNTRY);
+    const envCountry = normalizeSheinCountry(
+      this.configService.get<string>('SHEIN_IMPORT_COUNTRY_CODE'),
+      DEFAULT_SHEIN_COUNTRY,
+    );
     const countryCode = normalizeSheinCountry(map.get(SHEIN_COUNTRY_SETTING_KEY), envCountry);
-    const language = normalizeSheinLanguage(map.get(SHEIN_LANGUAGE_SETTING_KEY) ?? this.configService.get<string>('SHEIN_IMPORT_LANGUAGE') ?? DEFAULT_SHEIN_LANGUAGE);
+    const language = normalizeSheinLanguage(
+      map.get(SHEIN_LANGUAGE_SETTING_KEY) ??
+        this.configService.get<string>('SHEIN_IMPORT_LANGUAGE') ??
+        DEFAULT_SHEIN_LANGUAGE,
+    );
 
     return {
       countryCode,
@@ -42,31 +53,46 @@ export class SheinMarketplaceSettingsService {
     };
   }
 
-  async updateSettings(dto: UpdateSheinMarketplaceSettingsDto, user: AuthenticatedUser): Promise<SheinMarketplaceSettings> {
+  async updateSettings(
+    dto: UpdateSheinMarketplaceSettingsDto,
+    user: AuthenticatedUser,
+  ): Promise<SheinMarketplaceSettings> {
     const countryCode = assertSupportedSheinCountry(dto.countryCode);
     const language = normalizeSheinLanguage(dto.language ?? DEFAULT_SHEIN_LANGUAGE);
     const data = [
-      { key: SHEIN_COUNTRY_SETTING_KEY, value: countryCode, description: 'SHEIN import target marketplace country' },
-      { key: SHEIN_CURRENCY_SETTING_KEY, value: FIXED_SHEIN_CURRENCY, description: 'SHEIN import fixed order currency' },
+      {
+        key: SHEIN_COUNTRY_SETTING_KEY,
+        value: countryCode,
+        description: 'SHEIN import target marketplace country',
+      },
+      {
+        key: SHEIN_CURRENCY_SETTING_KEY,
+        value: FIXED_SHEIN_CURRENCY,
+        description: 'SHEIN import fixed order currency',
+      },
       { key: SHEIN_LANGUAGE_SETTING_KEY, value: language, description: 'SHEIN import language' },
     ];
 
-    await this.prisma.$transaction(data.map((setting) => this.prisma.setting.upsert({
-      where: { key: setting.key },
-      create: {
-        key: setting.key,
-        value: setting.value as Prisma.InputJsonValue,
-        scope: SettingScope.ADMIN,
-        description: setting.description,
-        updatedById: user.id,
-      },
-      update: {
-        value: setting.value as Prisma.InputJsonValue,
-        scope: SettingScope.ADMIN,
-        description: setting.description,
-        updatedById: user.id,
-      },
-    })));
+    await this.prisma.$transaction(
+      data.map((setting) =>
+        this.prisma.setting.upsert({
+          where: { key: setting.key },
+          create: {
+            key: setting.key,
+            value: setting.value as Prisma.InputJsonValue,
+            scope: SettingScope.ADMIN,
+            description: setting.description,
+            updatedById: user.id,
+          },
+          update: {
+            value: setting.value as Prisma.InputJsonValue,
+            scope: SettingScope.ADMIN,
+            description: setting.description,
+            updatedById: user.id,
+          },
+        }),
+      ),
+    );
 
     return this.getSettings();
   }

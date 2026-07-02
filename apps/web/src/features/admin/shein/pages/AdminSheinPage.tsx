@@ -36,7 +36,10 @@ export function AdminSheinPage() {
       />
 
       <section className="admin-shein-console">
-        <SheinMarketplaceCard marketplace={workflow.marketplace} onSaved={workflow.setMarketplace} />
+        <SheinMarketplaceCard
+          marketplace={workflow.marketplace}
+          onSaved={workflow.setMarketplace}
+        />
         <SheinImportStartCard
           sourceUrl={workflow.sourceUrl}
           isStarting={workflow.isStarting}

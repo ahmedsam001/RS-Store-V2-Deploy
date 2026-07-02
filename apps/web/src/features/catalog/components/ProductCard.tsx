@@ -47,14 +47,19 @@ function getProductPriceDisplay(product: CatalogProductCard): ProductPriceDispla
     currentPrice,
     oldPrice: hasDiscount ? oldPrice : null,
     hasDiscount,
-    discountPercentage: hasDiscount ? resolveDiscountPercentage(product, currentAmount, oldAmount) : 0,
+    discountPercentage: hasDiscount
+      ? resolveDiscountPercentage(product, currentAmount, oldAmount)
+      : 0,
     discountAmount: hasDiscount
       ? resolveDiscountAmount(product, currentPrice.currency, currentAmount, oldAmount)
       : null,
   };
 }
 
-function toCatalogPrice(value: PriceLike, fallbackCurrency: string): CatalogProductCard['price'] | null {
+function toCatalogPrice(
+  value: PriceLike,
+  fallbackCurrency: string,
+): CatalogProductCard['price'] | null {
   if (value === null || value === undefined) return null;
   if (typeof value === 'number' || typeof value === 'string') {
     return { amount: String(value), currency: fallbackCurrency };
@@ -72,9 +77,16 @@ function priceAmount(price: PriceLike): number {
   return Number(price.amount);
 }
 
-function resolveDiscountPercentage(product: CatalogProductCard, currentAmount: number, oldAmount: number): number {
-  const explicitDiscount = Number(product.sale?.discountPercent ?? product.discountPercentage ?? product.discount);
-  if (Number.isFinite(explicitDiscount) && explicitDiscount > 0) return Math.round(explicitDiscount);
+function resolveDiscountPercentage(
+  product: CatalogProductCard,
+  currentAmount: number,
+  oldAmount: number,
+): number {
+  const explicitDiscount = Number(
+    product.sale?.discountPercent ?? product.discountPercentage ?? product.discount,
+  );
+  if (Number.isFinite(explicitDiscount) && explicitDiscount > 0)
+    return Math.round(explicitDiscount);
   return Math.round(((oldAmount - currentAmount) / oldAmount) * 100);
 }
 
@@ -85,7 +97,8 @@ function resolveDiscountAmount(
   oldAmount: number,
 ): CatalogProductCard['price'] | null {
   const explicitDiscountAmount = toCatalogPrice(product.sale?.discountAmount, fallbackCurrency);
-  if (explicitDiscountAmount && priceAmount(explicitDiscountAmount) > 0) return explicitDiscountAmount;
+  if (explicitDiscountAmount && priceAmount(explicitDiscountAmount) > 0)
+    return explicitDiscountAmount;
 
   const computedAmount = oldAmount - currentAmount;
   if (!Number.isFinite(computedAmount) || computedAmount <= 0) return null;
@@ -103,7 +116,11 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
   }
 
   return (
-    <article className={`rs-product-card product-card--polished ${className ?? ''}`} tabIndex={-1} aria-label={product.name}>
+    <article
+      className={`rs-product-card product-card--polished ${className ?? ''}`}
+      tabIndex={-1}
+      aria-label={product.name}
+    >
       <div className="rs-product-image-wrap product-card__media">
         <CatalogLink href={productUrl} className="block h-full" aria-label={`View ${product.name}`}>
           {product.primaryImage ? (
@@ -124,11 +141,16 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
               fallbackVariant="product"
             />
           )}
-          <span className="product-card__image-overlay" aria-hidden="true">View item</span>
+          <span className="product-card__image-overlay" aria-hidden="true">
+            View item
+          </span>
         </CatalogLink>
 
         {priceDisplay.hasDiscount ? (
-          <span className="rs-badge-sale product-card__discount-badge" aria-label={`Discount ${priceDisplay.discountPercentage}%`}>
+          <span
+            className="rs-badge-sale product-card__discount-badge"
+            aria-label={`Discount ${priceDisplay.discountPercentage}%`}
+          >
             -{priceDisplay.discountPercentage}%
           </span>
         ) : null}
@@ -136,8 +158,12 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
 
       <div className="product-card__content">
         {product.category ? (
-          <p className="product-card__category" title={`${product.category.name}${product.subCategory ? ` / ${product.subCategory}` : ''}`}>
-            {product.category.name}{product.subCategory ? ` / ${product.subCategory}` : ''}
+          <p
+            className="product-card__category"
+            title={`${product.category.name}${product.subCategory ? ` / ${product.subCategory}` : ''}`}
+          >
+            {product.category.name}
+            {product.subCategory ? ` / ${product.subCategory}` : ''}
           </p>
         ) : null}
 
@@ -149,30 +175,32 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
           <div className="product-card__price-row">
             <span
               className={`product-card__price ${
-                priceDisplay.hasDiscount ? 'product-card__price--sale rs-price-primary' : 'text-rs-ink'
+                priceDisplay.hasDiscount
+                  ? 'product-card__price--sale rs-price-primary'
+                  : 'text-rs-ink'
               }`}
             >
               {formatPrice(priceDisplay.currentPrice)}
             </span>
             {priceDisplay.hasDiscount && priceDisplay.oldPrice ? (
-              <del className="product-card__old-price">
+              <del className="product-card__old-price line-through text-muted-foreground">
                 {formatPrice(priceDisplay.oldPrice)}
               </del>
             ) : null}
           </div>
 
           {priceDisplay.hasDiscount && priceDisplay.discountAmount ? (
-            <p className="product-card__save-amount" aria-label={`You save ${formatPrice(priceDisplay.discountAmount)}`}>
+            <p
+              className="product-card__save-amount"
+              aria-label={`You save ${formatPrice(priceDisplay.discountAmount)}`}
+            >
               Save {formatPrice(priceDisplay.discountAmount)}
             </p>
           ) : null}
         </div>
 
         {product.rating ? (
-          <div
-            className="product-card__rating"
-            aria-label={`Rating ${product.rating} out of 5`}
-          >
+          <div className="product-card__rating" aria-label={`Rating ${product.rating} out of 5`}>
             <span aria-hidden="true">★</span>
             <span>{product.rating.toFixed(1)}</span>
           </div>
@@ -181,7 +209,11 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
         <Button
           className="rs-cart-btn product-card__cta"
           onClick={handlePrimaryAction}
-          aria-label={hasPurchasableVariants ? `Select options for ${product.name}` : `View details for ${product.name}`}
+          aria-label={
+            hasPurchasableVariants
+              ? `Select options for ${product.name}`
+              : `View details for ${product.name}`
+          }
         >
           <ShoppingBag className="h-4 w-4" aria-hidden="true" />
           {hasPurchasableVariants ? 'Select Options' : 'View Details'}

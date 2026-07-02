@@ -127,4 +127,3 @@ This supports the Orders and Payments tabs without adding a database migration.
 ## No Database Migration
 
 This phase does not change the database schema.
-

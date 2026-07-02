@@ -15,7 +15,11 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { PATHS } from '@/shared/constants/routes';
-import { adminApi, type AdminReportStatusRow, type AdminReports } from '@/features/admin/api/admin-api';
+import {
+  adminApi,
+  type AdminReportStatusRow,
+  type AdminReports,
+} from '@/features/admin/api/admin-api';
 import {
   AdminCard,
   AdminCountBadge,
@@ -77,9 +81,13 @@ export function AdminReportsPage() {
 
   const reportHealth = useMemo(() => {
     if (!data) return { label: 'Loading', tone: 'neutral' as const };
-    const reviewCount = data.orders.depositReview + data.orders.finalPaymentReview + data.orders.cashFinalPaymentReview;
+    const reviewCount =
+      data.orders.depositReview +
+      data.orders.finalPaymentReview +
+      data.orders.cashFinalPaymentReview;
     if (reviewCount > 0) return { label: 'Payments need review', tone: 'warning' as const };
-    if (data.orders.readyForBatch > 0) return { label: 'Orders ready for batching', tone: 'info' as const };
+    if (data.orders.readyForBatch > 0)
+      return { label: 'Orders ready for batching', tone: 'info' as const };
     if (data.batches.open > 0) return { label: 'Open batches active', tone: 'gold' as const };
     return { label: 'Operations clear', tone: 'success' as const };
   }, [data]);
@@ -87,7 +95,8 @@ export function AdminReportsPage() {
   if (error) return <AdminError message={error} onRetry={load} />;
   if (!data) return <AdminLoading message="Loading admin reports" />;
 
-  const paymentQueueTotal = data.orders.depositReview + data.orders.finalPaymentReview + data.orders.cashFinalPaymentReview;
+  const paymentQueueTotal =
+    data.orders.depositReview + data.orders.finalPaymentReview + data.orders.cashFinalPaymentReview;
 
   const financialMetrics: ReportMetric[] = [
     {
@@ -291,9 +300,24 @@ export function AdminReportsPage() {
         badgeCount={paymentQueueTotal}
       >
         <div className="grid gap-3 md:grid-cols-3">
-          <QueueLink icon={CreditCard} label="Deposit Review" value={data.orders.depositReview} href={PAYMENT_QUEUE_LINKS.deposit} />
-          <QueueLink icon={WalletCards} label="Final Payment Review" value={data.orders.finalPaymentReview} href={PAYMENT_QUEUE_LINKS.final} />
-          <QueueLink icon={Banknote} label="Cash Final Review" value={data.orders.cashFinalPaymentReview} href={PAYMENT_QUEUE_LINKS.cash} />
+          <QueueLink
+            icon={CreditCard}
+            label="Deposit Review"
+            value={data.orders.depositReview}
+            href={PAYMENT_QUEUE_LINKS.deposit}
+          />
+          <QueueLink
+            icon={WalletCards}
+            label="Final Payment Review"
+            value={data.orders.finalPaymentReview}
+            href={PAYMENT_QUEUE_LINKS.final}
+          />
+          <QueueLink
+            icon={Banknote}
+            label="Cash Final Review"
+            value={data.orders.cashFinalPaymentReview}
+            href={PAYMENT_QUEUE_LINKS.cash}
+          />
         </div>
         <StatusTable
           title="Orders By Payment Status"
@@ -323,23 +347,41 @@ export function AdminReportsPage() {
         title="Open Batches"
         description="Most recently updated open SHEIN batches"
         badgeCount={data.batches.openItems.length}
-        action={<Link className="text-sm font-black text-[#c7831e]" to={`${PATHS.adminSheinBatches}?statusGroup=COLLECTING`}>View all</Link>}
+        action={
+          <Link
+            className="text-sm font-black text-[#c7831e]"
+            to={`${PATHS.adminSheinBatches}?statusGroup=COLLECTING`}
+          >
+            View all
+          </Link>
+        }
       >
-        {data.batches.openItems.length === 0 ? <AdminEmpty message="No open SHEIN batches right now" /> : null}
+        {data.batches.openItems.length === 0 ? (
+          <AdminEmpty message="No open SHEIN batches right now" />
+        ) : null}
         <div className="grid gap-3">
           {data.batches.openItems.map((batch) => (
-            <Link key={batch.id} to={`${PATHS.adminSheinBatches}?statusGroup=${batchStatusToGroup(batch.status)}`} className="admin-list-card block transition hover:bg-[#fff8ef]">
+            <Link
+              key={batch.id}
+              to={`${PATHS.adminSheinBatches}?statusGroup=${batchStatusToGroup(batch.status)}`}
+              className="admin-list-card block transition hover:bg-[#fff8ef]"
+            >
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,auto)] lg:items-center">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <strong className="text-[#241611]">{batch.batchCode}</strong>
-                    <AdminStatusBadge value={batch.status}>{labelBatchStatus(batch.status)}</AdminStatusBadge>
+                    <AdminStatusBadge value={batch.status}>
+                      {labelBatchStatus(batch.status)}
+                    </AdminStatusBadge>
                     <AdminCountBadge count={batch.orderCount} />
                   </div>
                   <p className="mt-1 truncate text-sm text-muted-foreground">
-                    {batch.title || 'SHEIN batch'} - {batch.orderCount} orders - {batch.itemsCount} items - {batch.totalQuantity} pieces
+                    {batch.title || 'SHEIN batch'} - {batch.orderCount} orders - {batch.itemsCount}{' '}
+                    items - {batch.totalQuantity} pieces
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">Updated {formatDate(batch.updatedAt)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Updated {formatDate(batch.updatedAt)}
+                  </p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <AmountPill label="SAR" value={formatMoney(batch.totalSarAmount, 'SAR')} />
@@ -399,11 +441,22 @@ function MetricGrid({ metrics }: { metrics: ReportMetric[] }) {
 
 function ReportMetricCard({ metric }: { metric: ReportMetric }) {
   const content = (
-    <AdminMetricCard title={metric.title} value={metric.value} icon={metric.icon} hint={metric.hint} tone={metric.tone}>
+    <AdminMetricCard
+      title={metric.title}
+      value={metric.value}
+      icon={metric.icon}
+      hint={metric.hint}
+      tone={metric.tone}
+    >
       {typeof metric.count === 'number' ? <AdminCountBadge count={metric.count} /> : null}
     </AdminMetricCard>
   );
-  if (metric.href) return <Link to={metric.href} className="block min-w-0">{content}</Link>;
+  if (metric.href)
+    return (
+      <Link to={metric.href} className="block min-w-0">
+        {content}
+      </Link>
+    );
   return content;
 }
 
@@ -430,7 +483,11 @@ function StatusTable({
         </span>
         <AdminCountBadge count={rows.reduce((total, row) => total + row.count, 0)} />
       </div>
-      {!hasAnyRows ? <div className="p-4"><AdminEmpty message={emptyMessage} /></div> : null}
+      {!hasAnyRows ? (
+        <div className="p-4">
+          <AdminEmpty message={emptyMessage} />
+        </div>
+      ) : null}
       {hasAnyRows ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#f2decf] text-sm">
@@ -457,8 +514,12 @@ function StatusTable({
 function StatusTableRowView({ row }: { row: StatusTableRow }) {
   const content = (
     <>
-      <td className="px-4 py-3"><AdminStatusBadge value={row.status}>{row.label}</AdminStatusBadge></td>
-      <td className="px-4 py-3"><AdminCountBadge count={row.count} /></td>
+      <td className="px-4 py-3">
+        <AdminStatusBadge value={row.status}>{row.label}</AdminStatusBadge>
+      </td>
+      <td className="px-4 py-3">
+        <AdminCountBadge count={row.count} />
+      </td>
       <td className="px-4 py-3 font-bold text-[#241611]">{row.valueA}</td>
       <td className="px-4 py-3 font-bold text-[#241611]">{row.valueB}</td>
     </>
@@ -467,9 +528,16 @@ function StatusTableRowView({ row }: { row: StatusTableRow }) {
   return (
     <tr className="transition hover:bg-[#fffaf3]">
       <td colSpan={4} className="p-0">
-        <Link to={row.href} className="grid min-w-[680px] grid-cols-[1.2fr_0.7fr_1fr_1fr] items-center">
-          <span className="px-4 py-3"><AdminStatusBadge value={row.status}>{row.label}</AdminStatusBadge></span>
-          <span className="px-4 py-3"><AdminCountBadge count={row.count} /></span>
+        <Link
+          to={row.href}
+          className="grid min-w-[680px] grid-cols-[1.2fr_0.7fr_1fr_1fr] items-center"
+        >
+          <span className="px-4 py-3">
+            <AdminStatusBadge value={row.status}>{row.label}</AdminStatusBadge>
+          </span>
+          <span className="px-4 py-3">
+            <AdminCountBadge count={row.count} />
+          </span>
           <span className="px-4 py-3 font-bold text-[#241611]">{row.valueA}</span>
           <span className="px-4 py-3 font-bold text-[#241611]">{row.valueB}</span>
         </Link>
@@ -478,9 +546,22 @@ function StatusTableRowView({ row }: { row: StatusTableRow }) {
   );
 }
 
-function QueueLink({ icon: Icon, label, value, href }: { icon: LucideIcon; label: string; value: number; href: string }) {
+function QueueLink({
+  icon: Icon,
+  label,
+  value,
+  href,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number;
+  href: string;
+}) {
   return (
-    <Link to={href} className="admin-list-card flex items-center justify-between gap-3 transition hover:bg-[#fff8ef]">
+    <Link
+      to={href}
+      className="admin-list-card flex items-center justify-between gap-3 transition hover:bg-[#fff8ef]"
+    >
       <div className="flex min-w-0 items-center gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#fff6e4] text-[#9a5b00]">
           <Icon className="h-5 w-5" />
@@ -536,7 +617,9 @@ function batchStatusToGroup(status: string): string {
 }
 
 function formatMoney(amount: AdminReportStatusRow['totalAmount'], currency: string): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(toMinorNumber(amount) / 100);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(
+    toMinorNumber(amount) / 100,
+  );
 }
 
 function formatRate(value: string | number | undefined): string {

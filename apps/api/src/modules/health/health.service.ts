@@ -31,7 +31,11 @@ export class HealthService {
     };
 
     const statuses = Object.values(checks).map((check) => check.status);
-    const status: CheckState = statuses.includes('unhealthy') ? 'unhealthy' : statuses.includes('degraded') ? 'degraded' : 'healthy';
+    const status: CheckState = statuses.includes('unhealthy')
+      ? 'unhealthy'
+      : statuses.includes('degraded')
+        ? 'degraded'
+        : 'healthy';
     const statusCode = status === 'healthy' ? 200 : status === 'degraded' ? 200 : 503;
 
     return { statusCode, body: { status, checks, checkedAt: new Date().toISOString() } };
@@ -49,7 +53,9 @@ export class HealthService {
   private async checkRedis() {
     try {
       const result = await this.redisService.ping();
-      return result === 'PONG' ? { status: 'healthy' as const } : { status: 'degraded' as const, message: 'Unexpected Redis ping response' };
+      return result === 'PONG'
+        ? { status: 'healthy' as const }
+        : { status: 'degraded' as const, message: 'Unexpected Redis ping response' };
     } catch (error) {
       return { status: 'unhealthy' as const, message: this.errorMessage(error) };
     }
@@ -59,8 +65,12 @@ export class HealthService {
     const cloudName = this.configService.get<string>('CLOUDINARY_CLOUD_NAME');
     const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
     const apiSecret = this.configService.get<string>('CLOUDINARY_API_SECRET');
-    const configured = Boolean(cloudName && apiKey && apiSecret && this.cloudinary.config().cloud_name);
-    return configured ? { status: 'healthy' as const } : { status: 'degraded' as const, message: 'Cloudinary is not fully configured' };
+    const configured = Boolean(
+      cloudName && apiKey && apiSecret && this.cloudinary.config().cloud_name,
+    );
+    return configured
+      ? { status: 'healthy' as const }
+      : { status: 'degraded' as const, message: 'Cloudinary is not fully configured' };
   }
 
   private errorMessage(error: unknown): string {

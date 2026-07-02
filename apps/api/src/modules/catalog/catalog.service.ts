@@ -14,7 +14,12 @@ import {
   mapFeaturedSubCategory,
   CatalogPricingContext,
 } from './mappers/catalog.mapper';
-import { CatalogCategory, CatalogProductDetail, FeaturedSubCategory, PaginatedCatalogProducts } from './types/catalog-response.types';
+import {
+  CatalogCategory,
+  CatalogProductDetail,
+  FeaturedSubCategory,
+  PaginatedCatalogProducts,
+} from './types/catalog-response.types';
 
 @Injectable()
 export class CatalogService {
@@ -25,10 +30,14 @@ export class CatalogService {
   ) {}
 
   async findCategories(query: CatalogCategoriesQueryDto): Promise<CatalogCategory[]> {
-    const categoryIds = query.search ? await this.catalogSearchService.searchCategoryIds(query.search) : undefined;
+    const categoryIds = query.search
+      ? await this.catalogSearchService.searchCategoryIds(query.search)
+      : undefined;
     const topLevelCategoryWhere = { ...this.activeCategoryWhere(), parentId: null };
     const categories = await this.prisma.category.findMany({
-      where: categoryIds ? { ...topLevelCategoryWhere, id: { in: categoryIds } } : topLevelCategoryWhere,
+      where: categoryIds
+        ? { ...topLevelCategoryWhere, id: { in: categoryIds } }
+        : topLevelCategoryWhere,
       orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }],
     });
 
@@ -47,11 +56,28 @@ export class CatalogService {
     );
 
     return categories.map((category) =>
-      mapCategory(category, countByCategoryId.get(category.id) ?? 0, subCategoryProductCounts.get(category.id) ?? []),
+      mapCategory(
+        category,
+        countByCategoryId.get(category.id) ?? 0,
+        subCategoryProductCounts.get(category.id) ?? [],
+      ),
     );
   }
 
-  private async getSubCategoryProductCounts(): Promise<Map<string, Array<{ id: string; slug: string; name: string; nameAr: string; nameEn: string | null; count: number; image: string | null }>>> {
+  private async getSubCategoryProductCounts(): Promise<
+    Map<
+      string,
+      Array<{
+        id: string;
+        slug: string;
+        name: string;
+        nameAr: string;
+        nameEn: string | null;
+        count: number;
+        image: string | null;
+      }>
+    >
+  > {
     const childCategories = await this.prisma.category.findMany({
       where: {
         ...this.activeCategoryWhere(),
@@ -69,7 +95,18 @@ export class CatalogService {
       orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }],
     });
 
-    const map = new Map<string, Array<{ id: string; slug: string; name: string; nameAr: string; nameEn: string | null; count: number; image: string | null }>>();
+    const map = new Map<
+      string,
+      Array<{
+        id: string;
+        slug: string;
+        name: string;
+        nameAr: string;
+        nameEn: string | null;
+        count: number;
+        image: string | null;
+      }>
+    >();
     childCategories.forEach((category) => {
       if (!category.parentId || category._count.subCategoryProducts <= 0) return;
       const existing = map.get(category.parentId) ?? [];
@@ -102,7 +139,9 @@ export class CatalogService {
       ? this.activeProductWhere({ subCategoryId: category.id })
       : this.activeProductWhere({ categoryId: category.id });
     const productCount = await this.prisma.product.count({ where: productWhere });
-    const subCategoryProductCounts = category.parentId ? new Map() : await this.getSubCategoryProductCounts();
+    const subCategoryProductCounts = category.parentId
+      ? new Map()
+      : await this.getSubCategoryProductCounts();
     return mapCategory(category, productCount, subCategoryProductCounts.get(category.id) ?? []);
   }
 
@@ -128,7 +167,14 @@ export class CatalogService {
     });
 
     return subCategories
-      .map((category) => mapFeaturedSubCategory(category as Category & { _count: { subCategoryProducts: number }; parent?: Category | null }))
+      .map((category) =>
+        mapFeaturedSubCategory(
+          category as Category & {
+            _count: { subCategoryProducts: number };
+            parent?: Category | null;
+          },
+        ),
+      )
       .filter((sub) => sub.productsCount > 0);
   }
 
@@ -136,7 +182,9 @@ export class CatalogService {
     return this.findProductsBySaleAwareIndex(query);
   }
 
-  private async findProductsBySaleAwareIndex(query: CatalogProductsQueryDto): Promise<PaginatedCatalogProducts> {
+  private async findProductsBySaleAwareIndex(
+    query: CatalogProductsQueryDto,
+  ): Promise<PaginatedCatalogProducts> {
     const searchResult = await this.catalogSearchService.searchProductIds(query);
     if (searchResult.ids.length === 0) {
       return this.paginateProducts([], searchResult.total, query);
@@ -148,7 +196,9 @@ export class CatalogService {
     });
 
     const order = new Map(searchResult.ids.map((id, index) => [id, index]));
-    const sortedProducts = products.sort((first, second) => (order.get(first.id) ?? 0) - (order.get(second.id) ?? 0));
+    const sortedProducts = products.sort(
+      (first, second) => (order.get(first.id) ?? 0) - (order.get(second.id) ?? 0),
+    );
     return this.paginateProducts(sortedProducts, searchResult.total, query);
   }
 
@@ -159,7 +209,9 @@ export class CatalogService {
   ): Promise<PaginatedCatalogProducts> {
     const totalPages = Math.max(1, Math.ceil(total / query.limit));
 
-    const saleAdjustments = await this.pricingService.getActiveSaleAdjustments(items.map((item) => item.id));
+    const saleAdjustments = await this.pricingService.getActiveSaleAdjustments(
+      items.map((item) => item.id),
+    );
     const context: CatalogPricingContext = { pricingService: this.pricingService, saleAdjustments };
 
     return {
@@ -202,5 +254,4 @@ export class CatalogService {
   private activeCategoryWhere(): Prisma.CategoryWhereInput {
     return { isActive: true, deletedAt: null };
   }
-
 }

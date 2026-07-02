@@ -42,7 +42,10 @@ type PrismaClientLike = PrismaService | Prisma.TransactionClient;
 export class ProductPricingService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getActiveSaleAdjustments(productIds: string[], client: PrismaClientLike = this.prisma): Promise<Map<string, SaleAdjustment>> {
+  async getActiveSaleAdjustments(
+    productIds: string[],
+    client: PrismaClientLike = this.prisma,
+  ): Promise<Map<string, SaleAdjustment>> {
     const uniqueIds = [...new Set(productIds.filter(Boolean))];
     if (uniqueIds.length === 0) {
       return new Map();
@@ -90,7 +93,10 @@ export class ProductPricingService {
   ): ProductPricingDetail {
     const { baseAmount, productDiscountPercent, currency } = input;
     const flashSalePrice = this.calculateSalePrice(baseAmount, saleAdjustment);
-    const productDiscountPrice = this.calculateProductDiscountPrice(baseAmount, productDiscountPercent);
+    const productDiscountPrice = this.calculateProductDiscountPrice(
+      baseAmount,
+      productDiscountPercent,
+    );
 
     // Priority: Flash sale > Product discount > None
     if (saleAdjustment && flashSalePrice.finalAmount < baseAmount) {
@@ -147,10 +153,7 @@ export class ProductPricingService {
     return { originalAmount: baseAmount, finalAmount, discountAmount, sale };
   }
 
-  private calculateProductDiscountPrice(
-    baseAmount: number,
-    discountPercent: number,
-  ): PricedAmount {
+  private calculateProductDiscountPrice(baseAmount: number, discountPercent: number): PricedAmount {
     if (discountPercent <= 0) {
       return { originalAmount: baseAmount, finalAmount: baseAmount, discountAmount: 0, sale: null };
     }

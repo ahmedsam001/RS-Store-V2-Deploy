@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isLikelyProductImage, selectMainProductImages } from '../src/modules/shein/shein-image-filter';
+import {
+  isLikelyProductImage,
+  selectMainProductImages,
+} from '../src/modules/shein/shein-image-filter';
 
 describe('SHEIN image filter', () => {
   it('keeps ordered real main product gallery images', () => {
@@ -33,7 +36,9 @@ describe('SHEIN image filter', () => {
       'https://img.shein.com/images20240301/pi/12345/1.jpg',
     ];
 
-    assert.deepEqual(selectMainProductImages(urls), ['https://img.shein.com/images20240301/pi/12345/1.jpg']);
+    assert.deepEqual(selectMainProductImages(urls), [
+      'https://img.shein.com/images20240301/pi/12345/1.jpg',
+    ]);
   });
 
   it('deduplicates resized versions of the same gallery image', () => {
@@ -48,8 +53,14 @@ describe('SHEIN image filter', () => {
   });
 
   it('rejects size guide swatches and non product image paths', () => {
-    assert.equal(isLikelyProductImage('https://img.shein.com/images20240301/spmp/12345/a.jpg'), false);
-    assert.equal(isLikelyProductImage('https://img.shein.com/images20240301/pi/12345/color-swatch.jpg'), false);
+    assert.equal(
+      isLikelyProductImage('https://img.shein.com/images20240301/spmp/12345/a.jpg'),
+      false,
+    );
+    assert.equal(
+      isLikelyProductImage('https://img.shein.com/images20240301/pi/12345/color-swatch.jpg'),
+      false,
+    );
     assert.equal(isLikelyProductImage('https://example.com/images20240301/pi/12345/1.jpg'), false);
   });
 
@@ -71,5 +82,4 @@ describe('SHEIN image filter', () => {
       'https://img.shein.com/images20240301/pi/12345/side.jpg',
     ]);
   });
-
 });

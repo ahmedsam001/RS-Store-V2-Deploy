@@ -38,7 +38,11 @@ export class WishlistService {
     return mapWishlist(payload, this.pricingService);
   }
 
-  async addItem(request: Request, response: Response, dto: AddWishlistItemDto): Promise<WishlistResponse> {
+  async addItem(
+    request: Request,
+    response: Response,
+    dto: AddWishlistItemDto,
+  ): Promise<WishlistResponse> {
     const context = await this.resolveAndMerge(request, response);
     const payload = await this.runWishlistWrite(async (tx) => {
       const wishlist = await this.getOrCreateWishlist(context, tx);
@@ -50,7 +54,11 @@ export class WishlistService {
     return mapWishlist(payload, this.pricingService);
   }
 
-  async removeItem(request: Request, response: Response, params: IdParamDto): Promise<WishlistResponse> {
+  async removeItem(
+    request: Request,
+    response: Response,
+    params: IdParamDto,
+  ): Promise<WishlistResponse> {
     const context = await this.resolveAndMerge(request, response);
     const payload = await this.runWishlistWrite(async (tx) => {
       const wishlist = await this.getOrCreateWishlist(context, tx);
@@ -62,11 +70,17 @@ export class WishlistService {
     return mapWishlist(payload, this.pricingService);
   }
 
-  async removeProduct(request: Request, response: Response, params: IdParamDto): Promise<WishlistResponse> {
+  async removeProduct(
+    request: Request,
+    response: Response,
+    params: IdParamDto,
+  ): Promise<WishlistResponse> {
     const context = await this.resolveAndMerge(request, response);
     const payload = await this.runWishlistWrite(async (tx) => {
       const wishlist = await this.getOrCreateWishlist(context, tx);
-      await tx.wishlistItem.deleteMany({ where: { wishlistId: wishlist.id, productId: params.id } });
+      await tx.wishlistItem.deleteMany({
+        where: { wishlistId: wishlist.id, productId: params.id },
+      });
       return this.getWishlistPayload(wishlist.id, tx);
     });
 
@@ -83,7 +97,10 @@ export class WishlistService {
     return context;
   }
 
-  private async getOrCreateWishlist(context: ShopperContext, client: PrismaClientLike): Promise<{ id: string }> {
+  private async getOrCreateWishlist(
+    context: ShopperContext,
+    client: PrismaClientLike,
+  ): Promise<{ id: string }> {
     const owner = this.wishlistOwner(context);
     const existing = await client.wishlist.findFirst({ where: owner, select: { id: true } });
 
@@ -119,7 +136,11 @@ export class WishlistService {
     });
   }
 
-  private async addWishlistItem(client: Prisma.TransactionClient, wishlistId: string, productId: string): Promise<void> {
+  private async addWishlistItem(
+    client: Prisma.TransactionClient,
+    wishlistId: string,
+    productId: string,
+  ): Promise<void> {
     const existing = await client.wishlistItem.findUnique({
       where: { wishlistId_productId: { wishlistId, productId } },
       select: { id: true },
@@ -131,15 +152,25 @@ export class WishlistService {
   }
 
   private async assertCatalogProduct(client: PrismaClientLike, productId: string): Promise<void> {
-    const product = await client.product.findFirst({ where: { id: productId, ...visibleProductWhere }, select: { id: true } });
+    const product = await client.product.findFirst({
+      where: { id: productId, ...visibleProductWhere },
+      select: { id: true },
+    });
 
     if (!product) {
       throw new NotFoundException('Product is not available');
     }
   }
 
-  private async assertWishlistItem(client: PrismaClientLike, wishlistId: string, itemId: string): Promise<void> {
-    const item = await client.wishlistItem.findFirst({ where: { id: itemId, wishlistId }, select: { id: true } });
+  private async assertWishlistItem(
+    client: PrismaClientLike,
+    wishlistId: string,
+    itemId: string,
+  ): Promise<void> {
+    const item = await client.wishlistItem.findFirst({
+      where: { id: itemId, wishlistId },
+      select: { id: true },
+    });
 
     if (!item) {
       throw new NotFoundException('Wishlist item not found');
@@ -158,7 +189,10 @@ export class WishlistService {
       }
 
       if (!userWishlist) {
-        await tx.wishlist.update({ where: { id: guestWishlist.id }, data: { userId, guestKey: null } });
+        await tx.wishlist.update({
+          where: { id: guestWishlist.id },
+          data: { userId, guestKey: null },
+        });
         return;
       }
 
@@ -170,10 +204,14 @@ export class WishlistService {
     });
   }
 
-  private async runWishlistWrite<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  private async runWishlistWrite<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
     for (let attempt = 0; attempt <= maxWriteRetries; attempt += 1) {
       try {
-        return await this.prisma.$transaction(operation, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
       } catch (error) {
         if (attempt === maxWriteRetries || !this.isRetryablePrismaError(error)) {
           throw error;
@@ -185,6 +223,9 @@ export class WishlistService {
   }
 
   private isRetryablePrismaError(error: unknown): boolean {
-    return error instanceof Prisma.PrismaClientKnownRequestError && ['P2002', 'P2034'].includes(error.code);
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      ['P2002', 'P2034'].includes(error.code)
+    );
   }
 }

@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { Request, Response } from 'express';
@@ -10,7 +15,13 @@ import { CustomerLoginDto } from './dto/customer-login.dto';
 import { LookupDto } from './dto/lookup.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { AuthLookupResponse, AuthMeResponse, AuthResponse, AuthUserResponse, SessionListItem } from './auth.types';
+import {
+  AuthLookupResponse,
+  AuthMeResponse,
+  AuthResponse,
+  AuthUserResponse,
+  SessionListItem,
+} from './auth.types';
 import { AuthSessionService } from './services/auth-session.service';
 import type { AuthSessionRecord, AuthSessionUser } from './services/auth-session.service';
 import { egyptianPhoneLookupVariants, normalizeEgyptianPhone } from './phone-normalization';
@@ -65,7 +76,11 @@ export class AuthService {
     };
   }
 
-  async customerLogin(dto: CustomerLoginDto, request: Request, response: Response): Promise<AuthResponse> {
+  async customerLogin(
+    dto: CustomerLoginDto,
+    request: Request,
+    response: Response,
+  ): Promise<AuthResponse> {
     const phone = normalizeEgyptianPhone(dto.phone);
     const existingUser = await this.prisma.user.findFirst({ where: { phone, deletedAt: null } });
 
@@ -84,7 +99,11 @@ export class AuthService {
     return this.startSession(user.id, Boolean(dto.rememberMe), request, response);
   }
 
-  async adminLogin(dto: AdminLoginDto, request: Request, response: Response): Promise<AuthResponse> {
+  async adminLogin(
+    dto: AdminLoginDto,
+    request: Request,
+    response: Response,
+  ): Promise<AuthResponse> {
     const phoneVariants = egyptianPhoneLookupVariants(dto.phone);
     const user = await this.prisma.user.findFirst({
       where: {
@@ -108,7 +127,11 @@ export class AuthService {
     return this.startSession(user.id, Boolean(dto.rememberMe), request, response);
   }
 
-  async compatibleLogin(dto: CompatibleLoginDto, request: Request, response: Response): Promise<AuthResponse> {
+  async compatibleLogin(
+    dto: CompatibleLoginDto,
+    request: Request,
+    response: Response,
+  ): Promise<AuthResponse> {
     const phoneVariants = egyptianPhoneLookupVariants(dto.phone);
     const user = await this.prisma.user.findFirst({
       where: { phone: { in: phoneVariants }, deletedAt: null },
@@ -120,7 +143,11 @@ export class AuthService {
         throw new UnauthorizedException('Admin password is required');
       }
 
-      return this.adminLogin({ phone: dto.phone, password: dto.password, rememberMe: dto.rememberMe }, request, response);
+      return this.adminLogin(
+        { phone: dto.phone, password: dto.password, rememberMe: dto.rememberMe },
+        request,
+        response,
+      );
     }
 
     return this.customerLogin(dto, request, response);
@@ -139,7 +166,11 @@ export class AuthService {
     };
   }
 
-  async logout(session: AuthSessionRecord, dto: LogoutDto, response: Response): Promise<{ ok: true }> {
+  async logout(
+    session: AuthSessionRecord,
+    dto: LogoutDto,
+    response: Response,
+  ): Promise<{ ok: true }> {
     if (dto.allDevices) {
       await this.authSessionService.revokeUserSessions(session.user.id);
     } else {
@@ -150,7 +181,10 @@ export class AuthService {
     return { ok: true };
   }
 
-  async updateProfile(session: AuthSessionRecord, dto: UpdateProfileDto): Promise<{ ok: true; user: AuthUserResponse }> {
+  async updateProfile(
+    session: AuthSessionRecord,
+    dto: UpdateProfileDto,
+  ): Promise<{ ok: true; user: AuthUserResponse }> {
     this.validateLanguage(dto.language);
 
     if (dto.newPassword) {
@@ -183,7 +217,9 @@ export class AuthService {
     return { ok: true, user };
   }
 
-  async listSessions(currentSession: AuthSessionRecord): Promise<{ ok: true; sessions: SessionListItem[] }> {
+  async listSessions(
+    currentSession: AuthSessionRecord,
+  ): Promise<{ ok: true; sessions: SessionListItem[] }> {
     const sessions = await this.prisma.session.findMany({
       where: {
         userId: currentSession.user.id,
@@ -227,8 +263,18 @@ export class AuthService {
     return { ok: true };
   }
 
-  private async startSession(userId: string, rememberMe: boolean, request: Request, response: Response): Promise<AuthResponse> {
-    const session = await this.authSessionService.createSession({ userId, rememberMe, request, response });
+  private async startSession(
+    userId: string,
+    rememberMe: boolean,
+    request: Request,
+    response: Response,
+  ): Promise<AuthResponse> {
+    const session = await this.authSessionService.createSession({
+      userId,
+      rememberMe,
+      request,
+      response,
+    });
     return {
       ok: true,
       csrfToken: session.csrfToken,
@@ -256,7 +302,10 @@ export class AuthService {
     });
   }
 
-  private async updateExistingCustomerProfile(userId: string, dto: CustomerLoginDto): Promise<AuthSessionUser> {
+  private async updateExistingCustomerProfile(
+    userId: string,
+    dto: CustomerLoginDto,
+  ): Promise<AuthSessionUser> {
     this.validateLanguage(dto.language);
     return this.prisma.user.update({
       where: { id: userId },
@@ -270,12 +319,20 @@ export class AuthService {
     });
   }
 
-  private async changePassword(userId: string, currentSessionId: string, currentPassword: string | undefined, newPassword: string): Promise<void> {
+  private async changePassword(
+    userId: string,
+    currentSessionId: string,
+    currentPassword: string | undefined,
+    newPassword: string,
+  ): Promise<void> {
     if (!isStrongPassword(newPassword)) {
       throw new BadRequestException('Use a strong new password of at least 12 characters');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
     if (!user?.passwordHash || !currentPassword) {
       throw new UnauthorizedException('Current password is required');
     }
@@ -285,13 +342,18 @@ export class AuthService {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
-    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(newPassword, 12) } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: await bcrypt.hash(newPassword, 12) },
+    });
     await this.authSessionService.revokeUserSessions(userId, currentSessionId);
   }
 
   private async ensurePhoneAvailable(phone: string, userId: string): Promise<void> {
     const phoneVariants = egyptianPhoneLookupVariants(phone);
-    const duplicate = await this.prisma.user.findFirst({ where: { phone: { in: phoneVariants }, id: { not: userId }, deletedAt: null } });
+    const duplicate = await this.prisma.user.findFirst({
+      where: { phone: { in: phoneVariants }, id: { not: userId }, deletedAt: null },
+    });
     if (duplicate) {
       throw new ConflictException('This phone number is already used by another account');
     }

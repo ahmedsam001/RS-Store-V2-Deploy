@@ -31,7 +31,6 @@ export type OrderMoney = {
   currency?: string;
 };
 
-
 export type CustomerSheinBatchStatus =
   | 'DRAFT'
   | 'ORDERED_FROM_SHEIN'
@@ -73,10 +72,31 @@ export type CustomerSheinBatchItemTracking = {
   batch: CustomerSheinBatchTracking;
 };
 
+export type OrderProductImage = {
+  id: string;
+  secureUrl?: string | null;
+  url?: string | null;
+  altTextAr?: string | null;
+  altTextEn?: string | null;
+  altText?: string | null;
+};
+
 export type OrderItem = {
   id: string;
   productId: string | null;
   productVariantId: string | null;
+  imageUrl?: string | null;
+  thumbnailUrl?: string | null;
+  productImage?: string | null;
+  product?: {
+    id?: string;
+    slug?: string;
+    nameAr?: string | null;
+    nameEn?: string | null;
+    imageUrl?: string | null;
+    thumbnailUrl?: string | null;
+    images?: OrderProductImage[];
+  } | null;
   productNameSnapshot: string;
   productSkuSnapshot: string | null;
   productVariantNameSnapshot: string | null;

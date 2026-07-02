@@ -10,7 +10,10 @@ import { getSettingDefinitions, validateSettingValue } from './settings-registry
 
 @Injectable()
 export class SettingsService {
-  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async findAll(query: SettingsQueryDto) {
     const where: Prisma.SettingWhereInput = { scope: query.scope };
@@ -69,13 +72,24 @@ export class SettingsService {
       create: { key, ...data },
       update: data,
     });
-    await this.auditService.log({ actorUserId: user.id, action: 'SETTING_UPDATED', entityType: 'SETTING', entityId: key, metadata: { scope: dto.scope } });
+    await this.auditService.log({
+      actorUserId: user.id,
+      action: 'SETTING_UPDATED',
+      entityType: 'SETTING',
+      entityId: key,
+      metadata: { scope: dto.scope },
+    });
     return setting;
   }
 
   async remove(key: string, user?: AuthenticatedUser) {
     const setting = await this.prisma.setting.delete({ where: { key } });
-    await this.auditService.log({ actorUserId: user?.id, action: 'SETTING_DELETED', entityType: 'SETTING', entityId: key });
+    await this.auditService.log({
+      actorUserId: user?.id,
+      action: 'SETTING_DELETED',
+      entityType: 'SETTING',
+      entityId: key,
+    });
     return setting;
   }
 }

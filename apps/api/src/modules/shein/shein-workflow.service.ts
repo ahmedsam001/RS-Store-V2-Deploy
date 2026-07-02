@@ -35,17 +35,9 @@ export class SheinWorkflowService {
   }
 
   assertCanCreateProduct(status: SheinImportStatus): void {
-    const allowedStatuses: SheinImportStatus[] = [
-      SheinImportStatus.PREVIEW_READY,
-      SheinImportStatus.FAILED,
-      SheinImportStatus.MANUAL_REVIEW,
-      SheinImportStatus.REVIEWING,
-      SheinImportStatus.REVIEWED,
-      SheinImportStatus.APPROVED,
-    ];
-    if (!allowedStatuses.includes(status)) {
+    if (status !== SheinImportStatus.APPROVED) {
       throw new BadRequestException(
-        'Unable to create product from SHEIN data. Please review data and try again.',
+        'Unable to create product from SHEIN data. Please review and approve data before creating product.',
       );
     }
   }

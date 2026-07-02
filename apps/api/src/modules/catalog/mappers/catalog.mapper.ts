@@ -1,6 +1,10 @@
 import { Category, Prisma, ProductVariantStatus } from '@prisma/client';
 import { minorUnitsToMoneyString } from '../../../common/money/money';
-import { ProductPricingService, ProductPricingInput, ProductPricingDetail } from '../../pricing/product-pricing.service';
+import {
+  ProductPricingService,
+  ProductPricingInput,
+  ProductPricingDetail,
+} from '../../pricing/product-pricing.service';
 import {
   CatalogCategory,
   CatalogImage,
@@ -16,22 +20,38 @@ const productCardInclude = {
   category: true,
   subCategoryRef: true,
   images: { orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }] },
-  variants: { where: { isActive: true, status: ProductVariantStatus.ACTIVE, deletedAt: null }, orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }] },
+  variants: {
+    where: { isActive: true, status: ProductVariantStatus.ACTIVE, deletedAt: null },
+    orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }],
+  },
 } satisfies Prisma.ProductInclude;
 
-export type CatalogProductPayload = Prisma.ProductGetPayload<{ include: typeof productCardInclude }>;
+export type CatalogProductPayload = Prisma.ProductGetPayload<{
+  include: typeof productCardInclude;
+}>;
 
 export const catalogProductInclude = productCardInclude;
 
 export type CatalogPricingContext = {
   pricingService: ProductPricingService;
-  saleAdjustments: Map<string, { flashSaleId: string; titleAr: string; discountPercent: string; discountBasisPoints: number }>;
+  saleAdjustments: Map<
+    string,
+    { flashSaleId: string; titleAr: string; discountPercent: string; discountBasisPoints: number }
+  >;
 };
 
 export function mapCategory(
   category: Category & { parent?: Pick<Category, 'slug' | 'nameAr'> | null },
   productCount: number,
-  subCategoryItems: Array<{ id: string; slug: string; name: string; nameAr: string; nameEn: string | null; count: number; image: string | null }> = [],
+  subCategoryItems: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    nameAr: string;
+    nameEn: string | null;
+    count: number;
+    image: string | null;
+  }> = [],
 ): CatalogCategory {
   const subCategories: CatalogSubCategory[] = subCategoryItems.map((item) => ({
     id: item.id,
@@ -70,7 +90,10 @@ export function mapFeaturedSubCategory(
   };
 }
 
-export function mapProductCard(product: CatalogProductPayload, context: CatalogPricingContext): CatalogProductCard {
+export function mapProductCard(
+  product: CatalogProductPayload,
+  context: CatalogPricingContext,
+): CatalogProductCard {
   const pricing = resolveProductPricing(product, product.priceAmount, context);
   return {
     id: product.id,
@@ -79,8 +102,14 @@ export function mapProductCard(product: CatalogProductPayload, context: CatalogP
     name: product.nameAr,
     description: product.description,
     sourceSheinUrl: product.sourceSheinUrl,
-    price: { amount: minorUnitsToMoneyString(pricing.finalPriceAmount), currency: product.currency },
-    originalPrice: pricing.priceSource !== 'NONE' ? { amount: minorUnitsToMoneyString(pricing.basePriceAmount), currency: product.currency } : null,
+    price: {
+      amount: minorUnitsToMoneyString(pricing.finalPriceAmount),
+      currency: product.currency,
+    },
+    originalPrice:
+      pricing.priceSource !== 'NONE'
+        ? { amount: minorUnitsToMoneyString(pricing.basePriceAmount), currency: product.currency }
+        : null,
     sale: mapSale(product.currency, pricing),
     subCategory: product.subCategoryRef?.nameAr ?? product.subCategory ?? null,
     discount: pricing.discountPercent,
@@ -102,11 +131,16 @@ export function mapProductCard(product: CatalogProductPayload, context: CatalogP
   };
 }
 
-export function mapProductDetail(product: CatalogProductPayload, context: CatalogPricingContext): CatalogProductDetail {
+export function mapProductDetail(
+  product: CatalogProductPayload,
+  context: CatalogPricingContext,
+): CatalogProductDetail {
   return {
     ...mapProductCard(product, context),
     images: product.images.map((image) => mapImage(image)).filter(Boolean) as CatalogImage[],
-    variants: product.variants.map((variant) => mapVariant(variant, product, product.currency, context)),
+    variants: product.variants.map((variant) =>
+      mapVariant(variant, product, product.currency, context),
+    ),
   };
 }
 
@@ -168,7 +202,10 @@ export function mapVariant(
     sku: variant.sku,
     name: variant.nameAr,
     price: { amount: minorUnitsToMoneyString(pricing.finalPriceAmount), currency },
-    originalPrice: pricing.priceSource !== 'NONE' ? { amount: minorUnitsToMoneyString(pricing.basePriceAmount), currency } : null,
+    originalPrice:
+      pricing.priceSource !== 'NONE'
+        ? { amount: minorUnitsToMoneyString(pricing.basePriceAmount), currency }
+        : null,
     sale: mapSale(currency, pricing),
     sortOrder: variant.sortOrder,
     size: variant.size ?? null,

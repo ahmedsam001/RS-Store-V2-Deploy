@@ -291,7 +291,6 @@ export type SheinExtractionEnvelope = {
   product: SheinExtractedProduct | null;
 };
 
-
 export type OrderItemStatus =
   | 'PENDING'
   | 'SHEIN'
@@ -354,8 +353,21 @@ export type AdminSheinBatchItem = {
     customerPhoneSnapshot?: string;
   };
   orderItem?: { id: string; status: OrderItemStatus };
-  product?: { id: string; slug: string; nameAr: string; nameEn?: string | null; sourceSheinUrl?: string | null } | null;
-  productVariant?: { id: string; sku?: string | null; nameAr: string; nameEn?: string | null; size?: string | null; color?: string | null } | null;
+  product?: {
+    id: string;
+    slug: string;
+    nameAr: string;
+    nameEn?: string | null;
+    sourceSheinUrl?: string | null;
+  } | null;
+  productVariant?: {
+    id: string;
+    sku?: string | null;
+    nameAr: string;
+    nameEn?: string | null;
+    size?: string | null;
+    color?: string | null;
+  } | null;
 };
 export type AdminSheinBatchWhatsappNotification = {
   itemId: string;
@@ -441,8 +453,21 @@ export type AdminAvailableSheinOrderItem = AdminOrderItem & {
     customerPhoneSnapshot: string;
     createdAt: string;
   };
-  product?: { id: string; slug: string; nameAr: string; nameEn?: string | null; sourceSheinUrl?: string | null } | null;
-  productVariant?: { id: string; sku?: string | null; nameAr: string; nameEn?: string | null; size?: string | null; color?: string | null } | null;
+  product?: {
+    id: string;
+    slug: string;
+    nameAr: string;
+    nameEn?: string | null;
+    sourceSheinUrl?: string | null;
+  } | null;
+  productVariant?: {
+    id: string;
+    sku?: string | null;
+    nameAr: string;
+    nameEn?: string | null;
+    size?: string | null;
+    color?: string | null;
+  } | null;
 };
 
 export type AdminSheinImport = {
@@ -518,7 +543,10 @@ export type AdminAuditLog = {
   actorUser?: { id: string; name: string; email?: string | null; role?: string } | null;
 };
 export type UploadReconciliation = { databaseOrphans: number; cloudinaryOrphans: number };
-export type UploadCleanupResult = { databaseRecordsDeleted: number; cloudinaryFilesDeleted: number };
+export type UploadCleanupResult = {
+  databaseRecordsDeleted: number;
+  cloudinaryFilesDeleted: number;
+};
 export type AdminNotification = {
   id: string;
   titleAr: string;
@@ -687,7 +715,9 @@ export type AdminCreateVariantInput = {
   sortOrder?: number;
 };
 
-function sanitizeSheinPublishPayload(payload?: SheinPreviewPayload): SheinPreviewPayload | undefined {
+function sanitizeSheinPublishPayload(
+  payload?: SheinPreviewPayload,
+): SheinPreviewPayload | undefined {
   if (!payload) return undefined;
   return {
     slug: payload.slug,
@@ -718,26 +748,52 @@ export const adminApi = {
   reports: () => apiRequest<AdminReports>('/admin/reports'),
   notifications: () => apiRequest<AdminList<AdminNotification>>('/notifications?limit=10'),
   markNotificationRead: (id: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminNotification>(`/notifications/${id}/read`, { method: 'PATCH', csrfToken: options?.csrfToken }),
+    apiRequest<AdminNotification>(`/notifications/${id}/read`, {
+      method: 'PATCH',
+      csrfToken: options?.csrfToken,
+    }),
 
   // productsPage: (query = '') => fetchList<AdminProduct>(`/products?limit=20${query}`),
-  productsPage: (query = '') =>
-  fetchList<AdminProduct>(withDefaultLimit('/products', query)),
+  productsPage: (query = '') => fetchList<AdminProduct>(withDefaultLimit('/products', query)),
   products: async (query = '') => (await adminApi.productsPage(query)).items,
   product: (id: string) => apiRequest<AdminProduct>(`/products/${id}`),
   createProduct: (input: AdminCreateProductInput, options?: AdminWriteOptions) =>
-    apiRequest<AdminProduct>('/products', { method: 'POST', body: input, csrfToken: options?.csrfToken }),
-  updateProduct: (id: string, input: Partial<AdminCreateProductInput>, options?: AdminWriteOptions) =>
-    apiRequest<AdminProduct>(`/products/${id}`, { method: 'PATCH', body: input, csrfToken: options?.csrfToken }),
+    apiRequest<AdminProduct>('/products', {
+      method: 'POST',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
+  updateProduct: (
+    id: string,
+    input: Partial<AdminCreateProductInput>,
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminProduct>(`/products/${id}`, {
+      method: 'PATCH',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
   applyBulkProductDiscount: (discount: number, options?: AdminWriteOptions) =>
     apiRequest<{ updatedCount: number; discount: number }>('/products/bulk/discount', {
       method: 'PATCH',
       body: { discount },
       csrfToken: options?.csrfToken,
     }),
-  deleteProduct: (id: string, options?: AdminWriteOptions) => apiRequest<AdminProduct>(`/products/${id}`, { method: 'DELETE', csrfToken: options?.csrfToken }),
-  changeProductStatus: (id: string, status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED', options?: AdminWriteOptions) =>
-    apiRequest<AdminProduct>(`/products/${id}/status`, { method: 'PATCH', body: { status }, csrfToken: options?.csrfToken }),
+  deleteProduct: (id: string, options?: AdminWriteOptions) =>
+    apiRequest<AdminProduct>(`/products/${id}`, {
+      method: 'DELETE',
+      csrfToken: options?.csrfToken,
+    }),
+  changeProductStatus: (
+    id: string,
+    status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED',
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminProduct>(`/products/${id}/status`, {
+      method: 'PATCH',
+      body: { status },
+      csrfToken: options?.csrfToken,
+    }),
   uploadImage: (file: File, folder = 'rs-store/products', options: AdminWriteOptions = {}) => {
     const form = new FormData();
     form.append('file', file);
@@ -748,20 +804,51 @@ export const adminApi = {
       csrfToken: options.csrfToken,
     });
   },
-  addProductImage: (productId: string, input: Partial<AdminImage> & UploadedImageResponse, options?: AdminWriteOptions) =>
-    apiRequest<AdminImage>(`/products/${productId}/images`, { method: 'POST', body: input, csrfToken: options?.csrfToken }),
+  addProductImage: (
+    productId: string,
+    input: Partial<AdminImage> & UploadedImageResponse,
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminImage>(`/products/${productId}/images`, {
+      method: 'POST',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
   setPrimaryImage: (productId: string, imageId: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminImage>(`/products/${productId}/images/${imageId}/primary`, { method: 'PATCH', csrfToken: options?.csrfToken }),
+    apiRequest<AdminImage>(`/products/${productId}/images/${imageId}/primary`, {
+      method: 'PATCH',
+      csrfToken: options?.csrfToken,
+    }),
   deleteProductImage: (imageId: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminImage>(`/products/images/${imageId}`, { method: 'DELETE', csrfToken: options?.csrfToken }),
+    apiRequest<AdminImage>(`/products/images/${imageId}`, {
+      method: 'DELETE',
+      csrfToken: options?.csrfToken,
+    }),
   createVariant: (productId: string, input: AdminCreateVariantInput, options?: AdminWriteOptions) =>
-    apiRequest(`/products/${productId}/variants`, { method: 'POST', body: input, csrfToken: options?.csrfToken }),
-  updateVariant: (productId: string, variantId: string, input: Partial<AdminCreateVariantInput>, options?: AdminWriteOptions) =>
-    apiRequest(`/products/${productId}/variants/${variantId}`, { method: 'PATCH', body: input, csrfToken: options?.csrfToken }),
+    apiRequest(`/products/${productId}/variants`, {
+      method: 'POST',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
+  updateVariant: (
+    productId: string,
+    variantId: string,
+    input: Partial<AdminCreateVariantInput>,
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest(`/products/${productId}/variants/${variantId}`, {
+      method: 'PATCH',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
   deleteVariant: (productId: string, variantId: string, options?: AdminWriteOptions) =>
-    apiRequest(`/products/${productId}/variants/${variantId}`, { method: 'DELETE', csrfToken: options?.csrfToken }),
+    apiRequest(`/products/${productId}/variants/${variantId}`, {
+      method: 'DELETE',
+      csrfToken: options?.csrfToken,
+    }),
 
-  categoriesPage: (query = 'includeChildren=true') => fetchList<AdminCategory>(withDefaultLimit('/categories', query)),
+  categoriesPage: (query = 'includeChildren=true') =>
+    fetchList<AdminCategory>(withDefaultLimit('/categories', query)),
   categories: async () => (await adminApi.categoriesPage('includeChildren=true')).items,
   createCategory: (input: AdminCategoryInput, options: AdminWriteOptions = {}) =>
     apiRequest<AdminCategory>('/categories', {
@@ -769,45 +856,90 @@ export const adminApi = {
       body: input,
       csrfToken: options.csrfToken,
     }),
-  updateCategory: (id: string, input: Partial<AdminCategoryInput>, options: AdminWriteOptions = {}) =>
+  updateCategory: (
+    id: string,
+    input: Partial<AdminCategoryInput>,
+    options: AdminWriteOptions = {},
+  ) =>
     apiRequest<AdminCategory>(`/categories/${id}`, {
       method: 'PATCH',
       body: input,
       csrfToken: options.csrfToken,
     }),
   deleteCategory: (id: string, options: AdminWriteOptions = {}) =>
-    apiRequest<AdminCategory>(`/categories/${id}`, { method: 'DELETE', csrfToken: options.csrfToken }),
-  createSubcategory: (parentId: string, input: AdminSubcategoryInput, options: AdminWriteOptions = {}) =>
+    apiRequest<AdminCategory>(`/categories/${id}`, {
+      method: 'DELETE',
+      csrfToken: options.csrfToken,
+    }),
+  createSubcategory: (
+    parentId: string,
+    input: AdminSubcategoryInput,
+    options: AdminWriteOptions = {},
+  ) =>
     apiRequest<AdminCategory>(`/categories/${parentId}/subcategories`, {
       method: 'POST',
       body: input,
       csrfToken: options.csrfToken,
     }),
-  updateSubcategory: (id: string, input: Partial<AdminSubcategoryInput>, options: AdminWriteOptions = {}) =>
+  updateSubcategory: (
+    id: string,
+    input: Partial<AdminSubcategoryInput>,
+    options: AdminWriteOptions = {},
+  ) =>
     apiRequest<AdminCategory>(`/categories/${id}`, {
       method: 'PATCH',
       body: input,
       csrfToken: options.csrfToken,
     }),
   deleteSubcategory: (id: string, options: AdminWriteOptions = {}) =>
-    apiRequest<AdminCategory>(`/categories/${id}`, { method: 'DELETE', csrfToken: options.csrfToken }),
+    apiRequest<AdminCategory>(`/categories/${id}`, {
+      method: 'DELETE',
+      csrfToken: options.csrfToken,
+    }),
 
   ordersPage: (query = '') => fetchList<AdminOrder>(withDefaultLimit('/orders', query)),
   orders: async (query = '') => (await adminApi.ordersPage(query)).items,
   order: (id: string) => apiRequest<AdminOrder>(`/orders/${id}`),
   updateOrderStatus: (id: string, status: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminOrder>(`/orders/${id}/status`, { method: 'PATCH', body: { status }, csrfToken: options?.csrfToken }),
-  updateOrderStatusWithNotes: (id: string, status: string, notes?: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminOrder>(`/orders/${id}/status`, { method: 'PATCH', body: { status, notes }, csrfToken: options?.csrfToken }),
+    apiRequest<AdminOrder>(`/orders/${id}/status`, {
+      method: 'PATCH',
+      body: { status },
+      csrfToken: options?.csrfToken,
+    }),
+  updateOrderStatusWithNotes: (
+    id: string,
+    status: string,
+    notes?: string,
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminOrder>(`/orders/${id}/status`, {
+      method: 'PATCH',
+      body: { status, notes },
+      csrfToken: options?.csrfToken,
+    }),
   updateOrderItemStatus: (id: string, status: string, options?: AdminWriteOptions) =>
-    apiRequest(`/orders/items/${id}/status`, { method: 'PATCH', body: { status }, csrfToken: options?.csrfToken }),
-  reviewPaymentProof: (id: string, status: 'APPROVED' | 'REJECTED', rejectionReason?: string, options?: AdminWriteOptions) =>
+    apiRequest(`/orders/items/${id}/status`, {
+      method: 'PATCH',
+      body: { status },
+      csrfToken: options?.csrfToken,
+    }),
+  reviewPaymentProof: (
+    id: string,
+    status: 'APPROVED' | 'REJECTED',
+    rejectionReason?: string,
+    options?: AdminWriteOptions,
+  ) =>
     apiRequest<AdminOrder>(`/orders/payment-proofs/${id}/status`, {
       method: 'PATCH',
       body: { status, rejectionReason },
       csrfToken: options?.csrfToken,
     }),
-  reviewCashFinalPayment: (id: string, status: 'APPROVED' | 'REJECTED', note?: string, options?: AdminWriteOptions) =>
+  reviewCashFinalPayment: (
+    id: string,
+    status: 'APPROVED' | 'REJECTED',
+    note?: string,
+    options?: AdminWriteOptions,
+  ) =>
     apiRequest<AdminOrder>(`/orders/${id}/final-payment`, {
       method: 'PATCH',
       body: { status, method: 'cash_at_shop', note },
@@ -817,102 +949,264 @@ export const adminApi = {
   settingsPage: () => fetchList<AdminSetting>('/settings?limit=100'),
   settings: async () => (await adminApi.settingsPage()).items,
   settingDefinitions: () => apiRequest<AdminSettingDefinition[]>('/settings/definitions'),
-  upsertSetting: (key: string, input: { value: unknown; scope: string; description?: string }, options?: AdminWriteOptions) =>
-    apiRequest<AdminSetting>(`/settings/${key}`, { method: 'PUT', body: input, csrfToken: options?.csrfToken }),
+  upsertSetting: (
+    key: string,
+    input: { value: unknown; scope: string; description?: string },
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminSetting>(`/settings/${key}`, {
+      method: 'PUT',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
 
-  flashSalesPage: (query = '') => fetchList<AdminFlashSale>(withDefaultLimit('/flash-sales/admin/list', query, 20)),
+  flashSalesPage: (query = '') =>
+    fetchList<AdminFlashSale>(withDefaultLimit('/flash-sales/admin/list', query, 20)),
   flashSales: async (query = '') => (await adminApi.flashSalesPage(query)).items,
-  createFlashSale: (input: {
-    titleAr: string;
-    titleEn?: string;
-    discountPercent: string;
-    startsAt: string;
-    endsAt: string;
-    status: string;
-  }, options?: AdminWriteOptions) => apiRequest<AdminFlashSale>('/flash-sales', { method: 'POST', body: input, csrfToken: options?.csrfToken }),
+  createFlashSale: (
+    input: {
+      titleAr: string;
+      titleEn?: string;
+      discountPercent: string;
+      startsAt: string;
+      endsAt: string;
+      status: string;
+    },
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminFlashSale>('/flash-sales', {
+      method: 'POST',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
   updateFlashSale: (id: string, input: Partial<AdminFlashSale>, options?: AdminWriteOptions) =>
-    apiRequest<AdminFlashSale>(`/flash-sales/${id}`, { method: 'PATCH', body: input, csrfToken: options?.csrfToken }),
+    apiRequest<AdminFlashSale>(`/flash-sales/${id}`, {
+      method: 'PATCH',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
   deleteFlashSale: (id: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminFlashSale>(`/flash-sales/${id}`, { method: 'DELETE', csrfToken: options?.csrfToken }),
+    apiRequest<AdminFlashSale>(`/flash-sales/${id}`, {
+      method: 'DELETE',
+      csrfToken: options?.csrfToken,
+    }),
   addFlashSaleProduct: (id: string, productId: string, options?: AdminWriteOptions) =>
-    apiRequest(`/flash-sales/${id}/products`, { method: 'POST', body: { productId }, csrfToken: options?.csrfToken }),
+    apiRequest(`/flash-sales/${id}/products`, {
+      method: 'POST',
+      body: { productId },
+      csrfToken: options?.csrfToken,
+    }),
   removeFlashSaleProduct: (id: string, productId: string, options?: AdminWriteOptions) =>
-    apiRequest(`/flash-sales/${id}/products/${productId}`, { method: 'DELETE', csrfToken: options?.csrfToken }),
+    apiRequest(`/flash-sales/${id}/products/${productId}`, {
+      method: 'DELETE',
+      csrfToken: options?.csrfToken,
+    }),
 
   sheinMarketplaceSettings: () =>
     apiRequest<AdminSheinMarketplaceSettings>('/shein/marketplace-settings'),
-  updateSheinMarketplaceSettings: (input: { countryCode: string; language?: string }, options: AdminWriteOptions = {}) =>
+  updateSheinMarketplaceSettings: (
+    input: { countryCode: string; language?: string },
+    options: AdminWriteOptions = {},
+  ) =>
     apiRequest<AdminSheinMarketplaceSettings>('/shein/marketplace-settings', {
       method: 'PATCH',
       body: { ...input, currencyCode: 'SAR' },
       csrfToken: options.csrfToken,
     }),
-  sheinImportsPage: (query = '') => fetchList<AdminSheinImport>(withDefaultLimit('/shein/imports', query)),
+  sheinImportsPage: (query = '') =>
+    fetchList<AdminSheinImport>(withDefaultLimit('/shein/imports', query)),
   sheinImports: async (query = '') => (await adminApi.sheinImportsPage(query)).items,
   sheinImport: (id: string) => apiRequest<AdminSheinImport>(`/shein/imports/${id}`),
-  createSheinImport: (input: { sourceUrl: string; rawPayload?: unknown }, options: AdminWriteOptions = {}) =>
-    apiRequest<AdminSheinImport>('/shein/imports', { method: 'POST', body: input, csrfToken: options.csrfToken }),
-  startSheinAssist: (input: { sourceUrl: string; rawPayload?: unknown }, options: AdminWriteOptions = {}) =>
-    apiRequest<AdminSheinAssistResponse>('/shein/imports/assist', { method: 'POST', body: input, csrfToken: options.csrfToken }),
+  createSheinImport: (
+    input: { sourceUrl: string; rawPayload?: unknown },
+    options: AdminWriteOptions = {},
+  ) =>
+    apiRequest<AdminSheinImport>('/shein/imports', {
+      method: 'POST',
+      body: input,
+      csrfToken: options.csrfToken,
+    }),
+  startSheinAssist: (
+    input: { sourceUrl: string; rawPayload?: unknown },
+    options: AdminWriteOptions = {},
+  ) =>
+    apiRequest<AdminSheinAssistResponse>('/shein/imports/assist', {
+      method: 'POST',
+      body: input,
+      csrfToken: options.csrfToken,
+    }),
   sheinAssistJob: (jobId: string) =>
     apiRequest<AdminSheinAssistResponse>(`/shein/imports/assist/${jobId}`),
   continueSheinAssist: (jobId: string, options: AdminWriteOptions = {}) =>
-    apiRequest<AdminSheinAssistResponse>(`/shein/imports/assist/${jobId}/continue`, { method: 'POST', csrfToken: options.csrfToken }),
-  reviewSheinProduct: (id: string, editedPayload: SheinPreviewPayload, options: AdminWriteOptions = {}) =>
+    apiRequest<AdminSheinAssistResponse>(`/shein/imports/assist/${jobId}/continue`, {
+      method: 'POST',
+      csrfToken: options.csrfToken,
+    }),
+  reviewSheinProduct: (
+    id: string,
+    editedPayload: SheinPreviewPayload,
+    options: AdminWriteOptions = {},
+  ) =>
     apiRequest<AdminSheinImport>(`/shein/imports/${id}/review`, {
       method: 'POST',
       body: { editedPayload: sanitizeSheinPublishPayload(editedPayload) },
       csrfToken: options.csrfToken,
     }),
-  approveSheinProduct: (id: string, editedPayload?: SheinPreviewPayload, options: AdminWriteOptions = {}) =>
+  approveSheinProduct: (
+    id: string,
+    editedPayload?: SheinPreviewPayload,
+    options: AdminWriteOptions = {},
+  ) =>
     apiRequest<AdminSheinImport>(`/shein/imports/${id}/approve`, {
       method: 'POST',
       body: { editedPayload: sanitizeSheinPublishPayload(editedPayload) },
       csrfToken: options.csrfToken,
     }),
-  publishSheinProduct: (id: string, editedPayload?: SheinPreviewPayload, options: AdminWriteOptions = {}) =>
+  publishSheinProduct: (
+    id: string,
+    editedPayload?: SheinPreviewPayload,
+    options: AdminWriteOptions = {},
+  ) =>
     apiRequest<AdminSheinImport>(`/shein/imports/${id}/publish`, {
       method: 'POST',
       body: { editedPayload: sanitizeSheinPublishPayload(editedPayload) },
       csrfToken: options.csrfToken,
     }),
   retrySheinImport: (id: string, options: AdminWriteOptions = {}) =>
-    apiRequest<AdminSheinImport>(`/shein/imports/${id}/retry`, { method: 'POST', csrfToken: options.csrfToken }),
+    apiRequest<AdminSheinImport>(`/shein/imports/${id}/retry`, {
+      method: 'POST',
+      csrfToken: options.csrfToken,
+    }),
 
-
-  sheinBatchesPage: (query = '') => fetchList<AdminSheinBatch>(withDefaultLimit('/shein-batches', query, 20)),
+  sheinBatchesPage: (query = '') =>
+    fetchList<AdminSheinBatch>(withDefaultLimit('/shein-batches', query, 20)),
   sheinBatches: async (query = '') => (await adminApi.sheinBatchesPage(query)).items,
   sheinBatch: (id: string) => apiRequest<AdminSheinBatch>(`/shein-batches/${id}`),
-  createSheinBatch: (input: { title?: string; sheinOrderReference?: string; trackingNumber?: string; trackingCarrier?: string; trackingUrl?: string; exchangeRateSarToEgp?: string; status?: SheinBatchStatus; orderedAt?: string; notes?: string; items?: Array<{ orderItemId: string; quantity?: number; unitSarAmount?: string; unitEgpAmount?: string; notes?: string }> }, options?: AdminWriteOptions) =>
-    apiRequest<AdminSheinBatch>('/shein-batches', { method: 'POST', body: input, csrfToken: options?.csrfToken }),
-  updateSheinBatch: (id: string, input: { title?: string; sheinOrderReference?: string; trackingNumber?: string; trackingCarrier?: string; trackingUrl?: string; exchangeRateSarToEgp?: string; notes?: string }, options?: AdminWriteOptions) =>
-    apiRequest<AdminSheinBatch>(`/shein-batches/${id}`, { method: 'PATCH', body: input, csrfToken: options?.csrfToken }),
-  updateSheinBatchStatus: (id: string, status: SheinBatchStatus, note?: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminSheinBatch>(`/shein-batches/${id}/status`, { method: 'PATCH', body: { status, note }, csrfToken: options?.csrfToken }),
-  updateSheinBatchItemStatus: (batchId: string, itemId: string, status: OrderItemStatus, note?: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminSheinBatch>(`/shein-batches/${batchId}/items/${itemId}/status`, { method: 'PATCH', body: { status, note }, csrfToken: options?.csrfToken }),
-  availableSheinOrderItemsPage: (query = '') => fetchList<AdminAvailableSheinOrderItem>(withDefaultLimit('/shein-batches/available-order-items', query, 20)),
-  addSheinBatchItems: (id: string, items: Array<{ orderItemId: string; quantity?: number; unitSarAmount?: string; unitEgpAmount?: string; notes?: string }>, options?: AdminWriteOptions) =>
-    apiRequest<AdminSheinBatch>(`/shein-batches/${id}/items/bulk`, { method: 'POST', body: { items }, csrfToken: options?.csrfToken }),
+  createSheinBatch: (
+    input: {
+      title?: string;
+      sheinOrderReference?: string;
+      trackingNumber?: string;
+      trackingCarrier?: string;
+      trackingUrl?: string;
+      exchangeRateSarToEgp?: string;
+      status?: SheinBatchStatus;
+      orderedAt?: string;
+      notes?: string;
+      items?: Array<{
+        orderItemId: string;
+        quantity?: number;
+        unitSarAmount?: string;
+        unitEgpAmount?: string;
+        notes?: string;
+      }>;
+    },
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminSheinBatch>('/shein-batches', {
+      method: 'POST',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
+  updateSheinBatch: (
+    id: string,
+    input: {
+      title?: string;
+      sheinOrderReference?: string;
+      trackingNumber?: string;
+      trackingCarrier?: string;
+      trackingUrl?: string;
+      exchangeRateSarToEgp?: string;
+      notes?: string;
+    },
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminSheinBatch>(`/shein-batches/${id}`, {
+      method: 'PATCH',
+      body: input,
+      csrfToken: options?.csrfToken,
+    }),
+  updateSheinBatchStatus: (
+    id: string,
+    status: SheinBatchStatus,
+    note?: string,
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminSheinBatch>(`/shein-batches/${id}/status`, {
+      method: 'PATCH',
+      body: { status, note },
+      csrfToken: options?.csrfToken,
+    }),
+  updateSheinBatchItemStatus: (
+    batchId: string,
+    itemId: string,
+    status: OrderItemStatus,
+    note?: string,
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminSheinBatch>(`/shein-batches/${batchId}/items/${itemId}/status`, {
+      method: 'PATCH',
+      body: { status, note },
+      csrfToken: options?.csrfToken,
+    }),
+  availableSheinOrderItemsPage: (query = '') =>
+    fetchList<AdminAvailableSheinOrderItem>(
+      withDefaultLimit('/shein-batches/available-order-items', query, 20),
+    ),
+  addSheinBatchItems: (
+    id: string,
+    items: Array<{
+      orderItemId: string;
+      quantity?: number;
+      unitSarAmount?: string;
+      unitEgpAmount?: string;
+      notes?: string;
+    }>,
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminSheinBatch>(`/shein-batches/${id}/items/bulk`, {
+      method: 'POST',
+      body: { items },
+      csrfToken: options?.csrfToken,
+    }),
   removeSheinBatchItem: (batchId: string, itemId: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminSheinBatch>(`/shein-batches/${batchId}/items/${itemId}`, { method: 'DELETE', csrfToken: options?.csrfToken }),
+    apiRequest<AdminSheinBatch>(`/shein-batches/${batchId}/items/${itemId}`, {
+      method: 'DELETE',
+      csrfToken: options?.csrfToken,
+    }),
   regenerateSheinBatchWhatsappMessages: (id: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminSheinBatch>(`/shein-batches/${id}/notifications/whatsapp/regenerate`, { method: 'POST', csrfToken: options?.csrfToken }),
+    apiRequest<AdminSheinBatch>(`/shein-batches/${id}/notifications/whatsapp/regenerate`, {
+      method: 'POST',
+      csrfToken: options?.csrfToken,
+    }),
   sheinBatchWhatsappNotifications: (id: string) =>
     apiRequest<AdminSheinBatchWhatsappNotifications>(`/shein-batches/${id}/notifications/whatsapp`),
-  updateSheinBatchItemWhatsappMessage: (batchId: string, itemId: string, message: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminSheinBatch>(`/shein-batches/${batchId}/items/${itemId}/whatsapp-message`, { method: 'PATCH', body: { message }, csrfToken: options?.csrfToken }),
+  updateSheinBatchItemWhatsappMessage: (
+    batchId: string,
+    itemId: string,
+    message: string,
+    options?: AdminWriteOptions,
+  ) =>
+    apiRequest<AdminSheinBatch>(`/shein-batches/${batchId}/items/${itemId}/whatsapp-message`, {
+      method: 'PATCH',
+      body: { message },
+      csrfToken: options?.csrfToken,
+    }),
   recalculateSheinBatch: (id: string, options?: AdminWriteOptions) =>
-    apiRequest<AdminSheinBatch>(`/shein-batches/${id}/recalculate`, { method: 'POST', csrfToken: options?.csrfToken }),
+    apiRequest<AdminSheinBatch>(`/shein-batches/${id}/recalculate`, {
+      method: 'POST',
+      csrfToken: options?.csrfToken,
+    }),
 
-  auditLogsPage: (query = '') => fetchList<AdminAuditLog>(withDefaultLimit('/admin/audit-logs', query)),
+  auditLogsPage: (query = '') =>
+    fetchList<AdminAuditLog>(withDefaultLimit('/admin/audit-logs', query)),
   auditLogs: async (query = '') => (await adminApi.auditLogsPage(query)).items,
   uploadReconciliation: () => apiRequest<UploadReconciliation>('/uploads/reconciliation'),
   cleanupUploadOrphans: (options?: AdminWriteOptions) =>
-    apiRequest<UploadCleanupResult>(
-      '/uploads/cleanup-orphans',
-      { method: 'POST', csrfToken: options?.csrfToken },
-    ),
+    apiRequest<UploadCleanupResult>('/uploads/cleanup-orphans', {
+      method: 'POST',
+      csrfToken: options?.csrfToken,
+    }),
 };
 
 function withDefaultLimit(path: string, query = '', defaultLimit = 20): string {

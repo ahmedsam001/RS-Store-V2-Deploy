@@ -5,6 +5,9 @@ coverage
 .env
 .env.*
 !.env.example
+apps/api/.env
+apps/api/.env.*
+!apps/api/.env.example
 .DS_Store
 .vscode
 .idea

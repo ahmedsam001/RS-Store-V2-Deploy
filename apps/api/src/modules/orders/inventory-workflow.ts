@@ -4,6 +4,12 @@ export function getAvailableStock(stockQuantity: number, reservedQuantity: numbe
   return Math.max(0, stockQuantity - reservedQuantity);
 }
 
-export function canReserveStock(stockQuantity: number, reservedQuantity: number, requestedQuantity: number): boolean {
-  return requestedQuantity > 0 && getAvailableStock(stockQuantity, reservedQuantity) >= requestedQuantity;
+export function canReserveStock(
+  stockQuantity: number,
+  reservedQuantity: number,
+  requestedQuantity: number,
+): boolean {
+  return (
+    requestedQuantity > 0 && getAvailableStock(stockQuantity, reservedQuantity) >= requestedQuantity
+  );
 }

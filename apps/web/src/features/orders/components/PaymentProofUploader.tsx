@@ -60,7 +60,9 @@ export function PaymentProofUploader({
       await onUpload(file);
       setFile(null);
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : 'Failed to upload payment proof');
+      setError(
+        caughtError instanceof Error ? caughtError.message : 'Failed to upload payment proof',
+      );
     } finally {
       setIsUploading(false);
     }

@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { UserRole, ProductStatus } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -41,7 +51,11 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  update(@Param() params: IdParamDto, @Body() dto: UpdateProductDto, @CurrentUser() user: AuthenticatedUser) {
+  update(
+    @Param() params: IdParamDto,
+    @Body() dto: UpdateProductDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.productsService.update(params.id, dto, user);
   }
 
@@ -60,12 +74,20 @@ export class ProductsController {
   }
 
   @Post(':id/images')
-  addImage(@Param() params: IdParamDto, @Body() dto: AddProductImageDto, @CurrentUser() user: AuthenticatedUser) {
+  addImage(
+    @Param() params: IdParamDto,
+    @Body() dto: AddProductImageDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.productsService.addImage(params.id, dto, user);
   }
 
   @Patch(':id/images/:imageId/primary')
-  setPrimaryImage(@Param('id') id: string, @Param('imageId') imageId: string, @CurrentUser() user: AuthenticatedUser) {
+  setPrimaryImage(
+    @Param('id') id: string,
+    @Param('imageId') imageId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.productsService.setPrimaryImage(id, imageId, user);
   }
 
@@ -75,17 +97,30 @@ export class ProductsController {
   }
 
   @Post(':id/variants')
-  addVariant(@Param() params: IdParamDto, @Body() dto: CreateProductVariantDto, @CurrentUser() user: AuthenticatedUser) {
+  addVariant(
+    @Param() params: IdParamDto,
+    @Body() dto: CreateProductVariantDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.productsService.addVariant(params.id, dto, user);
   }
 
   @Patch(':id/variants/:variantId')
-  updateVariant(@Param('id') id: string, @Param('variantId') variantId: string, @Body() dto: UpdateProductVariantDto, @CurrentUser() user: AuthenticatedUser) {
+  updateVariant(
+    @Param('id') id: string,
+    @Param('variantId') variantId: string,
+    @Body() dto: UpdateProductVariantDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.productsService.updateVariant(id, variantId, dto, user);
   }
 
   @Delete(':id/variants/:variantId')
-  removeVariant(@Param('id') id: string, @Param('variantId') variantId: string, @CurrentUser() user: AuthenticatedUser) {
+  removeVariant(
+    @Param('id') id: string,
+    @Param('variantId') variantId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.productsService.removeVariant(id, variantId, user);
   }
 }

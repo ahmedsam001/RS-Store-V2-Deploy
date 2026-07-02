@@ -4,7 +4,12 @@ import { X } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { Select } from '@/shared/components/ui/Select';
-import { AdminCategory, AdminPaginated, AdminProduct, adminApi } from '@/features/admin/api/admin-api';
+import {
+  AdminCategory,
+  AdminPaginated,
+  AdminProduct,
+  adminApi,
+} from '@/features/admin/api/admin-api';
 import {
   AdminCard,
   AdminFilterBar,
@@ -14,7 +19,11 @@ import { AdminEmpty } from '@/features/admin/components/AdminState';
 import { AdminMobileDataCard, AdminMobileField } from '@/features/admin/components/AdminMobileList';
 import { AdminPagination } from '@/features/admin/components/AdminPagination';
 import { AdminConfirmButton } from '@/features/admin/components/AdminConfirmButton';
-import { AdminFeedback, AdminNoticeState, toNotice } from '@/features/admin/components/AdminFeedback';
+import {
+  AdminFeedback,
+  AdminNoticeState,
+  toNotice,
+} from '@/features/admin/components/AdminFeedback';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 import { useAuth } from '@/features/auth';
 
@@ -95,7 +104,10 @@ export function AdminProductsList({ categories, onEdit, onAddNew }: Props) {
     try {
       const result = await adminApi.applyBulkProductDiscount(discount, { csrfToken });
       await load();
-      setNotice({ type: 'success', message: `Discount ${discount}% applied to ${result.updatedCount} products` });
+      setNotice({
+        type: 'success',
+        message: `Discount ${discount}% applied to ${result.updatedCount} products`,
+      });
     } catch (error) {
       setNotice(toNotice(error));
     }
@@ -139,7 +151,12 @@ export function AdminProductsList({ categories, onEdit, onAddNew }: Props) {
       </div>
 
       <div className="hidden lg:block">
-        <FilterPanel filters={filters} setFilters={setFilters} categories={categories} onSubmit={submitFilters} />
+        <FilterPanel
+          filters={filters}
+          setFilters={setFilters}
+          categories={categories}
+          onSubmit={submitFilters}
+        />
       </div>
 
       <form
@@ -148,7 +165,9 @@ export function AdminProductsList({ categories, onEdit, onAddNew }: Props) {
       >
         <div>
           <p className="text-sm font-extrabold">Apply discount to all products</p>
-          <p className="text-xs font-semibold text-muted-foreground">This updates every product discount shown on the customer store</p>
+          <p className="text-xs font-semibold text-muted-foreground">
+            This updates every product discount shown on the customer store
+          </p>
         </div>
         <div className="mt-3 flex gap-2 sm:mt-0">
           <Input
@@ -160,7 +179,9 @@ export function AdminProductsList({ categories, onEdit, onAddNew }: Props) {
             placeholder="Discount %"
             className="w-32"
           />
-          <Button type="submit" variant="outline">Apply to all</Button>
+          <Button type="submit" variant="outline">
+            Apply to all
+          </Button>
         </div>
       </form>
 
@@ -177,7 +198,13 @@ export function AdminProductsList({ categories, onEdit, onAddNew }: Props) {
             action={{
               label: 'Clear filters',
               onClick: () => {
-                const cleared: ProductFilters = { ...filters, search: '', categoryId: '', status: '', stockStatus: '' };
+                const cleared: ProductFilters = {
+                  ...filters,
+                  search: '',
+                  categoryId: '',
+                  status: '',
+                  stockStatus: '',
+                };
                 setFilters(cleared);
                 load(cleared);
               },
@@ -262,7 +289,11 @@ function ProductCard({
       <AdminMobileField label="SKU" value={product.sku ?? '-'} dir="ltr" />
       <AdminMobileField label="Category" value={categoryName} />
       <AdminMobileField label="Price" value={<AdminProductPrice product={product} />} dir="ltr" />
-      <AdminMobileField label="Availability" value={isInStock ? 'In Stock' : 'Out of Stock'} dir="ltr" />
+      <AdminMobileField
+        label="Availability"
+        value={isInStock ? 'In Stock' : 'Out of Stock'}
+        dir="ltr"
+      />
     </AdminMobileDataCard>
   );
 }
@@ -286,7 +317,9 @@ function FilterPanel({
       >
         <option value="">All categories</option>
         {categories.map((c) => (
-          <option key={c.id} value={c.id}>{c.nameAr}</option>
+          <option key={c.id} value={c.id}>
+            {c.nameAr}
+          </option>
         ))}
       </Select>
 
@@ -359,7 +392,11 @@ function MobileFilterDrawer({
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-label="Close filter drawer" />
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+        aria-label="Close filter drawer"
+      />
       <aside className="absolute inset-y-0 right-0 flex h-full w-[min(88vw,360px)] flex-col gap-4 bg-background p-4 shadow-xl">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">Filter Products</h2>
@@ -369,7 +406,12 @@ function MobileFilterDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <FilterPanel filters={filters} setFilters={setFilters} categories={categories} onSubmit={handleFilterSubmit} />
+          <FilterPanel
+            filters={filters}
+            setFilters={setFilters}
+            categories={categories}
+            onSubmit={handleFilterSubmit}
+          />
         </div>
 
         <div className="flex gap-2 pt-4">
@@ -385,7 +427,6 @@ function MobileFilterDrawer({
   );
 }
 
-
 function AdminProductPrice({ product }: { product: AdminProduct }) {
   const discount = Number(product.discount ?? product.discountPercent ?? 0);
   const originalAmount = Number(product.priceAmount ?? 0);
@@ -394,10 +435,12 @@ function AdminProductPrice({ product }: { product: AdminProduct }) {
     return <>{formatPrice(originalAmount, currency)}</>;
   }
 
-  const newAmount = Math.max(0, Math.round(originalAmount * (100 - discount) / 100));
+  const newAmount = Math.max(0, Math.round((originalAmount * (100 - discount)) / 100));
   return (
     <span className="inline-flex flex-wrap items-baseline gap-2">
-      <span className="text-muted-foreground line-through">{formatPrice(originalAmount, currency)}</span>
+      <span className="text-muted-foreground line-through">
+        {formatPrice(originalAmount, currency)}
+      </span>
       <span className="text-primary">{formatPrice(newAmount, currency)}</span>
       <span className="text-xs text-green-700">-{discount}%</span>
     </span>

@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { SettingScope } from '@prisma/client';
-import { getSettingDefinition, validateSettingValue } from '../src/modules/settings/settings-registry';
+import {
+  getSettingDefinition,
+  validateSettingValue,
+} from '../src/modules/settings/settings-registry';
 
 describe('settings registry validation', () => {
   it('marks required settings explicitly', () => {

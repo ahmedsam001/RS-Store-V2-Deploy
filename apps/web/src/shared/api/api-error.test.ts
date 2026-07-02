@@ -73,7 +73,9 @@ describe('ApiError utilities and http client parsing', () => {
       await apiRequest('/network-error');
       throw new Error('Expected apiRequest to throw');
     } catch (error) {
-      expect(toUserMessage(error)).toBe('Unable to connect to server. Please check your internet connection.');
+      expect(toUserMessage(error)).toBe(
+        'Unable to connect to server. Please check your internet connection.',
+      );
     }
   });
 

@@ -12,7 +12,12 @@ export class IsGreaterThanOrEqualToConstraint implements ValidatorConstraintInte
     const [relatedPropertyName] = args.constraints as [string];
     const relatedValue = (args.object as Record<string, unknown>)[relatedPropertyName];
 
-    if (value === undefined || value === null || relatedValue === undefined || relatedValue === null) {
+    if (
+      value === undefined ||
+      value === null ||
+      relatedValue === undefined ||
+      relatedValue === null
+    ) {
       return true;
     }
 

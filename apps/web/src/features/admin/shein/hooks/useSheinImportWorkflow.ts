@@ -1,5 +1,12 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { AdminCategory, AdminPaginated, AdminSheinImport, AdminSheinAssistJob, AdminSheinMarketplaceSettings, AdminSetting } from '@/features/admin/api/admin-api';
+import {
+  AdminCategory,
+  AdminPaginated,
+  AdminSheinImport,
+  AdminSheinAssistJob,
+  AdminSheinMarketplaceSettings,
+  AdminSetting,
+} from '@/features/admin/api/admin-api';
 import { sheinApi, readSarExchangeRate } from '@/features/admin/shein/api/shein-api';
 import { sanitizeSheinAdminMessage } from '@/features/admin/shein/utils/shein-review-utils';
 import { Notice } from '@/features/admin/shein/types/shein.types';
@@ -24,7 +31,9 @@ function errorMessage(error: unknown, fallback: string): string {
 }
 
 function isTemporaryDevToolsMessage(message: string): boolean {
-  return /timed out|timeout|DevTools|communicate|fetch failed|ECONNREFUSED|ECONNRESET|aborted|Target closed|No target|socket|terminated while loading/i.test(message);
+  return /timed out|timeout|DevTools|communicate|fetch failed|ECONNREFUSED|ECONNRESET|aborted|Target closed|No target|socket|terminated while loading/i.test(
+    message,
+  );
 }
 
 const SHEIN_VERIFICATION_NOTICE =
@@ -144,18 +153,21 @@ export function useSheinImportWorkflow() {
               : currentNotice,
           );
         }
-        if (
-          result.job &&
-          isTerminalAssistStatus(result.job.status)
-        ) {
+        if (result.job && isTerminalAssistStatus(result.job.status)) {
           window.clearInterval(timer);
           await load();
           if (result.status === 'success') {
-            setNotice({ type: 'success', message: 'Product extracted automatically. SHEIN tab was closed and the review form is ready.' });
+            setNotice({
+              type: 'success',
+              message:
+                'Product extracted automatically. SHEIN tab was closed and the review form is ready.',
+            });
           } else if (result.status === 'manual_review' || result.status === 'failed') {
             setNotice({
               type: result.product ? 'warning' : 'error',
-              message: sanitizeSheinAdminMessage(result.reason || 'Automatic extraction needs manual review.'),
+              message: sanitizeSheinAdminMessage(
+                result.reason || 'Automatic extraction needs manual review.',
+              ),
             });
           }
         }
@@ -211,10 +223,15 @@ export function useSheinImportWorkflow() {
       } else if (result.status === 'failed') {
         setNotice({
           type: 'error',
-          message: sanitizeSheinAdminMessage(result.reason || 'Failed to open SHEIN assisted browser session.'),
+          message: sanitizeSheinAdminMessage(
+            result.reason || 'Failed to open SHEIN assisted browser session.',
+          ),
         });
       } else if (result.status === 'success') {
-        setNotice({ type: 'success', message: 'Product extracted successfully. Review form is ready.' });
+        setNotice({
+          type: 'success',
+          message: 'Product extracted successfully. Review form is ready.',
+        });
       } else {
         setNotice({
           type: 'success',
@@ -248,7 +265,10 @@ export function useSheinImportWorkflow() {
       }
       if (result.status === 'success') {
         await load();
-        setNotice({ type: 'success', message: 'Product extracted successfully. Review form is ready.' });
+        setNotice({
+          type: 'success',
+          message: 'Product extracted successfully. Review form is ready.',
+        });
       } else if (result.status === 'captcha_required') {
         setNotice({
           type: 'warning',
@@ -262,7 +282,9 @@ export function useSheinImportWorkflow() {
       } else {
         setNotice({
           type: result.status === 'failed' ? 'error' : 'warning',
-          message: sanitizeSheinAdminMessage(result.reason || 'Automatic extraction could not read product data.'),
+          message: sanitizeSheinAdminMessage(
+            result.reason || 'Automatic extraction could not read product data.',
+          ),
         });
       }
     } catch (error) {

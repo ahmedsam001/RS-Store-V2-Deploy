@@ -9,7 +9,11 @@ import * as path from 'node:path';
 import { SHEIN_MAX_PRODUCT_IMAGES } from './shein-image-filter';
 import { SheinPreviewNormalizer } from './shein-preview.normalizer';
 import { SheinUrlService } from './shein-url.service';
-import { DEFAULT_SHEIN_IMPORT_VARIANT_STOCK, SheinImportPreview, SheinImportStepStatus } from './shein.types';
+import {
+  DEFAULT_SHEIN_IMPORT_VARIANT_STOCK,
+  SheinImportPreview,
+  SheinImportStepStatus,
+} from './shein.types';
 //import { FIXED_SHEIN_CURRENCY, SheinMarketplaceSettings } from './shein-marketplace';
 
 const DEFAULT_WAIT_MS = 20 * 60_000;
@@ -429,7 +433,14 @@ type VisibleReaderResult = {
     actualDetectedCountry?: string;
     sku?: string;
     images?: string[];
-    variants?: Array<{ nameAr?: string; nameEn?: string; size?: string; color?: string; sku?: string; stockQuantity?: number }>;
+    variants?: Array<{
+      nameAr?: string;
+      nameEn?: string;
+      size?: string;
+      color?: string;
+      sku?: string;
+      stockQuantity?: number;
+    }>;
   };
 };
 
@@ -461,7 +472,11 @@ export class SheinAssistedBrowserService {
     return this.visibleBrowserCanOpen();
   }
 
-  async openAssistedSession(sessionId: string, sourceUrl: string, marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): Promise<AssistedSessionReadResult> {
+  async openAssistedSession(
+    sessionId: string,
+    sourceUrl: string,
+    marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): Promise<AssistedSessionReadResult> {
     await this.closeSession(sessionId);
     const browser = await this.openVisibleBrowser();
     try {
@@ -494,11 +509,13 @@ export class SheinAssistedBrowserService {
 
     let inspected: VisibleReaderResult;
     try {
-      session.target = await this.findBestSheinTarget(session.browser.port, session.target.id) ?? session.target;
+      session.target =
+        (await this.findBestSheinTarget(session.browser.port, session.target.id)) ?? session.target;
       if (!this.isBrowserProcessAlive(session.browser) && !session.target.webSocketDebuggerUrl) {
         return {
           state: 'loading',
-          message: 'Waiting for visible Chrome DevTools to reconnect. Keep the SHEIN product tab open; the importer will continue automatically.',
+          message:
+            'Waiting for visible Chrome DevTools to reconnect. Keep the SHEIN product tab open; the importer will continue automatically.',
           sourceUrl: session.target.url || session.sourceUrl,
           preparedUrl: session.preparedUrl,
         };
@@ -506,7 +523,11 @@ export class SheinAssistedBrowserService {
       if (session.target.webSocketDebuggerUrl) {
         await this.wakeVisiblePage(session.target.webSocketDebuggerUrl);
       }
-      inspected = await this.inspectVisiblePage(session.browser.port, session.target.id, session.marketplace);
+      inspected = await this.inspectVisiblePage(
+        session.browser.port,
+        session.target.id,
+        session.marketplace,
+      );
     } catch (error) {
       const transientMessage = this.transientDevToolsMessage(error);
       if (!transientMessage) throw error;
@@ -520,11 +541,16 @@ export class SheinAssistedBrowserService {
     }
 
     if (inspected.state === 'ready' && inspected.product) {
-      const preview = this.normalizeVisibleProduct(inspected.product, inspected.sourceUrl || session.sourceUrl, session.marketplace);
+      const preview = this.normalizeVisibleProduct(
+        inspected.product,
+        inspected.sourceUrl || session.sourceUrl,
+        session.marketplace,
+      );
       if (!this.isStrictReadyPreview(preview)) {
         return {
           state: 'loading',
-          message: 'Waiting for complete product name, price, and at least two valid SHEIN product images',
+          message:
+            'Waiting for complete product name, price, and at least two valid SHEIN product images',
           sourceUrl: inspected.sourceUrl || session.sourceUrl,
           preparedUrl: session.preparedUrl,
         };
@@ -542,7 +568,11 @@ export class SheinAssistedBrowserService {
     const state = inspected.state === 'verification' ? 'verification' : 'loading';
     return {
       state,
-      message: inspected.message || (state === 'verification' ? 'SHEIN requires verification. Complete CAPTCHA in the opened browser. The system will keep waiting and continue automatically after it is solved.' : 'SHEIN page is still loading. Complete any popup or login, keep Chrome open, and the system will keep waiting.'),
+      message:
+        inspected.message ||
+        (state === 'verification'
+          ? 'SHEIN requires verification. Complete CAPTCHA in the opened browser. The system will keep waiting and continue automatically after it is solved.'
+          : 'SHEIN page is still loading. Complete any popup or login, keep Chrome open, and the system will keep waiting.'),
       sourceUrl: inspected.sourceUrl || session.sourceUrl,
       preparedUrl: session.preparedUrl,
     };
@@ -556,8 +586,16 @@ export class SheinAssistedBrowserService {
     await this.closeBrowser(session.browser);
   }
 
-  async captureProductPreview(sourceUrl: string, marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>, report: StepReporter): Promise<SheinImportPreview> {
-    report('browser_fallback', 'running', 'Opening real Chrome to bypass SHEIN verification like V1');
+  async captureProductPreview(
+    sourceUrl: string,
+    marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+    report: StepReporter,
+  ): Promise<SheinImportPreview> {
+    report(
+      'browser_fallback',
+      'running',
+      'Opening real Chrome to bypass SHEIN verification like V1',
+    );
 
     const browser = await this.openVisibleBrowser();
     let target: ChromeTarget | null = null;
@@ -565,7 +603,11 @@ export class SheinAssistedBrowserService {
     try {
       target = await this.openSheinTarget(browser, sourceUrl, marketplace);
       report('browser_fallback', 'success', 'Opened SHEIN in real Chrome window');
-      report('read_html', 'verification', 'If CAPTCHA appears, complete it in Chrome window and system will continue automatically');
+      report(
+        'read_html',
+        'verification',
+        'If CAPTCHA appears, complete it in Chrome window and system will continue automatically',
+      );
 
       const deadline = Date.now() + this.maxWaitMs();
       let lastMessage = '';
@@ -573,7 +615,7 @@ export class SheinAssistedBrowserService {
       while (Date.now() < deadline) {
         let inspected: VisibleReaderResult;
         try {
-          target = await this.findBestSheinTarget(browser.port, target.id) ?? target;
+          target = (await this.findBestSheinTarget(browser.port, target.id)) ?? target;
           if (target.webSocketDebuggerUrl) {
             await this.wakeVisiblePage(target.webSocketDebuggerUrl);
           }
@@ -590,9 +632,14 @@ export class SheinAssistedBrowserService {
         if (inspected.state === 'ready' && inspected.product) {
           report('read_html', 'success', 'Verification passed and page read successfully');
           report('extract_product', 'running', 'Preparing product data from Chrome page');
-          const preview = this.normalizeVisibleProduct(inspected.product, inspected.sourceUrl || sourceUrl, marketplace);
+          const preview = this.normalizeVisibleProduct(
+            inspected.product,
+            inspected.sourceUrl || sourceUrl,
+            marketplace,
+          );
           if (!this.isStrictReadyPreview(preview)) {
-            const message = 'Waiting for complete product name, price, and at least two valid SHEIN product images';
+            const message =
+              'Waiting for complete product name, price, and at least two valid SHEIN product images';
             if (message !== lastMessage) report('read_html', 'running', message);
             lastMessage = message;
             await this.sleep(this.pollMs());
@@ -615,7 +662,9 @@ export class SheinAssistedBrowserService {
         await this.sleep(this.pollMs());
       }
 
-      throw new ServiceUnavailableException('Import timeout completed before SHEIN verification finished. Try again.');
+      throw new ServiceUnavailableException(
+        'Import timeout completed before SHEIN verification finished. Try again.',
+      );
     } finally {
       if (target) {
         await this.closeTarget(browser.port, target.id);
@@ -624,7 +673,11 @@ export class SheinAssistedBrowserService {
     }
   }
 
-  private normalizeVisibleProduct(product: NonNullable<VisibleReaderResult['product']>, sourceUrl: string, marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): SheinImportPreview {
+  private normalizeVisibleProduct(
+    product: NonNullable<VisibleReaderResult['product']>,
+    sourceUrl: string,
+    marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): SheinImportPreview {
     const candidate = {
       slug: product.sku,
       nameAr: product.name || 'SHEIN Product',
@@ -638,29 +691,42 @@ export class SheinAssistedBrowserService {
       selectedCurrency: marketplace.currencyCode,
       actualDetectedCountry: product.actualDetectedCountry,
       actualDetectedCurrency: product.actualDetectedCurrency || product.currency,
-      sizes: (product.variants || []).map((variant) => variant.size).filter((value): value is string => Boolean(value)),
-      colors: (product.variants || []).map((variant) => variant.color).filter((value): value is string => Boolean(value)),
+      sizes: (product.variants || [])
+        .map((variant) => variant.size)
+        .filter((value): value is string => Boolean(value)),
+      colors: (product.variants || [])
+        .map((variant) => variant.color)
+        .filter((value): value is string => Boolean(value)),
       images: (product.images || []).slice(0, SHEIN_MAX_PRODUCT_IMAGES).map((url) => ({ url })),
       variants: (product.variants || []).map((variant) => ({
-        nameAr: variant.nameAr || [variant.size, variant.color].filter(Boolean).join(' / ') || 'Default option',
+        nameAr:
+          variant.nameAr ||
+          [variant.size, variant.color].filter(Boolean).join(' / ') ||
+          'Default option',
         nameEn: variant.nameEn,
         sku: variant.sku,
         size: variant.size,
         color: variant.color,
-        stockQuantity: Number.isFinite(Number(variant.stockQuantity)) && Number(variant.stockQuantity) > 0 ? Number(variant.stockQuantity) : DEFAULT_SHEIN_IMPORT_VARIANT_STOCK,
+        stockQuantity:
+          Number.isFinite(Number(variant.stockQuantity)) && Number(variant.stockQuantity) > 0
+            ? Number(variant.stockQuantity)
+            : DEFAULT_SHEIN_IMPORT_VARIANT_STOCK,
       })),
     };
 
-    return this.normalizer.normalize(candidate, product.sourceUrl || sourceUrl, { marketplace, strictImages: true });
+    return this.normalizer.normalize(candidate, product.sourceUrl || sourceUrl, {
+      marketplace,
+      strictImages: true,
+    });
   }
 
   private isStrictReadyPreview(preview: SheinImportPreview): boolean {
     return Boolean(
-      preview.nameAr?.trim()
-      && preview.priceAmount?.trim()
-      && Number.isFinite(Number(preview.priceAmount))
-      && Number(preview.priceAmount) > 0
-      && preview.images.length >= 2,
+      preview.nameAr?.trim() &&
+      preview.priceAmount?.trim() &&
+      Number.isFinite(Number(preview.priceAmount)) &&
+      Number(preview.priceAmount) > 0 &&
+      preview.images.length >= 2,
     );
   }
 
@@ -699,7 +765,10 @@ export class SheinAssistedBrowserService {
       args.unshift('--no-sandbox', '--disable-setuid-sandbox');
     }
 
-    const child = spawn(executable, args, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: false });
+    const child = spawn(executable, args, {
+      stdio: ['ignore', 'ignore', 'pipe'],
+      windowsHide: false,
+    });
     let lastError = '';
     child.stderr?.on('data', (chunk: Buffer) => {
       lastError = `${lastError}${chunk.toString('utf8')}`.slice(-4000);
@@ -707,50 +776,90 @@ export class SheinAssistedBrowserService {
 
     const started = await this.waitForChrome(port, 30_000);
     if (!started) {
-      try { child.kill('SIGTERM'); } catch { /* ignore */ }
+      try {
+        child.kill('SIGTERM');
+      } catch {
+        /* ignore */
+      }
       const details = lastError.split('\n').filter(Boolean).slice(-2).join(' ');
-      throw new ServiceUnavailableException(`Unable to open assisted Chrome${details ? `: ${details}` : ''}`);
+      throw new ServiceUnavailableException(
+        `Unable to open assisted Chrome${details ? `: ${details}` : ''}`,
+      );
     }
 
     return { process: child, port, profileDir, temporaryProfile: profile.temporary };
   }
 
-  private async openSheinTarget(browser: AssistedBrowserHandle, sourceUrl: string, marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): Promise<ChromeTarget> {
-    const target = await this.chromeEndpoint<ChromeTarget>(browser.port, `/json/new?${encodeURIComponent('about:blank')}`, { method: 'PUT', timeoutMs: 5_000 });
+  private async openSheinTarget(
+    browser: AssistedBrowserHandle,
+    sourceUrl: string,
+    marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): Promise<ChromeTarget> {
+    const target = await this.chromeEndpoint<ChromeTarget>(
+      browser.port,
+      `/json/new?${encodeURIComponent('about:blank')}`,
+      { method: 'PUT', timeoutMs: 5_000 },
+    );
     if (!target.webSocketDebuggerUrl) {
       throw new ServiceUnavailableException('Chrome DevTools did not return a debuggable tab');
     }
 
     const normalizedUrl = this.marketUrl(sourceUrl, marketplace);
-    await this.cdpCommand(target.webSocketDebuggerUrl, 'Network.enable', {}, 5_000).catch(() => undefined);
+    await this.cdpCommand(target.webSocketDebuggerUrl, 'Network.enable', {}, 5_000).catch(
+      () => undefined,
+    );
     await this.setMarketCookies(target.webSocketDebuggerUrl, normalizedUrl, marketplace);
-    await this.cdpCommand(target.webSocketDebuggerUrl, 'Page.navigate', { url: normalizedUrl }, 10_000);
+    await this.cdpCommand(
+      target.webSocketDebuggerUrl,
+      'Page.navigate',
+      { url: normalizedUrl },
+      10_000,
+    );
     await this.sleep(1_500);
     return target;
   }
 
-  private async inspectVisiblePage(port: number, targetId: string, marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): Promise<VisibleReaderResult> {
+  private async inspectVisiblePage(
+    port: number,
+    targetId: string,
+    marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): Promise<VisibleReaderResult> {
     const target = await this.getTarget(port, targetId);
     if (!target?.webSocketDebuggerUrl) {
       throw new BadRequestException('SHEIN tab was closed before import completed');
     }
 
-    const result = await this.cdpCommand(target.webSocketDebuggerUrl, 'Runtime.evaluate', {
-      expression: `(${VISIBLE_PAGE_READER})(${JSON.stringify({ currencyCode: marketplace.currencyCode, countryCode: marketplace.countryCode })})`,
-      awaitPromise: true,
-      returnByValue: true,
-    }, 12_000);
+    const result = await this.cdpCommand(
+      target.webSocketDebuggerUrl,
+      'Runtime.evaluate',
+      {
+        expression: `(${VISIBLE_PAGE_READER})(${JSON.stringify({ currencyCode: marketplace.currencyCode, countryCode: marketplace.countryCode })})`,
+        awaitPromise: true,
+        returnByValue: true,
+      },
+      12_000,
+    );
 
     const value = this.readCdpValue(result);
-    return this.isVisibleReaderResult(value) ? value : { state: 'loading', message: 'Waiting for SHEIN page to load' };
+    return this.isVisibleReaderResult(value)
+      ? value
+      : { state: 'loading', message: 'Waiting for SHEIN page to load' };
   }
 
-  private async findBestSheinTarget(port: number, currentTargetId: string): Promise<ChromeTarget | null> {
-    const targets = await this.chromeEndpoint<ChromeTarget[]>(port, '/json/list', { timeoutMs: 3_000 }).catch(() => []);
+  private async findBestSheinTarget(
+    port: number,
+    currentTargetId: string,
+  ): Promise<ChromeTarget | null> {
+    const targets = await this.chromeEndpoint<ChromeTarget[]>(port, '/json/list', {
+      timeoutMs: 3_000,
+    }).catch(() => []);
     const pages = targets.filter((target) => target.type === 'page' && target.webSocketDebuggerUrl);
     if (!pages.length) return null;
 
-    pages.sort((a, b) => this.sheinTargetScore(b, currentTargetId) - this.sheinTargetScore(a, currentTargetId));
+    pages.sort(
+      (a, b) =>
+        this.sheinTargetScore(b, currentTargetId) - this.sheinTargetScore(a, currentTargetId),
+    );
     return pages[0] ?? null;
   }
 
@@ -767,9 +876,14 @@ export class SheinAssistedBrowserService {
   }
 
   private async wakeVisiblePage(webSocketDebuggerUrl: string): Promise<void> {
-    await this.cdpCommand(webSocketDebuggerUrl, 'Page.bringToFront', {}, 2_500).catch(() => undefined);
-    await this.cdpCommand(webSocketDebuggerUrl, 'Runtime.evaluate', {
-      expression: `(() => {
+    await this.cdpCommand(webSocketDebuggerUrl, 'Page.bringToFront', {}, 2_500).catch(
+      () => undefined,
+    );
+    await this.cdpCommand(
+      webSocketDebuggerUrl,
+      'Runtime.evaluate',
+      {
+        expression: `(() => {
         try {
           window.scrollTo(0, 0);
           document.dispatchEvent(new Event('visibilitychange'));
@@ -780,14 +894,21 @@ export class SheinAssistedBrowserService {
         } catch (_) {}
         return true;
       })()`,
-      awaitPromise: false,
-      returnByValue: true,
-    }, 4_000).catch(() => undefined);
+        awaitPromise: false,
+        returnByValue: true,
+      },
+      4_000,
+    ).catch(() => undefined);
   }
 
-  private async setMarketCookies(webSocketDebuggerUrl: string, normalizedUrl: string, marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): Promise<void> {
+  private async setMarketCookies(
+    webSocketDebuggerUrl: string,
+    normalizedUrl: string,
+    marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): Promise<void> {
     const host = new URL(normalizedUrl).hostname;
-    const domains = host.endsWith('.shein.com') || host === 'shein.com' ? ['.shein.com', host] : [host];
+    const domains =
+      host.endsWith('.shein.com') || host === 'shein.com' ? ['.shein.com', host] : [host];
     const values = [
       ['currency', marketplace.currencyCode],
       ['default_currency', marketplace.currencyCode],
@@ -799,48 +920,75 @@ export class SheinAssistedBrowserService {
 
     for (const domain of [...new Set(domains)]) {
       for (const [name, value] of values) {
-        await this.cdpCommand(webSocketDebuggerUrl, 'Network.setCookie', {
-          name,
-          value,
-          domain,
-          path: '/',
-          secure: true,
-          sameSite: 'Lax',
-        }, 5_000).catch(() => undefined);
+        await this.cdpCommand(
+          webSocketDebuggerUrl,
+          'Network.setCookie',
+          {
+            name,
+            value,
+            domain,
+            path: '/',
+            secure: true,
+            sameSite: 'Lax',
+          },
+          5_000,
+        ).catch(() => undefined);
       }
     }
   }
 
-  private marketUrl(sourceUrl: string, marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): string {
+  private marketUrl(
+    sourceUrl: string,
+    marketplace: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): string {
     return this.urlService.applyV1MarketToSheinUrl(sourceUrl, marketplace).toString();
   }
 
   private async getTarget(port: number, targetId: string): Promise<ChromeTarget | null> {
-    const targets = await this.chromeEndpoint<ChromeTarget[]>(port, '/json/list', { timeoutMs: 3_000 });
+    const targets = await this.chromeEndpoint<ChromeTarget[]>(port, '/json/list', {
+      timeoutMs: 3_000,
+    });
     return targets.find((target) => target.id === targetId) ?? null;
   }
 
   private async closeTarget(port: number, targetId: string): Promise<void> {
-    await this.chromeEndpoint<unknown>(port, `/json/close/${encodeURIComponent(targetId)}`, { timeoutMs: 2_500 }).catch(() => undefined);
+    await this.chromeEndpoint<unknown>(port, `/json/close/${encodeURIComponent(targetId)}`, {
+      timeoutMs: 2_500,
+    }).catch(() => undefined);
   }
 
   private async closeBrowser(browser: AssistedBrowserHandle): Promise<void> {
     try {
-      const version = await this.chromeEndpoint<{ webSocketDebuggerUrl?: string }>(browser.port, '/json/version', { timeoutMs: 2_000 });
+      const version = await this.chromeEndpoint<{ webSocketDebuggerUrl?: string }>(
+        browser.port,
+        '/json/version',
+        { timeoutMs: 2_000 },
+      );
       if (version.webSocketDebuggerUrl) {
-        await this.cdpCommand(version.webSocketDebuggerUrl, 'Browser.close', {}, 2_500).catch(() => undefined);
+        await this.cdpCommand(version.webSocketDebuggerUrl, 'Browser.close', {}, 2_500).catch(
+          () => undefined,
+        );
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     await this.sleep(300);
     try {
       if (!browser.process.killed) browser.process.kill('SIGTERM');
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     if (browser.temporaryProfile) {
       for (let attempt = 0; attempt < 6; attempt += 1) {
         try {
-          fs.rmSync(browser.profileDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+          fs.rmSync(browser.profileDir, {
+            recursive: true,
+            force: true,
+            maxRetries: 3,
+            retryDelay: 100,
+          });
           break;
         } catch {
           await this.sleep(200);
@@ -849,23 +997,38 @@ export class SheinAssistedBrowserService {
     }
   }
 
-  private async cdpCommand(webSocketDebuggerUrl: string, method: string, params: Record<string, unknown>, timeoutMs: number): Promise<Record<string, unknown>> {
+  private async cdpCommand(
+    webSocketDebuggerUrl: string,
+    method: string,
+    params: Record<string, unknown>,
+    timeoutMs: number,
+  ): Promise<Record<string, unknown>> {
     const WebSocketCtor = (globalThis as { WebSocket?: WebSocketConstructorLike }).WebSocket;
     if (!WebSocketCtor) {
-      throw new ServiceUnavailableException('Node WebSocket support is not available for Chrome DevTools');
+      throw new ServiceUnavailableException(
+        'Node WebSocket support is not available for Chrome DevTools',
+      );
     }
 
     return new Promise((resolve, reject) => {
       const ws = new WebSocketCtor(webSocketDebuggerUrl);
       const id = Math.floor(Math.random() * 1_000_000_000);
       const timer = setTimeout(() => {
-        try { ws.close(); } catch { /* ignore */ }
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
         reject(new ServiceUnavailableException(`Chrome command timed out: ${method}`));
       }, timeoutMs);
 
       const finish = (error: Error | null, value?: Record<string, unknown>) => {
         clearTimeout(timer);
-        try { ws.close(); } catch { /* ignore */ }
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
         if (error) reject(error);
         else resolve(value ?? {});
       };
@@ -875,11 +1038,19 @@ export class SheinAssistedBrowserService {
       });
       ws.addEventListener('message', (event) => {
         try {
-          const message = JSON.parse(typeof event.data === 'string' ? event.data : Buffer.from(event.data as ArrayBuffer).toString('utf8')) as Record<string, unknown>;
+          const message = JSON.parse(
+            typeof event.data === 'string'
+              ? event.data
+              : Buffer.from(event.data as ArrayBuffer).toString('utf8'),
+          ) as Record<string, unknown>;
           if (message.id !== id) return;
           const cdpError = message.error;
           if (this.isRecord(cdpError)) {
-            finish(new ServiceUnavailableException(String(cdpError.message || `Chrome command failed: ${method}`)));
+            finish(
+              new ServiceUnavailableException(
+                String(cdpError.message || `Chrome command failed: ${method}`),
+              ),
+            );
             return;
           }
           finish(null, this.isRecord(message.result) ? message.result : {});
@@ -887,19 +1058,30 @@ export class SheinAssistedBrowserService {
           finish(error instanceof Error ? error : new Error('Invalid Chrome DevTools response'));
         }
       });
-      ws.addEventListener('error', () => finish(new ServiceUnavailableException('Could not communicate with the visible Chrome window')));
+      ws.addEventListener('error', () =>
+        finish(
+          new ServiceUnavailableException('Could not communicate with the visible Chrome window'),
+        ),
+      );
     });
   }
 
-  private async chromeEndpoint<T>(port: number, pathname: string, options: { method?: string; timeoutMs: number }): Promise<T> {
+  private async chromeEndpoint<T>(
+    port: number,
+    pathname: string,
+    options: { method?: string; timeoutMs: number },
+  ): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), options.timeoutMs);
     try {
-      const response = await fetch(`http://127.0.0.1:${port}${pathname}`, { method: options.method, signal: controller.signal });
+      const response = await fetch(`http://127.0.0.1:${port}${pathname}`, {
+        method: options.method,
+        signal: controller.signal,
+      });
       if (!response.ok) {
         throw new ServiceUnavailableException(`Chrome DevTools returned ${response.status}`);
       }
-      return await response.json() as T;
+      return (await response.json()) as T;
     } finally {
       clearTimeout(timer);
     }
@@ -923,7 +1105,9 @@ export class SheinAssistedBrowserService {
       const resolved = await this.commandPath(candidate);
       if (resolved) return resolved;
     }
-    throw new ServiceUnavailableException('Chrome or Chromium not found. Install Chrome or set SHEIN_BROWSER_PATH.');
+    throw new ServiceUnavailableException(
+      'Chrome or Chromium not found. Install Chrome or set SHEIN_BROWSER_PATH.',
+    );
   }
 
   private async commandPath(command: string): Promise<string> {
@@ -932,7 +1116,13 @@ export class SheinAssistedBrowserService {
     const lookupCommand = process.platform === 'win32' ? 'where' : 'which';
     return new Promise((resolve) => {
       execFile(lookupCommand, [command], { timeout: 3_000 }, (error, stdout) => {
-        resolve(error ? '' : String(stdout || '').split(/\r?\n/)[0]?.trim() ?? '');
+        resolve(
+          error
+            ? ''
+            : (String(stdout || '')
+                .split(/\r?\n/)[0]
+                ?.trim() ?? ''),
+        );
       });
     });
   }
@@ -957,9 +1147,21 @@ export class SheinAssistedBrowserService {
       }
       values.push('chrome.exe', 'msedge.exe');
     } else if (process.platform === 'darwin') {
-      values.push('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge', 'google-chrome', 'chromium');
+      values.push(
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+        'google-chrome',
+        'chromium',
+      );
     } else {
-      values.push('/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser', 'google-chrome', 'chromium');
+      values.push(
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        'google-chrome',
+        'chromium',
+      );
     }
 
     return [...new Set(values.filter((value): value is string => Boolean(value)))];
@@ -985,18 +1187,27 @@ export class SheinAssistedBrowserService {
     // Use a fresh writable profile for every assisted import.
     // Reusing one profile inside Docker often triggers Chromium native dialogs such as
     // "Profile error occurred" and "Restore pages", which can block the V1-style flow.
-    return { path: fs.mkdtempSync(path.join(os.tmpdir(), 'rsstore-v2-shein-browser-')), temporary: true };
+    return {
+      path: fs.mkdtempSync(path.join(os.tmpdir(), 'rsstore-v2-shein-browser-')),
+      temporary: true,
+    };
   }
 
   private removeStaleProfileLocks(profileDir: string): void {
     for (const lockName of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) {
-      try { fs.rmSync(path.join(profileDir, lockName), { force: true }); } catch { /* ignore */ }
+      try {
+        fs.rmSync(path.join(profileDir, lockName), { force: true });
+      } catch {
+        /* ignore */
+      }
     }
   }
 
   private assertVisibleBrowserCanOpen(): void {
     if (!this.visibleBrowserCanOpen()) {
-      throw new ServiceUnavailableException('Visible Chrome automation is unavailable in this runtime. If the API runs inside Docker, start it with GUI/X11 access or run the API locally on a desktop session.');
+      throw new ServiceUnavailableException(
+        'Visible Chrome automation is unavailable in this runtime. If the API runs inside Docker, start it with GUI/X11 access or run the API locally on a desktop session.',
+      );
     }
   }
 
@@ -1005,36 +1216,46 @@ export class SheinAssistedBrowserService {
   }
 
   private browserMode(): 'off' | 'headless' | 'interactive' {
-    const value = String(this.configService.get<string>('SHEIN_BROWSER_IMPORT') ?? 'off').trim().toLowerCase();
+    const value = String(this.configService.get<string>('SHEIN_BROWSER_IMPORT') ?? 'off')
+      .trim()
+      .toLowerCase();
     if (['0', 'false', 'no', 'off', 'manual'].includes(value)) return 'off';
     if (['headless', 'dump'].includes(value)) return 'headless';
     return 'interactive';
   }
 
   private shouldDisableSandbox(): boolean {
-    const configured = String(this.configService.get<string>('SHEIN_BROWSER_NO_SANDBOX') ?? '').trim().toLowerCase();
+    const configured = String(this.configService.get<string>('SHEIN_BROWSER_NO_SANDBOX') ?? '')
+      .trim()
+      .toLowerCase();
     if (['1', 'true', 'yes', 'on'].includes(configured)) return true;
-    return process.platform !== 'win32' && typeof process.getuid === 'function' && process.getuid() === 0;
+    return (
+      process.platform !== 'win32' && typeof process.getuid === 'function' && process.getuid() === 0
+    );
   }
 
   private maxWaitMs(): number {
     const configured = Number(this.configService.get<string>('SHEIN_ASSIST_MAX_WAIT_MS'));
-    if (Number.isFinite(configured) && configured > 0) return Math.max(60_000, Math.min(30 * 60_000, Math.trunc(configured)));
+    if (Number.isFinite(configured) && configured > 0)
+      return Math.max(60_000, Math.min(30 * 60_000, Math.trunc(configured)));
     return DEFAULT_WAIT_MS;
   }
 
   private pollMs(): number {
     const configured = Number(this.configService.get<string>('SHEIN_ASSIST_POLL_MS'));
-    if (Number.isFinite(configured) && configured > 0) return Math.max(1_500, Math.min(10_000, Math.trunc(configured)));
+    if (Number.isFinite(configured) && configured > 0)
+      return Math.max(1_500, Math.min(10_000, Math.trunc(configured)));
     return DEFAULT_POLL_MS;
   }
-
-
 
   private transientDevToolsMessage(error: unknown): string | null {
     const message = error instanceof Error ? error.message : String(error || '');
     if (/session not open|expired/i.test(message)) return null;
-    if (/timed out|timeout|DevTools|communicate|fetch failed|ECONNREFUSED|ECONNRESET|aborted|Target closed|No target|socket|terminated while loading/i.test(message)) {
+    if (
+      /timed out|timeout|DevTools|communicate|fetch failed|ECONNREFUSED|ECONNRESET|aborted|Target closed|No target|socket|terminated while loading/i.test(
+        message,
+      )
+    ) {
       return 'Waiting for SHEIN/CAPTCHA page to finish. Keep the visible Chrome window open; the importer will continue automatically after verification is solved.';
     }
     if (/tab was closed|visible chrome was closed/i.test(message)) {

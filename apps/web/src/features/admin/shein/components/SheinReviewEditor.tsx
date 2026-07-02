@@ -13,7 +13,12 @@ import {
   buildSheinAdminOpenUrl,
   countryLabel,
 } from '@/features/admin/shein/utils/shein-review-utils';
-import { adminApi, SheinPreviewPayload, AdminSheinMarketplaceSettings, AdminSheinImport } from '@/features/admin/api/admin-api';
+import {
+  adminApi,
+  SheinPreviewPayload,
+  AdminSheinMarketplaceSettings,
+  AdminSheinImport,
+} from '@/features/admin/api/admin-api';
 import { SheinPriceSummary } from './SheinPriceSummary';
 import { SheinReviewChecklist } from './SheinReviewChecklist';
 import { SheinReviewProgress } from './SheinReviewProgress';
@@ -37,7 +42,9 @@ export function SheinReviewEditor({
   const base = useMemo(
     () =>
       normalizeEditorPayload(
-        item.editedPayload ?? item.previewPayload ?? createEmptyPayload(item.sourceUrl, marketplace),
+        item.editedPayload ??
+          item.previewPayload ??
+          createEmptyPayload(item.sourceUrl, marketplace),
         marketplace,
         sarExchangeRate,
         categories,
@@ -46,13 +53,15 @@ export function SheinReviewEditor({
   );
   const [payload, setPayload] = useState(base);
   const [notice, setNotice] = useState<Notice>(null);
-  const [publishPhase, setPublishPhase] = useState<'reviewing' | 'approving' | 'publishing' | null>(null);
+  const [publishPhase, setPublishPhase] = useState<'reviewing' | 'approving' | 'publishing' | null>(
+    null,
+  );
   useEffect(() => setPayload(base), [base]);
 
   const hasExtractedData = Boolean(
     (item.previewPayload || item.editedPayload) &&
-      payload.nameAr.trim() &&
-      (payload.images ?? []).length > 0,
+    payload.nameAr.trim() &&
+    (payload.images ?? []).length > 0,
   );
   const isTerminal = ['PROCESSING', 'PUBLISHED', 'SUCCEEDED'].includes(item.status);
   const isManualFallback =
@@ -61,8 +70,12 @@ export function SheinReviewEditor({
     !item.editedPayload;
   const canEdit =
     !isTerminal &&
-    ['PREVIEW_READY', 'FAILED', 'MANUAL_REVIEW', 'REVIEWING', 'REVIEWED', 'APPROVED'].includes(item.status);
-  const canRetry = ['FAILED', 'MANUAL_REVIEW', 'PREVIEW_READY', 'REVIEWING', 'REVIEWED'].includes(item.status);
+    ['PREVIEW_READY', 'FAILED', 'MANUAL_REVIEW', 'REVIEWING', 'REVIEWED', 'APPROVED'].includes(
+      item.status,
+    );
+  const canRetry = ['FAILED', 'MANUAL_REVIEW', 'PREVIEW_READY', 'REVIEWING', 'REVIEWED'].includes(
+    item.status,
+  );
   const selectedCategory = categories.find((c) => c.id === payload.categoryId);
   const subCategories = getSubCategories(selectedCategory?.slug);
   const hasStaticSubCategoryOptions = hasStaticSubCategories(selectedCategory?.slug);
@@ -78,7 +91,9 @@ export function SheinReviewEditor({
     } catch (error) {
       setNotice({
         type: 'error',
-        message: sanitizeSheinAdminMessage(error instanceof Error ? error.message : 'Operation failed'),
+        message: sanitizeSheinAdminMessage(
+          error instanceof Error ? error.message : 'Operation failed',
+        ),
       });
     }
   }
@@ -150,12 +165,19 @@ export function SheinReviewEditor({
   }
 
   function validatePublishPayload(nextPayload: SheinPreviewPayload): string | null {
-    const price = Number(String(nextPayload.priceAmount ?? '').replace(/,/g, '').trim());
+    const price = Number(
+      String(nextPayload.priceAmount ?? '')
+        .replace(/,/g, '')
+        .trim(),
+    );
     if (!nextPayload.nameAr.trim()) return 'Please enter product title before publishing';
-    if (!(nextPayload.description ?? '').trim()) return 'Please enter product description before publishing';
-    if (!Number.isFinite(price) || price <= 0) return 'Please enter valid product price before publishing';
+    if (!(nextPayload.description ?? '').trim())
+      return 'Please enter product description before publishing';
+    if (!Number.isFinite(price) || price <= 0)
+      return 'Please enter valid product price before publishing';
     if (!nextPayload.categoryId?.trim()) return 'Please select category before publishing';
-    if (!(nextPayload.images ?? []).length) return 'Please add at least one product image before publishing';
+    if (!(nextPayload.images ?? []).length)
+      return 'Please add at least one product image before publishing';
     const invalidVariant = (nextPayload.variants ?? []).find((variant) => {
       const stock = Number(variant.stockQuantity ?? 0);
       return !variant.nameAr?.trim() || !Number.isFinite(stock) || stock < 0;
@@ -187,7 +209,7 @@ export function SheinReviewEditor({
           rating={payload.rating ?? 0}
         />
 
-        {(isManualFallback || (shouldShowManualNotice(item) && !hasExtractedData)) ? (
+        {isManualFallback || (shouldShowManualNotice(item) && !hasExtractedData) ? (
           <div className="admin-shein-manual-box">
             <strong>Manual review</strong>
             <p>{sanitizeSheinAdminMessage(item.errorMessage || MANUAL_REVIEW_MESSAGE)}</p>
@@ -208,7 +230,8 @@ export function SheinReviewEditor({
           <div className="admin-shein-error-box">
             <strong>Category not found in database</strong>
             <p>
-              An active category with slug {selectedCategory?.slug} must exist before publishing to link the product to the store
+              An active category with slug {selectedCategory?.slug} must exist before publishing to
+              link the product to the store
             </p>
           </div>
         ) : null}

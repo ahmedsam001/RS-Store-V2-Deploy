@@ -47,7 +47,9 @@ export function ImageUploadGallery({
   }
 
   function selectPrimary(index: number) {
-    updateImages(images.map((image, currentIndex) => ({ ...image, isPrimary: currentIndex === index })));
+    updateImages(
+      images.map((image, currentIndex) => ({ ...image, isPrimary: currentIndex === index })),
+    );
   }
 
   async function uploadFiles(fileList: FileList | File[]) {
@@ -96,7 +98,9 @@ export function ImageUploadGallery({
     <section className="space-y-3">
       <div className="admin-shein-section-title">
         <h3>Images gallery</h3>
-        <small>You can delete, reorder images, select the primary image, or upload additional images</small>
+        <small>
+          You can delete, reorder images, select the primary image, or upload additional images
+        </small>
       </div>
 
       <div
@@ -119,25 +123,32 @@ export function ImageUploadGallery({
         />
         <strong>Drag & Drop images here</strong>
         <span>Or click to upload from desktop, mobile, or tablet</span>
-<Button
-           type="button"
-           variant="outline"
-           onClick={() => inputRef.current?.click()}
-           disabled={disabled || isUploading}
-         >
-           {isUploading ? 'Uploading...' : 'Click to upload'}
-         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => inputRef.current?.click()}
+          disabled={disabled || isUploading}
+        >
+          {isUploading ? 'Uploading...' : 'Click to upload'}
+        </Button>
       </div>
 
-{images.length === 0 ? (
-         <div className="admin-shein-empty-box">No images in gallery. Add at least one image before publishing.</div>
-       ) : null}
+      {images.length === 0 ? (
+        <div className="admin-shein-empty-box">
+          No images in gallery. Add at least one image before publishing.
+        </div>
+      ) : null}
 
       <div className="admin-shein-images-grid">
         {images.map((image, index) => (
           <div key={`${image.url}-${index}`} className="admin-shein-image-card">
             <div className="admin-shein-image-frame">
-              <ImageWithFallback src={image.url} alt={altText || 'Product image'} className="h-full w-full object-cover" fallbackVariant="product" />
+              <ImageWithFallback
+                src={image.url}
+                alt={altText || 'Product image'}
+                className="h-full w-full object-cover"
+                fallbackVariant="product"
+              />
               {image.isPrimary || (!images.some((item) => item.isPrimary) && index === 0) ? (
                 <span className="admin-primary-image-badge">Primary</span>
               ) : null}
@@ -161,26 +172,26 @@ export function ImageUploadGallery({
               >
                 ↓
               </Button>
-<Button
-                 type="button"
-                 className="col-span-2"
-                 size="sm"
-                 variant="outline"
-                 onClick={() => selectPrimary(index)}
-                 disabled={disabled}
-               >
-                 Set as primary
-               </Button>
-               <Button
-                 type="button"
-                 className="col-span-2"
-                 size="sm"
-                 variant="outline"
-                 onClick={() => removeImage(index)}
-                 disabled={disabled}
-               >
-                 Remove
-               </Button>
+              <Button
+                type="button"
+                className="col-span-2"
+                size="sm"
+                variant="outline"
+                onClick={() => selectPrimary(index)}
+                disabled={disabled}
+              >
+                Set as primary
+              </Button>
+              <Button
+                type="button"
+                className="col-span-2"
+                size="sm"
+                variant="outline"
+                onClick={() => removeImage(index)}
+                disabled={disabled}
+              >
+                Remove
+              </Button>
             </div>
           </div>
         ))}

@@ -1,10 +1,26 @@
 import { Transform } from 'class-transformer';
-import { IsIn, IsNumber, IsOptional, IsString, IsUUID, Matches, MaxLength, Min } from 'class-validator';
+import {
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import { moneyStringToMinorUnits } from '../../../common/money/money';
 import { IsGreaterThanOrEqualTo } from '../../../common/validators/is-greater-than-or-equal-to.validator';
 
-export const catalogProductSortOptions = ['newest', 'oldest', 'price_asc', 'price_desc', 'name_asc', 'name_desc'] as const;
+export const catalogProductSortOptions = [
+  'newest',
+  'oldest',
+  'price_asc',
+  'price_desc',
+  'name_asc',
+  'name_desc',
+] as const;
 export type CatalogProductSort = (typeof catalogProductSortOptions)[number];
 
 export class CatalogProductsQueryDto extends PaginationQueryDto {
@@ -44,7 +60,9 @@ export class CatalogProductsQueryDto extends PaginationQueryDto {
   @Transform(({ value }) => moneyStringToMinorUnits(String(value), 'maxPrice'))
   @IsNumber()
   @Min(0)
-  @IsGreaterThanOrEqualTo('minPrice', { message: 'maxPrice must be greater than or equal to minPrice' })
+  @IsGreaterThanOrEqualTo('minPrice', {
+    message: 'maxPrice must be greater than or equal to minPrice',
+  })
   maxPrice?: number;
 
   @IsOptional()

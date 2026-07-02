@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -33,12 +43,20 @@ export class CategoriesController {
   }
 
   @Post(':id/subcategories')
-  createSubcategory(@Param() params: IdParamDto, @Body() dto: CreateCategoryDto, @CurrentUser() user: AuthenticatedUser) {
+  createSubcategory(
+    @Param() params: IdParamDto,
+    @Body() dto: CreateCategoryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.categoriesService.createSubcategory(params.id, dto, user);
   }
 
   @Patch(':id')
-  update(@Param() params: IdParamDto, @Body() dto: UpdateCategoryDto, @CurrentUser() user: AuthenticatedUser) {
+  update(
+    @Param() params: IdParamDto,
+    @Body() dto: UpdateCategoryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.categoriesService.update(params.id, dto, user);
   }
 

@@ -9,11 +9,19 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async create(dto: CreateCategoryDto, actor?: AuthenticatedUser) {
     const category = await this.prisma.category.create({ data: dto });
-    await this.auditService.log({ actorUserId: actor?.id, action: 'CATEGORY_CREATED', entityType: 'CATEGORY', entityId: category.id });
+    await this.auditService.log({
+      actorUserId: actor?.id,
+      action: 'CATEGORY_CREATED',
+      entityType: 'CATEGORY',
+      entityId: category.id,
+    });
     return category;
   }
 
@@ -68,19 +76,36 @@ export class CategoriesService {
 
   async createSubcategory(parentId: string, dto: CreateCategoryDto, actor?: AuthenticatedUser) {
     const category = await this.prisma.category.create({ data: { ...dto, parentId } });
-    await this.auditService.log({ actorUserId: actor?.id, action: 'SUBCATEGORY_CREATED', entityType: 'CATEGORY', entityId: category.id });
+    await this.auditService.log({
+      actorUserId: actor?.id,
+      action: 'SUBCATEGORY_CREATED',
+      entityType: 'CATEGORY',
+      entityId: category.id,
+    });
     return category;
   }
 
   async update(id: string, dto: UpdateCategoryDto, actor?: AuthenticatedUser) {
-    await this.prisma.category.findFirstOrThrow({ where: { id, deletedAt: null }, select: { id: true } });
+    await this.prisma.category.findFirstOrThrow({
+      where: { id, deletedAt: null },
+      select: { id: true },
+    });
     const category = await this.prisma.category.update({ where: { id }, data: dto });
-    await this.auditService.log({ actorUserId: actor?.id, action: 'CATEGORY_UPDATED', entityType: 'CATEGORY', entityId: id, metadata: { isActive: dto.isActive ?? null } });
+    await this.auditService.log({
+      actorUserId: actor?.id,
+      action: 'CATEGORY_UPDATED',
+      entityType: 'CATEGORY',
+      entityId: id,
+      metadata: { isActive: dto.isActive ?? null },
+    });
     return category;
   }
 
   async remove(id: string, actor?: AuthenticatedUser) {
-    await this.prisma.category.findFirstOrThrow({ where: { id, deletedAt: null }, select: { id: true } });
+    await this.prisma.category.findFirstOrThrow({
+      where: { id, deletedAt: null },
+      select: { id: true },
+    });
     const linkedProducts = await this.prisma.product.count({
       where: {
         deletedAt: null,
@@ -91,12 +116,22 @@ export class CategoriesService {
     if (linkedProducts > 0) {
       throw new BadRequestException('Move or archive products before deleting this category');
     }
-    const linkedChildren = await this.prisma.category.count({ where: { parentId: id, deletedAt: null } });
+    const linkedChildren = await this.prisma.category.count({
+      where: { parentId: id, deletedAt: null },
+    });
     if (linkedChildren > 0) {
       throw new BadRequestException('Delete or move subcategories before deleting this category');
     }
-    const category = await this.prisma.category.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
-    await this.auditService.log({ actorUserId: actor?.id, action: 'CATEGORY_DELETED', entityType: 'CATEGORY', entityId: id });
+    const category = await this.prisma.category.update({
+      where: { id },
+      data: { deletedAt: new Date(), isActive: false },
+    });
+    await this.auditService.log({
+      actorUserId: actor?.id,
+      action: 'CATEGORY_DELETED',
+      entityType: 'CATEGORY',
+      entityId: id,
+    });
     return category;
   }
 }

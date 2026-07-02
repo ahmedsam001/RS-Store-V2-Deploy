@@ -58,7 +58,10 @@ export async function apiRequest<TResponse>(
       body: buildRequestBody(options.body, isFormData),
     });
   } catch (error) {
-    throw normalizeApiError(error, 'Unable to connect to server. Please check your internet connection.');
+    throw normalizeApiError(
+      error,
+      'Unable to connect to server. Please check your internet connection.',
+    );
   }
 
   const payload = response.status === 204 ? null : await readPayload(response);

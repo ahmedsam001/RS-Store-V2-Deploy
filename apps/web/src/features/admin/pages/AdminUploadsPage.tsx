@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Database, ImageOff } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { adminApi, UploadCleanupResult, UploadReconciliation } from '@/features/admin/api/admin-api';
+import {
+  adminApi,
+  UploadCleanupResult,
+  UploadReconciliation,
+} from '@/features/admin/api/admin-api';
 import {
   AdminCard,
   AdminMetricCard,
   AdminPageHeader,
 } from '@/features/admin/components/AdminDesign';
 import { AdminError, AdminLoading } from '@/features/admin/components/AdminState';
-import { AdminFeedback, AdminNoticeState, toNotice } from '@/features/admin/components/AdminFeedback';
+import {
+  AdminFeedback,
+  AdminNoticeState,
+  toNotice,
+} from '@/features/admin/components/AdminFeedback';
 import { useAuth } from '@/features/auth';
 
 export function AdminUploadsPage() {
@@ -94,12 +102,18 @@ export function AdminUploadsPage() {
         description="Cleanup button executes a safe backend operation and writes an audit log with the admin user and deletion counts"
       >
         <div className="space-y-4">
-          <Button type="button" onClick={cleanup} disabled={isCleaning} className="min-h-11 w-full sm:w-auto">
+          <Button
+            type="button"
+            onClick={cleanup}
+            disabled={isCleaning}
+            className="min-h-11 w-full sm:w-auto"
+          >
             {isCleaning ? 'Cleaning...' : 'Confirm cleanup of orphaned files'}
           </Button>
           {cleanupResult ? (
             <p className="text-sm font-semibold text-[#6f625c]">
-              Last cleanup removed {cleanupResult.databaseRecordsDeleted} database records and {cleanupResult.cloudinaryFilesDeleted} Cloudinary files
+              Last cleanup removed {cleanupResult.databaseRecordsDeleted} database records and{' '}
+              {cleanupResult.cloudinaryFilesDeleted} Cloudinary files
             </p>
           ) : null}
         </div>

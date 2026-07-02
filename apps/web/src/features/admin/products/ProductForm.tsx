@@ -3,7 +3,11 @@ import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { Select } from '@/shared/components/ui/Select';
 import { AdminCategory, AdminCreateProductInput } from '@/features/admin/api/admin-api';
-import { AdminFeedback, AdminNoticeState, toNotice } from '@/features/admin/components/AdminFeedback';
+import {
+  AdminFeedback,
+  AdminNoticeState,
+  toNotice,
+} from '@/features/admin/components/AdminFeedback';
 import { AdminFormSection } from '@/features/admin/components/AdminDesign';
 import { getSubCategories } from '@/shared/constants/product-categories';
 
@@ -25,12 +29,19 @@ export function ProductForm({ categories, onSubmit, submitLabel, defaultValues, 
   );
 
   const subCategories = useMemo(() => {
-    const dynamicChildren = selectedCategory?.children
-      ?.filter((child) => child.isActive !== false)
-      .map((child) => child.nameEn || child.nameAr)
-      .filter(Boolean) ?? [];
+    const dynamicChildren =
+      selectedCategory?.children
+        ?.filter((child) => child.isActive !== false)
+        .map((child) => child.nameEn || child.nameAr)
+        .filter(Boolean) ?? [];
     const staticChildren = getSubCategories(selectedCategory?.slug);
-    return Array.from(new Set([...dynamicChildren, ...staticChildren, defaultValues?.subCategory].filter(Boolean) as string[]));
+    return Array.from(
+      new Set(
+        [...dynamicChildren, ...staticChildren, defaultValues?.subCategory].filter(
+          Boolean,
+        ) as string[],
+      ),
+    );
   }, [defaultValues?.subCategory, selectedCategory]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -137,11 +148,7 @@ export function ProductForm({ categories, onSubmit, submitLabel, defaultValues, 
             dir="ltr"
             disabled={disabled}
           />
-          <Select
-            name="status"
-            defaultValue={defaultValues?.status ?? 'DRAFT'}
-            disabled={disabled}
-          >
+          <Select name="status" defaultValue={defaultValues?.status ?? 'DRAFT'} disabled={disabled}>
             <option value="DRAFT">Draft</option>
             <option value="ACTIVE">Active</option>
             <option value="ARCHIVED">Archived</option>
@@ -254,7 +261,10 @@ function readForm(form: HTMLFormElement): AdminCreateProductInput {
     categoryId: String(data.get('categoryId') ?? '') || undefined,
     discount: discountRaw ? Number(discountRaw) : undefined,
     rating: ratingRaw ? Number(ratingRaw) : undefined,
-    currency: String(data.get('currency') ?? '').trim().toUpperCase() || undefined,
+    currency:
+      String(data.get('currency') ?? '')
+        .trim()
+        .toUpperCase() || undefined,
     isInStock,
   };
 }
@@ -262,7 +272,5 @@ function readForm(form: HTMLFormElement): AdminCreateProductInput {
 function normalizeSlug(value: string): string | undefined {
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) return undefined;
-  return trimmed
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  return trimmed.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }

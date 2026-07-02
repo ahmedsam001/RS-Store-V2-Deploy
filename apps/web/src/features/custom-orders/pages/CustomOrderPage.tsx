@@ -1,7 +1,10 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ExternalLink, ImagePlus, Loader2, PackageCheck, Send, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { customOrdersApi, type CustomOrderRequest } from '@/features/custom-orders/api/custom-orders-api';
+import {
+  customOrdersApi,
+  type CustomOrderRequest,
+} from '@/features/custom-orders/api/custom-orders-api';
 import { useAuth } from '@/features/auth/AuthContext';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 import { Button } from '@/shared/components/ui/Button';
@@ -14,7 +17,8 @@ const STATUS_LABELS: Record<CustomOrderRequest['status'], string> = {
 };
 
 const fieldClass = 'grid min-w-0 w-full gap-1.5 text-start text-sm font-bold text-rs-ink';
-const inputClass = 'w-full min-w-0 rounded-xl border border-orange-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100';
+const inputClass =
+  'w-full min-w-0 rounded-xl border border-orange-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100';
 
 export function CustomOrderPage() {
   const { csrfToken } = useAuth();
@@ -77,7 +81,9 @@ export function CustomOrderPage() {
       const order = await customOrdersApi.createOrder(item.id, { csrfToken });
       navigate(orderPath(order.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to start checkout for this custom order');
+      setError(
+        err instanceof Error ? err.message : 'Unable to start checkout for this custom order',
+      );
     } finally {
       setCreatingOrderId(null);
     }
@@ -98,7 +104,13 @@ export function CustomOrderPage() {
           <form className="grid gap-4" onSubmit={handleSubmit}>
             <label className={fieldClass}>
               Product URL
-              <input className={inputClass} name="productUrl" type="url" required placeholder="https://..." />
+              <input
+                className={inputClass}
+                name="productUrl"
+                type="url"
+                required
+                placeholder="https://..."
+              />
             </label>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -114,19 +126,32 @@ export function CustomOrderPage() {
 
             <label className={fieldClass}>
               Quantity
-              <input className={`${inputClass} sm:max-w-36`} name="quantity" type="number" min={1} defaultValue={1} required />
+              <input
+                className={`${inputClass} sm:max-w-36`}
+                name="quantity"
+                type="number"
+                min={1}
+                defaultValue={1}
+                required
+              />
             </label>
 
             <label className={fieldClass}>
               Note
-              <textarea className={`${inputClass} min-h-[120px] resize-none`} name="customerNote" placeholder="Optional" />
+              <textarea
+                className={`${inputClass} min-h-[120px] resize-none`}
+                name="customerNote"
+                placeholder="Optional"
+              />
             </label>
 
             <label className={fieldClass}>
               Reference image
               <span className="flex min-h-[132px] w-full min-w-0 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-orange-200 bg-white px-4 py-5 text-center transition hover:border-orange-300">
                 <ImagePlus className="h-6 w-6 text-rs-gold" aria-hidden="true" />
-                <span className="text-sm font-black text-rs-ink">Upload reference image optional</span>
+                <span className="text-sm font-black text-rs-ink">
+                  Upload reference image optional
+                </span>
                 <span className="max-w-full truncate rounded-full border border-orange-100 bg-orange-50 px-4 py-2 text-xs font-black text-orange-700">
                   {customerImageName ?? 'Choose image'}
                 </span>
@@ -136,16 +161,30 @@ export function CustomOrderPage() {
                   name="customerImage"
                   type="file"
                   accept="image/*"
-                  onChange={(event) => setCustomerImageName(event.currentTarget.files?.[0]?.name ?? null)}
+                  onChange={(event) =>
+                    setCustomerImageName(event.currentTarget.files?.[0]?.name ?? null)
+                  }
                 />
               </span>
             </label>
 
-            {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</p> : null}
-            {success ? <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{success}</p> : null}
+            {error ? (
+              <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                {error}
+              </p>
+            ) : null}
+            {success ? (
+              <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
+                {success}
+              </p>
+            ) : null}
 
             <Button className="w-full" type="submit" disabled={submitting}>
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Send className="h-4 w-4" aria-hidden="true" />
+              )}
               Submit Request
             </Button>
           </form>
@@ -154,7 +193,9 @@ export function CustomOrderPage() {
         <div className="w-full max-w-full overflow-hidden rounded-[1.25rem] border border-border bg-card px-4 py-5 shadow-sm sm:p-6">
           <div className="flex items-center gap-3 text-start">
             <h2 className="text-xl font-black text-rs-ink">My Custom Orders</h2>
-            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">{items.length}</span>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">
+              {items.length}
+            </span>
           </div>
 
           {loading ? (
@@ -171,7 +212,7 @@ export function CustomOrderPage() {
           ) : null}
 
           <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
-            {items.map((item) => (
+            {items.map((item) =>
               item.status === 'ACCEPTED' ? (
                 <AcceptedCustomOrderCard
                   key={item.id}
@@ -181,8 +222,8 @@ export function CustomOrderPage() {
                 />
               ) : (
                 <PendingCustomOrderCard key={item.id} item={item} />
-              )
-            ))}
+              ),
+            )}
           </div>
         </div>
       </section>
@@ -194,24 +235,43 @@ function PendingCustomOrderCard({ item }: { item: CustomOrderRequest }) {
   return (
     <article className="min-w-0 rounded-[1.25rem] border border-border bg-card p-4 shadow-sm">
       {item.customerImageUrl ? (
-        <img src={item.customerImageUrl} alt="" className="mb-3 aspect-[4/3] w-full rounded-xl object-cover" />
+        <img
+          src={item.customerImageUrl}
+          alt=""
+          className="mb-3 aspect-[4/3] w-full rounded-xl object-cover"
+        />
       ) : null}
       <div className="flex items-start justify-between gap-3">
-        <span className={`rounded-full px-3 py-1 text-xs font-black ${item.status === 'REJECTED' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-black ${item.status === 'REJECTED' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}
+        >
           {STATUS_LABELS[item.status]}
         </span>
         <span className="text-xs font-bold text-muted-foreground">Qty {item.quantity}</span>
       </div>
-      <a className="mt-3 flex items-center gap-2 break-all text-sm font-bold text-rs-ink hover:text-rs-gold" href={item.productUrl} target="_blank" rel="noreferrer">
+      <a
+        className="mt-3 flex items-center gap-2 break-all text-sm font-bold text-rs-ink hover:text-rs-gold"
+        href={item.productUrl}
+        target="_blank"
+        rel="noreferrer"
+      >
         Product link <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       </a>
       <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-muted-foreground">
-        {item.requestedColor ? <span className="rounded-full bg-secondary px-2.5 py-1">Color {item.requestedColor}</span> : null}
-        {item.requestedSize ? <span className="rounded-full bg-secondary px-2.5 py-1">Size {item.requestedSize}</span> : null}
+        {item.requestedColor ? (
+          <span className="rounded-full bg-secondary px-2.5 py-1">Color {item.requestedColor}</span>
+        ) : null}
+        {item.requestedSize ? (
+          <span className="rounded-full bg-secondary px-2.5 py-1">Size {item.requestedSize}</span>
+        ) : null}
       </div>
-      {item.customerNote ? <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.customerNote}</p> : null}
+      {item.customerNote ? (
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.customerNote}</p>
+      ) : null}
       {item.adminNote && item.status === 'REJECTED' ? (
-        <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold leading-6 text-red-700">{item.adminNote}</p>
+        <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold leading-6 text-red-700">
+          {item.adminNote}
+        </p>
       ) : null}
     </article>
   );
@@ -230,9 +290,18 @@ function AcceptedCustomOrderCard({
     <article className="rs-product-card min-w-0">
       <div className="rs-product-image-wrap">
         {item.adminImageUrl ? (
-          <img src={item.adminImageUrl} alt={item.adminTitle ?? 'Custom order'} className="rs-product-image" />
+          <img
+            src={item.adminImageUrl}
+            alt={item.adminTitle ?? 'Custom order'}
+            className="rs-product-image"
+          />
         ) : (
-          <ImageWithFallback src={null} alt={item.adminTitle ?? 'Custom order'} className="rs-product-image" fallbackVariant="product" />
+          <ImageWithFallback
+            src={null}
+            alt={item.adminTitle ?? 'Custom order'}
+            className="rs-product-image"
+            fallbackVariant="product"
+          />
         )}
         <span className="rs-badge-sale bg-emerald-600">Accepted</span>
       </div>
@@ -242,14 +311,30 @@ function AcceptedCustomOrderCard({
           {item.adminTitle ?? 'Accepted custom product'}
         </h3>
         <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-muted-foreground">
-          {item.requestedColor ? <span className="rounded-full bg-secondary px-2.5 py-1">Color {item.requestedColor}</span> : null}
-          {item.requestedSize ? <span className="rounded-full bg-secondary px-2.5 py-1">Size {item.requestedSize}</span> : null}
+          {item.requestedColor ? (
+            <span className="rounded-full bg-secondary px-2.5 py-1">
+              Color {item.requestedColor}
+            </span>
+          ) : null}
+          {item.requestedSize ? (
+            <span className="rounded-full bg-secondary px-2.5 py-1">Size {item.requestedSize}</span>
+          ) : null}
           <span className="rounded-full bg-secondary px-2.5 py-1">Qty {item.quantity}</span>
         </div>
-        <p className="mt-3 text-base font-black rs-price-primary">{formatMinorAmount(item.adminTotalAmount)}</p>
-        {item.adminNote ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">{item.adminNote}</p> : null}
+        <p className="mt-3 text-base font-black rs-price-primary">
+          {formatMinorAmount(item.adminTotalAmount)}
+        </p>
+        {item.adminNote ? (
+          <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
+            {item.adminNote}
+          </p>
+        ) : null}
         <Button className="rs-cart-btn mt-auto" onClick={onCreateOrder} disabled={isCreatingOrder}>
-          {isCreatingOrder ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ShoppingBag className="h-4 w-4" aria-hidden="true" />}
+          {isCreatingOrder ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+          )}
           {item.convertedOrderId ? 'Open Order' : 'Add to Checkout'}
         </Button>
       </div>
@@ -259,5 +344,7 @@ function AcceptedCustomOrderCard({
 
 function formatMinorAmount(value: string | number | null | undefined) {
   const amount = Number(value ?? 0) / 100;
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EGP' }).format(Number.isFinite(amount) ? amount : 0);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EGP' }).format(
+    Number.isFinite(amount) ? amount : 0,
+  );
 }

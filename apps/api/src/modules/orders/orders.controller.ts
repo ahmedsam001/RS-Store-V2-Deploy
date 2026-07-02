@@ -1,4 +1,18 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserRole } from '@prisma/client';
 import { Request, Response } from 'express';
@@ -29,7 +43,6 @@ export class OrdersController {
     private readonly ordersService: OrdersService,
     private readonly cartService: CartService,
   ) {}
-
 
   @Post('checkout-with-deposit-proof')
   @RateLimit({ bucket: 'orders_checkout_with_deposit_proof', limit: 10, windowMs: 60 * 60 * 1000 })
@@ -137,17 +150,24 @@ export class OrdersController {
   @Patch(':id/status')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OWNER)
-  updateStatus(@CurrentUser() user: AuthenticatedUser, @Param() params: IdParamDto, @Body() dto: UpdateOrderStatusDto) {
+  updateStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: IdParamDto,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
     return this.ordersService.updateStatus(params.id, dto, user);
   }
 
   @Patch('items/:id/status')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OWNER)
-  updateItemStatus(@CurrentUser() user: AuthenticatedUser, @Param() params: IdParamDto, @Body() dto: UpdateOrderItemStatusDto) {
+  updateItemStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: IdParamDto,
+    @Body() dto: UpdateOrderItemStatusDto,
+  ) {
     return this.ordersService.updateItemStatus(params.id, dto, user);
   }
-
 
   @Patch(':id/final-payment')
   @UseGuards(RolesGuard)

@@ -10,7 +10,15 @@ import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 
 @Module({
-  imports: [PricingModule, PrismaModule, AuthModule, CartModule, UploadsModule, AuditModule, NotificationsModule],
+  imports: [
+    PricingModule,
+    PrismaModule,
+    AuthModule,
+    CartModule,
+    UploadsModule,
+    AuditModule,
+    NotificationsModule,
+  ],
   controllers: [OrdersController],
   providers: [OrdersService],
   exports: [OrdersService],

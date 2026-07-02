@@ -21,7 +21,12 @@ export type CustomOrderRequest = {
   adminNote?: string | null;
   reviewedAt?: string | null;
   convertedOrderId?: string | null;
-  convertedOrder?: { id: string; orderNumber: string; status: string; paymentStatus: string } | null;
+  convertedOrder?: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
   user?: { id: string; name: string; email?: string | null; phone?: string | null };
@@ -97,7 +102,12 @@ export const customOrdersApi = {
     });
   },
 
-  review(id: string, input: CustomOrderReviewInput, image?: File | null, options: RequestOptions = {}) {
+  review(
+    id: string,
+    input: CustomOrderReviewInput,
+    image?: File | null,
+    options: RequestOptions = {},
+  ) {
     const body = new FormData();
     body.append('status', input.status);
     if (input.adminTitle) body.append('adminTitle', input.adminTitle);

@@ -236,11 +236,15 @@ export function AdminSettingsPage() {
       validateSettingsForm(form, activeFields);
       await Promise.all(
         activeFields.map((field) =>
-          adminApi.upsertSetting(field.key, {
-            scope: field.scope,
-            value: String(form.get(field.key) ?? ''),
-            description: field.hint,
-          }, { csrfToken }),
+          adminApi.upsertSetting(
+            field.key,
+            {
+              scope: field.scope,
+              value: String(form.get(field.key) ?? ''),
+              description: field.hint,
+            },
+            { csrfToken },
+          ),
         ),
       );
       setNotice({ type: 'success', message: `${activeGroupMeta.title} saved` });
@@ -278,7 +282,10 @@ export function AdminSettingsPage() {
       <AdminFeedback notice={notice} />
 
       <div className="grid gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <AdminCard title="Settings areas" description="Inputs are hidden until you choose a section">
+        <AdminCard
+          title="Settings areas"
+          description="Inputs are hidden until you choose a section"
+        >
           <div className="grid gap-2">
             {GROUPS.map((group) => {
               const count = fields.filter((field) => field.group === group.key).length;
@@ -301,7 +308,9 @@ export function AdminSettingsPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
-                  <p className="mt-2 text-xs font-bold text-[#8b7b73]">{count} setting{count === 1 ? '' : 's'}</p>
+                  <p className="mt-2 text-xs font-bold text-[#8b7b73]">
+                    {count} setting{count === 1 ? '' : 's'}
+                  </p>
                 </button>
               );
             })}
@@ -311,11 +320,18 @@ export function AdminSettingsPage() {
         <AdminCard
           title={activeGroupMeta.title}
           description={activeGroupMeta.helper}
-          actions={<span className="text-xs font-black uppercase tracking-wider text-[#c7831e]">Save this section only</span>}
+          actions={
+            <span className="text-xs font-black uppercase tracking-wider text-[#c7831e]">
+              Save this section only
+            </span>
+          }
         >
           <form className="grid gap-4" onSubmit={handleSubmit} key={activeGroup}>
             <SettingsPreview group={activeGroup} byKey={byKey} />
-            <AdminFormSection title="Editable fields" description="Only the selected section is saved so hidden settings are never overwritten by accident.">
+            <AdminFormSection
+              title="Editable fields"
+              description="Only the selected section is saved so hidden settings are never overwritten by accident."
+            >
               <div className="admin-form-grid">
                 {activeFields.map((field) => (
                   <SettingInput
@@ -327,10 +343,16 @@ export function AdminSettingsPage() {
               </div>
             </AdminFormSection>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={() => load().catch((error) => setNotice(toNotice(error)))}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => load().catch((error) => setNotice(toNotice(error)))}
+              >
                 Reset changes
               </Button>
-              <Button type="submit" size="lg">Save {activeGroupMeta.title}</Button>
+              <Button type="submit" size="lg">
+                Save {activeGroupMeta.title}
+              </Button>
             </div>
           </form>
         </AdminCard>
@@ -349,9 +371,19 @@ function SettingsPreview({
   if (group === 'payment') {
     return (
       <div className="grid gap-3 sm:grid-cols-3">
-        <AdminInfoItem label="Default deposit" value={`${readValue(byKey.get('payment.depositDefaultPercent')?.value) || '-'}%`} />
-        <AdminInfoItem label="Vodafone fee" value={`${readValue(byKey.get('payment.vodafoneFeePercent')?.value) || '0'}%`} />
-        <AdminInfoItem label="Instapay" value={readValue(byKey.get('payment.instapay')?.value) || '-'} dir="ltr" />
+        <AdminInfoItem
+          label="Default deposit"
+          value={`${readValue(byKey.get('payment.depositDefaultPercent')?.value) || '-'}%`}
+        />
+        <AdminInfoItem
+          label="Vodafone fee"
+          value={`${readValue(byKey.get('payment.vodafoneFeePercent')?.value) || '0'}%`}
+        />
+        <AdminInfoItem
+          label="Instapay"
+          value={readValue(byKey.get('payment.instapay')?.value) || '-'}
+          dir="ltr"
+        />
       </div>
     );
   }
@@ -359,22 +391,37 @@ function SettingsPreview({
     return (
       <div className="grid gap-3 sm:grid-cols-3">
         <AdminInfoItem label="Store" value={readValue(byKey.get('store.name')?.value) || '-'} />
-        <AdminInfoItem label="WhatsApp" value={readValue(byKey.get('store.whatsapp')?.value) || '-'} dir="ltr" />
-        <AdminInfoItem label="Currency" value={readValue(byKey.get('store.currency')?.value) || 'EGP'} dir="ltr" />
+        <AdminInfoItem
+          label="WhatsApp"
+          value={readValue(byKey.get('store.whatsapp')?.value) || '-'}
+          dir="ltr"
+        />
+        <AdminInfoItem
+          label="Currency"
+          value={readValue(byKey.get('store.currency')?.value) || 'EGP'}
+          dir="ltr"
+        />
       </div>
     );
   }
   if (group === 'shipping') {
     return (
       <div className="grid gap-3 sm:grid-cols-2">
-        <AdminInfoItem label="Estimated delivery" value={`${readValue(byKey.get('shipping.estimatedDays')?.value) || '-'} days`} />
+        <AdminInfoItem
+          label="Estimated delivery"
+          value={`${readValue(byKey.get('shipping.estimatedDays')?.value) || '-'} days`}
+        />
         <AdminInfoItem label="Visibility" value="Shown to customers" />
       </div>
     );
   }
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <AdminInfoItem label="SAR exchange rate" value={readValue(byKey.get('shein.import.sarExchangeRate')?.value) || '-'} dir="ltr" />
+      <AdminInfoItem
+        label="SAR exchange rate"
+        value={readValue(byKey.get('shein.import.sarExchangeRate')?.value) || '-'}
+        dir="ltr"
+      />
       <AdminInfoItem label="Scope" value="Admin only" />
     </div>
   );
@@ -384,8 +431,7 @@ function SettingInput({ field, value }: { field: ResolvedSettingField; value: st
   return (
     <label className="grid gap-1 text-sm">
       <span className="font-black text-[#241611]">
-        {field.label}{' '}
-        {field.required ? <span className="text-red-600">*</span> : null}{' '}
+        {field.label} {field.required ? <span className="text-red-600">*</span> : null}{' '}
         <span className="text-xs text-muted-foreground">{field.labelEn}</span>
       </span>
       <Input

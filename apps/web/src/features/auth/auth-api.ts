@@ -16,10 +16,18 @@ export const authApi = {
     apiRequest<AuthLookupResponse>('/auth/lookup', { method: 'POST', body: { phone } }),
 
   customerLogin: (input: CustomerLoginInput) =>
-    apiRequest<AuthResponse>('/auth/customer/login', { method: 'POST', body: input, cache: 'no-store' }),
+    apiRequest<AuthResponse>('/auth/customer/login', {
+      method: 'POST',
+      body: input,
+      cache: 'no-store',
+    }),
 
   adminLogin: (input: AdminLoginInput) =>
-    apiRequest<AuthResponse>('/auth/admin/login', { method: 'POST', body: input, cache: 'no-store' }),
+    apiRequest<AuthResponse>('/auth/admin/login', {
+      method: 'POST',
+      body: input,
+      cache: 'no-store',
+    }),
 
   logout: (csrfToken: string | null, allDevices = false) =>
     apiRequest<{ ok: true }>('/auth/logout', {

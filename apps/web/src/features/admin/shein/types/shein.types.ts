@@ -1,11 +1,26 @@
-import type { AdminSheinAssistJob, AdminSheinImport, AdminSheinMarketplaceSettings, AdminCategory } from '@/features/admin/api/admin-api';
+import type {
+  AdminSheinAssistJob,
+  AdminSheinImport,
+  AdminSheinMarketplaceSettings,
+  AdminCategory,
+} from '@/features/admin/api/admin-api';
 
 export type Notice = { type: 'success' | 'warning' | 'error'; message: string } | null;
 
 export type ReviewChecklistStep = { label: string; done: boolean };
 
 export type SheinImportWorkflowReturn = {
-  response: { items: AdminSheinImport[]; meta: { page: number; limit: number; total: number; totalPages: number; hasNextPage: boolean; hasPreviousPage: boolean } } | null;
+  response: {
+    items: AdminSheinImport[];
+    meta: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  } | null;
   categories: AdminCategory[];
   selectedId: string;
   selected: AdminSheinImport | null;

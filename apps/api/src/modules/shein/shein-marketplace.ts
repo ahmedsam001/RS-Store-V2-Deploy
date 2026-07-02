@@ -11,7 +11,9 @@ export const SUPPORTED_SHEIN_COUNTRIES = [
 
 export type SheinCountryCode = (typeof SUPPORTED_SHEIN_COUNTRIES)[number]['code'];
 
-export const SUPPORTED_SHEIN_COUNTRY_CODES = SUPPORTED_SHEIN_COUNTRIES.map((country) => country.code) as SheinCountryCode[];
+export const SUPPORTED_SHEIN_COUNTRY_CODES = SUPPORTED_SHEIN_COUNTRIES.map(
+  (country) => country.code,
+) as SheinCountryCode[];
 export const DEFAULT_SHEIN_COUNTRY: SheinCountryCode = 'KW';
 export const FIXED_SHEIN_CURRENCY = 'SAR';
 export const DEFAULT_SHEIN_LANGUAGE = 'en';
@@ -27,10 +29,16 @@ export type SheinMarketplaceSettings = {
 };
 
 export function isSupportedSheinCountry(value: unknown): value is SheinCountryCode {
-  return typeof value === 'string' && SUPPORTED_SHEIN_COUNTRY_CODES.includes(value.trim().toUpperCase() as SheinCountryCode);
+  return (
+    typeof value === 'string' &&
+    SUPPORTED_SHEIN_COUNTRY_CODES.includes(value.trim().toUpperCase() as SheinCountryCode)
+  );
 }
 
-export function normalizeSheinCountry(value: unknown, fallback: SheinCountryCode = DEFAULT_SHEIN_COUNTRY): SheinCountryCode {
+export function normalizeSheinCountry(
+  value: unknown,
+  fallback: SheinCountryCode = DEFAULT_SHEIN_COUNTRY,
+): SheinCountryCode {
   const candidate = typeof value === 'string' ? value.trim().toUpperCase() : '';
   return isSupportedSheinCountry(candidate) ? candidate : fallback;
 }

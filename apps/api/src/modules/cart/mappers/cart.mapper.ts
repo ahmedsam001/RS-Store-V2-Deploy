@@ -12,11 +12,18 @@ export const cartItemInclude = {
   productVariant: true,
 } satisfies Prisma.CartItemInclude;
 
-export type CartPayload = Prisma.CartGetPayload<{ include: { items: { include: typeof cartItemInclude } } }>;
+export type CartPayload = Prisma.CartGetPayload<{
+  include: { items: { include: typeof cartItemInclude } };
+}>;
 export type CartItemPayload = Prisma.CartItemGetPayload<{ include: typeof cartItemInclude }>;
 
-export async function mapCart(cart: CartPayload, pricingService: ProductPricingService): Promise<CartResponse> {
-  const saleAdjustments = await pricingService.getActiveSaleAdjustments(cart.items.map((item) => item.productId));
+export async function mapCart(
+  cart: CartPayload,
+  pricingService: ProductPricingService,
+): Promise<CartResponse> {
+  const saleAdjustments = await pricingService.getActiveSaleAdjustments(
+    cart.items.map((item) => item.productId),
+  );
   const pricedItems = cart.items.map((item) => mapCartItem(item, pricingService, saleAdjustments));
   const currency = pricedItems[0]?.response.unitPrice.currency ?? 'EGP';
   const subtotal = pricedItems.reduce((sum, item) => sum + item.lineTotalAmount, 0);
@@ -35,7 +42,10 @@ export async function mapCart(cart: CartPayload, pricingService: ProductPricingS
 function mapCartItem(
   item: CartItemPayload,
   pricingService: ProductPricingService,
-  saleAdjustments: Map<string, { flashSaleId: string; titleAr: string; discountPercent: string; discountBasisPoints: number }>,
+  saleAdjustments: Map<
+    string,
+    { flashSaleId: string; titleAr: string; discountPercent: string; discountBasisPoints: number }
+  >,
 ): { response: CartItemResponse; lineTotalAmount: number } {
   const baseAmount = item.productVariant?.priceAmount ?? item.product.priceAmount;
   const productDiscountPercent = Number(item.product.discountPercent ?? 0);
@@ -50,7 +60,8 @@ function mapCartItem(
   const image = item.product.images[0];
   const lineTotalAmount = pricing.finalPriceAmount * item.quantity;
   const unitPrice = money(pricing.finalPriceAmount, currency);
-  const originalUnitPrice = pricing.priceSource !== 'NONE' ? money(pricing.basePriceAmount, currency) : null;
+  const originalUnitPrice =
+    pricing.priceSource !== 'NONE' ? money(pricing.basePriceAmount, currency) : null;
   const sale = mapSale(currency, pricing);
 
   return {
@@ -66,7 +77,9 @@ function mapCartItem(
         price: unitPrice,
         originalPrice: originalUnitPrice,
         sale,
-        primaryImage: image ? { id: image.id, url: image.secureUrl, altText: image.altTextAr ?? null } : null,
+        primaryImage: image
+          ? { id: image.id, url: image.secureUrl, altText: image.altTextAr ?? null }
+          : null,
       },
       variant: item.productVariant
         ? {

@@ -144,7 +144,6 @@ describe('ProductCard discount display', () => {
     expect(screen.getByLabelText(/Discount 20%/i)).toHaveTextContent('-20%');
   });
 
-
   it('shows the discount amount from the active sale payload', () => {
     const product = createMockProduct({
       slug: 'discount-amount',

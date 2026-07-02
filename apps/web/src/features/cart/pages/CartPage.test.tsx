@@ -25,7 +25,13 @@ vi.mock('@/features/cart/CartContext', () => ({
 const authState = vi.hoisted(() => ({
   value: {
     status: 'authenticated' as const,
-    user: { id: '1', name: 'Test', phone: '+201000000000', role: 'CUSTOMER', email: 'test@test.com' },
+    user: {
+      id: '1',
+      name: 'Test',
+      phone: '+201000000000',
+      role: 'CUSTOMER',
+      email: 'test@test.com',
+    },
     csrfToken: 'test-token',
     refresh: vi.fn(),
     customerLogin: vi.fn(),
@@ -65,7 +71,9 @@ describe('CartPage', () => {
     renderWithRouter(<CartPage />);
 
     expect(screen.getByText('Your cart is empty')).toBeTruthy();
-    expect(screen.getByText('Browse our collection and add your favorite products to get started')).toBeTruthy();
+    expect(
+      screen.getByText('Browse our collection and add your favorite products to get started'),
+    ).toBeTruthy();
   });
 
   it('renders cart item product name price quantity and checkout action', () => {

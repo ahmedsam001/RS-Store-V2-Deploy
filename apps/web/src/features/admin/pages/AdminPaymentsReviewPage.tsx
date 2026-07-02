@@ -84,12 +84,15 @@ export function AdminPaymentsReviewPage() {
   const [response, setResponse] = useState<AdminPaginated<AdminOrder> | null>(null);
   const [reports, setReports] = useState<AdminReports | null>(null);
   const [selected, setSelected] = useState<AdminOrder | null>(null);
-  const [filters, setFilters] = useState(() => getPaymentReviewFiltersFromSearchParams(searchParams));
+  const [filters, setFilters] = useState(() =>
+    getPaymentReviewFiltersFromSearchParams(searchParams),
+  );
   const [notice, setNotice] = useState<AdminNoticeState>(null);
   const [rejectingProofId, setRejectingProofId] = useState<string | null>(null);
   const [cashRejectOpen, setCashRejectOpen] = useState(false);
   const orders = response?.items ?? [];
-  const activeTab = PAYMENT_REVIEW_TABS.find((tab) => tab.key === filters.queue) ?? PAYMENT_REVIEW_TABS[0];
+  const activeTab =
+    PAYMENT_REVIEW_TABS.find((tab) => tab.key === filters.queue) ?? PAYMENT_REVIEW_TABS[0];
   const selectedInList = useMemo(
     () => orders.find((order) => order.id === selected?.id),
     [orders, selected],
@@ -101,7 +104,8 @@ export function AdminPaymentsReviewPage() {
 
     if (paymentResponse.items[0]) {
       const preferred = selected?.id
-        ? paymentResponse.items.find((order) => order.id === selected.id) ?? paymentResponse.items[0]
+        ? (paymentResponse.items.find((order) => order.id === selected.id) ??
+          paymentResponse.items[0])
         : paymentResponse.items[0];
       await selectOrder(preferred.id);
     } else {
@@ -176,7 +180,9 @@ export function AdminPaymentsReviewPage() {
           <Button
             variant="outline"
             type="button"
-            onClick={() => Promise.all([load(), loadBadgeCounts()]).catch((error) => setNotice(toNotice(error)))}
+            onClick={() =>
+              Promise.all([load(), loadBadgeCounts()]).catch((error) => setNotice(toNotice(error)))
+            }
           >
             Refresh
           </Button>
@@ -184,17 +190,17 @@ export function AdminPaymentsReviewPage() {
       />
       <AdminFeedback notice={notice} />
 
-      <AdminCard title="Review queues" description="Pick one queue and handle the next payment decision">
+      <AdminCard
+        title="Review queues"
+        description="Pick one queue and handle the next payment decision"
+      >
         <div className="admin-queue-strip">
           {PAYMENT_REVIEW_TABS.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => changeTab(tab.key).catch((error) => setNotice(toNotice(error)))}
-              className={cn(
-                'admin-queue-pill',
-                filters.queue === tab.key ? 'is-active' : '',
-              )}
+              className={cn('admin-queue-pill', filters.queue === tab.key ? 'is-active' : '')}
             >
               <span className="min-w-0 flex-1 truncate font-black">{tab.label}</span>
               <AdminCountBadge count={getPaymentReviewBadgeCount(reports, tab.key)} />
@@ -204,10 +210,7 @@ export function AdminPaymentsReviewPage() {
         <p className="mt-3 text-sm font-bold text-muted-foreground">{activeTab.description}</p>
       </AdminCard>
 
-      <AdminCard
-        title="Search this queue"
-        description={`Current queue: ${activeTab.label}`}
-      >
+      <AdminCard title="Search this queue" description={`Current queue: ${activeTab.label}`}>
         <AdminFilterBar onSubmit={submitFilters}>
           <Input
             value={filters.search}
@@ -283,7 +286,10 @@ function PaymentReviewListCard({
     >
       <AdminMobileField label="Total" value={formatMoney(order.totalAmount, order.currency)} />
       <AdminMobileField label="Deposit" value={formatMoney(order.depositAmount, order.currency)} />
-      <AdminMobileField label="Remaining" value={formatMoney(getRemainingAmount(order), order.currency)} />
+      <AdminMobileField
+        label="Remaining"
+        value={formatMoney(getRemainingAmount(order), order.currency)}
+      />
       <AdminMobileField label="Final method" value={paymentMethodLabel(order.finalPaymentMethod)} />
       <AdminMobileField label="Date" value={new Date(order.createdAt).toLocaleString()} />
       <div className="admin-mobile-field-full">
@@ -346,8 +352,14 @@ function PaymentReviewDetails({
       </AdminSoftPanel>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <AdminInfoItem label="Amount to review" value={formatMoney(getReviewAmount(order, queue), order.currency)} />
-        <AdminInfoItem label="Payment method" value={paymentMethodLabel(reviewPaymentMethod(order, queue))} />
+        <AdminInfoItem
+          label="Amount to review"
+          value={formatMoney(getReviewAmount(order, queue), order.currency)}
+        />
+        <AdminInfoItem
+          label="Payment method"
+          value={paymentMethodLabel(reviewPaymentMethod(order, queue))}
+        />
         <AdminInfoItem label="Order total" value={formatMoney(order.totalAmount, order.currency)} />
       </section>
 
@@ -356,9 +368,18 @@ function PaymentReviewDetails({
         <section className="grid gap-3 pt-3 sm:grid-cols-2">
           <AdminInfoItem label="Customer" value={order.customerNameSnapshot ?? '-'} />
           <AdminInfoItem label="Phone" value={order.customerPhoneSnapshot ?? '-'} dir="ltr" />
-          <AdminInfoItem label="Deposit paid" value={formatMoney(order.depositPaidAmount, order.currency)} />
-          <AdminInfoItem label="Remaining" value={formatMoney(getRemainingAmount(order), order.currency)} />
-          <AdminInfoItem label="Final due" value={formatMoney(order.finalAmountDue ?? order.remainingAmount, order.currency)} />
+          <AdminInfoItem
+            label="Deposit paid"
+            value={formatMoney(order.depositPaidAmount, order.currency)}
+          />
+          <AdminInfoItem
+            label="Remaining"
+            value={formatMoney(getRemainingAmount(order), order.currency)}
+          />
+          <AdminInfoItem
+            label="Final due"
+            value={formatMoney(order.finalAmountDue ?? order.remainingAmount, order.currency)}
+          />
           <AdminInfoItem label="Created" value={new Date(order.createdAt).toLocaleString()} />
           <div className="sm:col-span-2">
             <AdminInfoItem label="Address" value={order.shippingAddressSnapshot ?? '-'} />
@@ -389,7 +410,10 @@ function PaymentReviewDetails({
                 : 'The customer selected cash at store. Confirm the received remaining amount before delivery.'}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <AdminInfoItem label="Amount to collect" value={formatMoney(order.finalAmountDue ?? order.remainingAmount, order.currency)} />
+              <AdminInfoItem
+                label="Amount to collect"
+                value={formatMoney(order.finalAmountDue ?? order.remainingAmount, order.currency)}
+              />
               <AdminInfoItem label="Payment method" value="Cash at store" />
             </div>
             {isCashFinalQueue ? (
@@ -400,7 +424,13 @@ function PaymentReviewDetails({
                     className="admin-tone-success border border-emerald-200 text-emerald-800 hover:bg-emerald-100"
                     onClick={() =>
                       run(
-                        () => adminApi.reviewCashFinalPayment(order.id, 'APPROVED', 'Cash final payment received', { csrfToken }),
+                        () =>
+                          adminApi.reviewCashFinalPayment(
+                            order.id,
+                            'APPROVED',
+                            'Cash final payment received',
+                            { csrfToken },
+                          ),
                         'Cash final payment approved. Order is ready to deliver.',
                       )
                     }
@@ -428,7 +458,10 @@ function PaymentReviewDetails({
                     ]}
                     onSubmit={(reason) =>
                       run(
-                        () => adminApi.reviewCashFinalPayment(order.id, 'REJECTED', reason, { csrfToken }),
+                        () =>
+                          adminApi.reviewCashFinalPayment(order.id, 'REJECTED', reason, {
+                            csrfToken,
+                          }),
                         'Cash final payment rejected.',
                       )
                     }
@@ -437,7 +470,8 @@ function PaymentReviewDetails({
               </>
             ) : (
               <p className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-800">
-                No transfer proof is attached because this was a rejected cash-at-store final payment.
+                No transfer proof is attached because this was a rejected cash-at-store final
+                payment.
               </p>
             )}
           </AdminSoftPanel>
@@ -475,7 +509,10 @@ function PaymentReviewDetails({
                         className="admin-tone-success border border-emerald-200 text-emerald-800 hover:bg-emerald-100"
                         onClick={() =>
                           run(
-                            () => adminApi.reviewPaymentProof(proof.id, 'APPROVED', undefined, { csrfToken }),
+                            () =>
+                              adminApi.reviewPaymentProof(proof.id, 'APPROVED', undefined, {
+                                csrfToken,
+                              }),
                             proof.type === 'DEPOSIT'
                               ? 'Deposit approved. Order moved to Orders.'
                               : 'Final payment approved. Order is ready to deliver.',
@@ -497,7 +534,11 @@ function PaymentReviewDetails({
                     </div>
                     {rejectingProofId === proof.id ? (
                       <RejectionForm
-                        title={proof.type === 'DEPOSIT' ? 'Reject deposit proof?' : 'Reject final payment proof?'}
+                        title={
+                          proof.type === 'DEPOSIT'
+                            ? 'Reject deposit proof?'
+                            : 'Reject final payment proof?'
+                        }
                         confirmLabel="Reject Payment"
                         details={[
                           `Order: ${order.orderNumber}`,
@@ -509,7 +550,10 @@ function PaymentReviewDetails({
                         ]}
                         onSubmit={(reason) =>
                           run(
-                            () => adminApi.reviewPaymentProof(proof.id, 'REJECTED', reason, { csrfToken }),
+                            () =>
+                              adminApi.reviewPaymentProof(proof.id, 'REJECTED', reason, {
+                                csrfToken,
+                              }),
                             'Payment proof rejected.',
                           )
                         }
@@ -560,7 +604,12 @@ function RejectionForm({
           if (cleanReason) setConfirmOpen(true);
         }}
       >
-        <Input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Rejection reason" required />
+        <Input
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder="Rejection reason"
+          required
+        />
         <Button
           variant="outline"
           type="submit"
@@ -573,16 +622,18 @@ function RejectionForm({
         open={confirmOpen}
         title={title}
         message="Rejecting a payment is a sensitive action. Confirm only after reviewing the proof and writing a clear reason."
-        details={(
+        details={
           <div className="space-y-3">
             <ul className="space-y-1">
-              {details.map((detail) => <li key={detail}>• {detail}</li>)}
+              {details.map((detail) => (
+                <li key={detail}>• {detail}</li>
+              ))}
             </ul>
             <p className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-black text-red-800">
               Reason: {cleanReason}
             </p>
           </div>
-        )}
+        }
         confirmLabel={confirmLabel}
         tone="danger"
         onConfirm={() => {
@@ -594,7 +645,6 @@ function RejectionForm({
     </>
   );
 }
-
 
 function isPaymentReviewQueue(value: string | null): value is PaymentReviewQueue {
   return PAYMENT_REVIEW_TABS.some((tab) => tab.key === value);
@@ -631,7 +681,8 @@ function buildPaymentReviewUrlSearchParams(filters: {
   queue: PaymentReviewQueue;
   page: number;
 }) {
-  const tab = PAYMENT_REVIEW_TABS.find((item) => item.key === filters.queue) ?? PAYMENT_REVIEW_TABS[0];
+  const tab =
+    PAYMENT_REVIEW_TABS.find((item) => item.key === filters.queue) ?? PAYMENT_REVIEW_TABS[0];
   const params = new URLSearchParams({ queue: filters.queue, workflow: tab.workflow });
   if (tab.paymentStatus) params.set('paymentStatus', tab.paymentStatus);
   if (filters.search.trim()) params.set('search', filters.search.trim());
@@ -639,8 +690,10 @@ function buildPaymentReviewUrlSearchParams(filters: {
   return params;
 }
 
-
-function getPaymentReviewBadgeCount(reports: AdminReports | null, queue: PaymentReviewQueue): number {
+function getPaymentReviewBadgeCount(
+  reports: AdminReports | null,
+  queue: PaymentReviewQueue,
+): number {
   if (!reports) return 0;
   if (queue === 'DEPOSIT_SUBMITTED') return reports.orders.depositReview;
   if (queue === 'FINAL_PAYMENT_SUBMITTED') return reports.orders.finalPaymentReview;
@@ -653,7 +706,8 @@ function buildPaymentsReviewQuery(filters: {
   queue: PaymentReviewQueue;
   page: number;
 }) {
-  const tab = PAYMENT_REVIEW_TABS.find((item) => item.key === filters.queue) ?? PAYMENT_REVIEW_TABS[0];
+  const tab =
+    PAYMENT_REVIEW_TABS.find((item) => item.key === filters.queue) ?? PAYMENT_REVIEW_TABS[0];
   const params = new URLSearchParams({
     page: String(filters.page),
     workflow: tab.workflow,
@@ -682,8 +736,7 @@ function nextActionDescription(queue: PaymentReviewQueue): string {
       'If approved, the order becomes fully paid and moves to Ready To Deliver.',
     CASH_FINAL_PAYMENT_PENDING:
       'Confirm that the remaining cash amount was received at the store before delivery.',
-    DEPOSIT_REJECTED:
-      'No admin action is required until the customer uploads a new deposit proof.',
+    DEPOSIT_REJECTED: 'No admin action is required until the customer uploads a new deposit proof.',
     FINAL_PAYMENT_REJECTED:
       'No admin action is required until the customer uploads a corrected final payment proof.',
   };
@@ -704,10 +757,13 @@ function paymentMethodLabel(method?: string | null): string {
     VODAFONE: 'Vodafone Cash',
     CASH_AT_SHOP: 'Cash at store',
   };
-  return method ? map[method] ?? method : '-';
+  return method ? (map[method] ?? method) : '-';
 }
 
-function reviewPaymentMethod(order: AdminOrder, queue: PaymentReviewQueue): string | null | undefined {
+function reviewPaymentMethod(
+  order: AdminOrder,
+  queue: PaymentReviewQueue,
+): string | null | undefined {
   if (queue === 'DEPOSIT_SUBMITTED' || queue === 'DEPOSIT_REJECTED') {
     return order.depositPaymentMethod;
   }
@@ -731,7 +787,10 @@ function getReviewAmount(order: AdminOrder, queue: PaymentReviewQueue): string |
 
 function getRemainingAmount(order: AdminOrder): string | number {
   if (order.paymentStatus === 'PAID') return 0;
-  if (order.paymentStatus === 'FINAL_PAYMENT_PENDING' || order.paymentStatus === 'FINAL_PAYMENT_SUBMITTED') {
+  if (
+    order.paymentStatus === 'FINAL_PAYMENT_PENDING' ||
+    order.paymentStatus === 'FINAL_PAYMENT_SUBMITTED'
+  ) {
     return order.finalAmountDue ?? order.remainingAmount ?? 0;
   }
   return order.remainingAmount ?? order.finalAmountDue ?? 0;

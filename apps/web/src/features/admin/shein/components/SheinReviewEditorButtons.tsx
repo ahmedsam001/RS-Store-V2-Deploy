@@ -33,17 +33,19 @@ export function SheinReviewEditorButtons({
         {publishPhase === 'reviewing'
           ? 'Reviewing'
           : publishPhase === 'approving'
-          ? 'Approving'
-          : publishPhase === 'publishing'
-            ? 'Publishing'
-            : 'Publish Product'}
+            ? 'Approving'
+            : publishPhase === 'publishing'
+              ? 'Publishing'
+              : 'Publish Product'}
       </Button>
       {canRetry ? (
         <Button
           type="button"
           variant="outline"
           disabled={Boolean(publishPhase)}
-          onClick={() => run(() => adminApi.retrySheinImport(item.id, { csrfToken }), 'Retry completed')}
+          onClick={() =>
+            run(() => adminApi.retrySheinImport(item.id, { csrfToken }), 'Retry completed')
+          }
         >
           Retry
         </Button>

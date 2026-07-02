@@ -1,5 +1,8 @@
 import { AdminSheinImport } from '@/features/admin/api/admin-api';
-import { formatSheinStatus, formatNumberForInput } from '@/features/admin/shein/utils/shein-review-utils';
+import {
+  formatSheinStatus,
+  formatNumberForInput,
+} from '@/features/admin/shein/utils/shein-review-utils';
 
 export function SheinImportCycleOverview({
   items,
@@ -23,8 +26,8 @@ export function SheinImportCycleOverview({
         <p className="admin-shein-kicker">Admin cycle</p>
         <h2>From SHEIN link to customer-facing product</h2>
         <p>
-          The workflow is now clear: paste the link, review data and images and category, then publish
-          the product without approval steps or drafts
+          The workflow is now clear: paste the link, review data and images and category, then
+          publish the product without approval steps or drafts
         </p>
       </div>
       <div className="admin-shein-cycle-stats">

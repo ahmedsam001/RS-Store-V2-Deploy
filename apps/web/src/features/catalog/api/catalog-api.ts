@@ -9,16 +9,22 @@ import type {
 } from '@/shared/types/CatalogTypes';
 
 export async function getCatalogCategories(
-    search?: string,
-    signal?: AbortSignal,
-  ): Promise<CatalogCategory[]> {
-    const path = buildCatalogCategoriesPath(search);
-    return apiRequest<CatalogCategory[]>(path, { signal, cache: 'no-store' });
-  }
+  search?: string,
+  signal?: AbortSignal,
+): Promise<CatalogCategory[]> {
+  const path = buildCatalogCategoriesPath(search);
+  return apiRequest<CatalogCategory[]>(path, { signal, cache: 'no-store' });
+}
 
-  export async function getCatalogCategory(slug: string, signal?: AbortSignal): Promise<CatalogCategory> {
-    return apiRequest<CatalogCategory>(`/catalog/categories/${encodeURIComponent(slug)}`, { signal, cache: 'no-store' });
-  }
+export async function getCatalogCategory(
+  slug: string,
+  signal?: AbortSignal,
+): Promise<CatalogCategory> {
+  return apiRequest<CatalogCategory>(`/catalog/categories/${encodeURIComponent(slug)}`, {
+    signal,
+    cache: 'no-store',
+  });
+}
 
 export async function getCatalogProducts(
   query: CatalogProductsQuery,
@@ -31,14 +37,19 @@ export async function getCatalogProduct(
   slug: string,
   signal?: AbortSignal,
 ): Promise<CatalogProductDetail> {
-  return apiRequest<CatalogProductDetail>(`/catalog/products/${encodeURIComponent(slug)}`, { signal });
+  return apiRequest<CatalogProductDetail>(`/catalog/products/${encodeURIComponent(slug)}`, {
+    signal,
+  });
 }
 
 export async function getFeaturedSubCategories(
-    signal?: AbortSignal,
-  ): Promise<FeaturedSubCategory[]> {
-    return apiRequest<FeaturedSubCategory[]>('/catalog/subcategories/featured', { signal, cache: 'no-store' });
-  }
+  signal?: AbortSignal,
+): Promise<FeaturedSubCategory[]> {
+  return apiRequest<FeaturedSubCategory[]>('/catalog/subcategories/featured', {
+    signal,
+    cache: 'no-store',
+  });
+}
 
 export async function getRelatedCatalogProducts(
   slug: string,
@@ -71,7 +82,6 @@ function buildCatalogProductsPath(query: CatalogProductsQuery): string {
   const suffix = params.toString();
   return `/catalog/products${suffix ? `?${suffix}` : ''}`;
 }
-
 
 export type CatalogFlashSale = {
   id: string;

@@ -23,7 +23,10 @@ export function SheinMarketplaceCard({ marketplace, onSaved }: SheinMarketplaceC
     setSaving(true);
     setNotice(null);
     try {
-      const next = await sheinApi.updateMarketplaceSettings({ countryCode, language }, { csrfToken });
+      const next = await sheinApi.updateMarketplaceSettings(
+        { countryCode, language },
+        { csrfToken },
+      );
       onSaved(next);
       setNotice({ type: 'success', message: 'SHEIN marketplace settings saved' });
     } catch (error) {
@@ -46,7 +49,8 @@ export function SheinMarketplaceCard({ marketplace, onSaved }: SheinMarketplaceC
       </CardHeader>
       <CardContent className="grid gap-3">
         <p className="text-sm leading-7 text-muted-foreground">
-          Select country to open SHEIN product. Currency is fixed to SAR to prevent wrong market price import
+          Select country to open SHEIN product. Currency is fixed to SAR to prevent wrong market
+          price import
         </p>
         <div className="admin-shein-form-grid">
           <label>

@@ -15,7 +15,11 @@ export class CartController {
   }
 
   @Post('items')
-  addItem(@Req() request: Request, @Res({ passthrough: true }) response: Response, @Body() dto: AddCartItemDto) {
+  addItem(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+    @Body() dto: AddCartItemDto,
+  ) {
     return this.cartService.addItem(request, response, dto);
   }
 
@@ -30,7 +34,11 @@ export class CartController {
   }
 
   @Delete('items/:id')
-  removeItem(@Req() request: Request, @Res({ passthrough: true }) response: Response, @Param() params: IdParamDto) {
+  removeItem(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+    @Param() params: IdParamDto,
+  ) {
     return this.cartService.removeItem(request, response, params.id);
   }
 

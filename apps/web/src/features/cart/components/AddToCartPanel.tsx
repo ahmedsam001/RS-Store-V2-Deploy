@@ -20,11 +20,15 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
   const productOutOfStock = product.isInStock === false;
 
   const availableSizes = useMemo(
-    () => product.availableSizes?.filter(Boolean) ?? uniqueValues(product.variants.map((item) => item.size)),
+    () =>
+      product.availableSizes?.filter(Boolean) ??
+      uniqueValues(product.variants.map((item) => item.size)),
     [product.availableSizes, product.variants],
   );
   const availableColors = useMemo(
-    () => product.availableColors?.filter(Boolean) ?? uniqueValues(product.variants.map((item) => item.color)),
+    () =>
+      product.availableColors?.filter(Boolean) ??
+      uniqueValues(product.variants.map((item) => item.color)),
     [product.availableColors, product.variants],
   );
 
@@ -32,7 +36,10 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
   const isPurchasable = hasVariants;
   const requiresSize = hasVariants && availableSizes.length > 0;
   const requiresColor = hasVariants && availableColors.length > 0;
-  const canResolveSelectedVariant = hasVariants && (!requiresSize || Boolean(selectedSize)) && (!requiresColor || Boolean(selectedColor));
+  const canResolveSelectedVariant =
+    hasVariants &&
+    (!requiresSize || Boolean(selectedSize)) &&
+    (!requiresColor || Boolean(selectedColor));
   const selectedVariant = useMemo(
     () =>
       canResolveSelectedVariant
@@ -96,7 +103,11 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
       return;
     }
 
-    await addToCart({ productId: product.id, productVariantId: selectedVariantId, quantity: finalQuantity });
+    await addToCart({
+      productId: product.id,
+      productVariantId: selectedVariantId,
+      quantity: finalQuantity,
+    });
   }
 
   return (
@@ -164,7 +175,15 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
         disabled={isAdding || !isPurchasable || isSelectedVariantOutOfStock || productOutOfStock}
       >
         <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-        {isAdding ? 'Adding...' : !isPurchasable ? 'Unavailable' : productOutOfStock ? 'Out of Stock' : isSelectedVariantOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+        {isAdding
+          ? 'Adding...'
+          : !isPurchasable
+            ? 'Unavailable'
+            : productOutOfStock
+              ? 'Out of Stock'
+              : isSelectedVariantOutOfStock
+                ? 'Out of Stock'
+                : 'Add to Cart'}
       </Button>
       {!isPurchasable ? (
         <p className="text-sm font-semibold leading-6 text-destructive" role="alert">
@@ -249,10 +268,7 @@ function resolveSelectedVariant(
     return matchesSize && matchesColor;
   });
 
-  return (
-    matchingVariants.find((variant) => variant.stockQuantity > 0) ??
-    matchingVariants[0]
-  );
+  return matchingVariants.find((variant) => variant.stockQuantity > 0) ?? matchingVariants[0];
 }
 
 function uniqueValues(values: Array<string | null>): string[] {

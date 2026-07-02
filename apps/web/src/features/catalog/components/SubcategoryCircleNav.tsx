@@ -20,11 +20,16 @@ type SubcategoryCircleNavProps = {
   parentCategorySlug?: string;
 };
 
-
-export function SubcategoryCircleNav({ activeSlug, parentCategorySlug, subcategories }: SubcategoryCircleNavProps) {
+export function SubcategoryCircleNav({
+  activeSlug,
+  parentCategorySlug,
+  subcategories,
+}: SubcategoryCircleNavProps) {
   const { user } = useAuth();
   const locale = user?.language ?? 'ar';
-  const visibleSubcategories = subcategories.filter((subcategory) => getProductCount(subcategory) > 0);
+  const visibleSubcategories = subcategories.filter(
+    (subcategory) => getProductCount(subcategory) > 0,
+  );
 
   if (visibleSubcategories.length === 0) {
     return null;
@@ -35,16 +40,21 @@ export function SubcategoryCircleNav({ activeSlug, parentCategorySlug, subcatego
       {visibleSubcategories.map((subcategory) => {
         const name = getSubcategoryName(subcategory, locale);
         const productCount = getProductCount(subcategory);
-        const resolvedParentSlug = 'parentCategorySlug' in subcategory && subcategory.parentCategorySlug
-          ? subcategory.parentCategorySlug
-          : parentCategorySlug;
+        const resolvedParentSlug =
+          'parentCategorySlug' in subcategory && subcategory.parentCategorySlug
+            ? subcategory.parentCategorySlug
+            : parentCategorySlug;
         const isActive = activeSlug === subcategory.slug;
 
         return (
           <div key={subcategory.id} className="rs-subcategory-circle-item">
             <CatalogLink
               href={getSubcategoryHref(subcategory.slug, resolvedParentSlug)}
-              className={isActive ? 'rs-subcategory-circle-link rs-subcategory-circle-active' : 'rs-subcategory-circle-link'}
+              className={
+                isActive
+                  ? 'rs-subcategory-circle-link rs-subcategory-circle-active'
+                  : 'rs-subcategory-circle-link'
+              }
               aria-current={isActive ? 'page' : undefined}
               aria-label={`${name} ${productCount} products`}
             >

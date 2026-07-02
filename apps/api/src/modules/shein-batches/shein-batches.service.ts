@@ -1,5 +1,17 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { OrderItemStatus, OrderPaymentStatus, OrderStatus, Prisma, SheinBatchStatus, SheinImportStatus } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  OrderItemStatus,
+  OrderPaymentStatus,
+  OrderStatus,
+  Prisma,
+  SheinBatchStatus,
+  SheinImportStatus,
+} from '@prisma/client';
 import { buildPaginationMeta } from '../../common/pagination/paginated-response';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
@@ -33,12 +45,19 @@ type BatchWithItems = Prisma.SheinBatchGetPayload<{
           };
         };
         orderItem: { select: { id: true; status: true } };
-        product: { select: { id: true; slug: true; nameAr: true; nameEn: true; sourceSheinUrl: true } };
-        productVariant: { select: { id: true; sku: true; nameAr: true; nameEn: true; size: true; color: true } };
+        product: {
+          select: { id: true; slug: true; nameAr: true; nameEn: true; sourceSheinUrl: true };
+        };
+        productVariant: {
+          select: { id: true; sku: true; nameAr: true; nameEn: true; size: true; color: true };
+        };
       };
       orderBy: { createdAt: 'asc' };
     };
-    statusHistory: { include: { changedBy: { select: { id: true; name: true; email: true; phone: true } } }; orderBy: { createdAt: 'asc' } };
+    statusHistory: {
+      include: { changedBy: { select: { id: true; name: true; email: true; phone: true } } };
+      orderBy: { createdAt: 'asc' };
+    };
     createdBy: { select: { id: true; name: true; email: true; phone: true } };
     updatedBy: { select: { id: true; name: true; email: true; phone: true } };
   };
@@ -73,12 +92,19 @@ type AvailableOrderItemPricingInput = {
   } | null;
 };
 
-const terminalStatuses = new Set<SheinBatchStatus>([SheinBatchStatus.DELIVERED, SheinBatchStatus.CANCELLED]);
+const terminalStatuses = new Set<SheinBatchStatus>([
+  SheinBatchStatus.DELIVERED,
+  SheinBatchStatus.CANCELLED,
+]);
 
 const statusGroups: Record<SheinBatchStatusGroup, SheinBatchStatus[]> = {
   COLLECTING: [SheinBatchStatus.DRAFT],
   ORDERED: [SheinBatchStatus.ORDERED_FROM_SHEIN],
-  IN_SHIPPING: [SheinBatchStatus.SHIPPING, SheinBatchStatus.CUSTOMS, SheinBatchStatus.ARRIVED_EGYPT],
+  IN_SHIPPING: [
+    SheinBatchStatus.SHIPPING,
+    SheinBatchStatus.CUSTOMS,
+    SheinBatchStatus.ARRIVED_EGYPT,
+  ],
   ARRIVED_SHOP: [SheinBatchStatus.ARRIVED_STORE, SheinBatchStatus.READY_FOR_PICKUP],
   COMPLETED: [SheinBatchStatus.DELIVERED],
   CANCELLED: [SheinBatchStatus.CANCELLED],
@@ -143,7 +169,9 @@ export class SheinBatchesService {
           exchangeRateSarToEgp: exchangeRate,
           status: initialStatus,
           ...this.statusTimestampPatch(initialStatus),
-          orderedAt: dto.orderedAt ?? (initialStatus === SheinBatchStatus.ORDERED_FROM_SHEIN ? new Date() : undefined),
+          orderedAt:
+            dto.orderedAt ??
+            (initialStatus === SheinBatchStatus.ORDERED_FROM_SHEIN ? new Date() : undefined),
           notes: dto.notes?.trim() || null,
           createdById: user.id,
           updatedById: user.id,
@@ -162,7 +190,10 @@ export class SheinBatchesService {
           batchId: created.id,
           fromStatus: null,
           toStatus: initialStatus,
-          note: requestedItems.length > 0 ? `Batch created with ${requestedItems.length} item(s)` : 'Batch created',
+          note:
+            requestedItems.length > 0
+              ? `Batch created with ${requestedItems.length} item(s)`
+              : 'Batch created',
           changedById: user.id,
         },
       });
@@ -172,7 +203,11 @@ export class SheinBatchesService {
         action: 'SHEIN_BATCH_CREATED',
         entityType: 'SHEIN_BATCH',
         entityId: created.id,
-        metadata: { batchCode: created.batchCode, status: created.status, itemsCount: requestedItems.length },
+        metadata: {
+          batchCode: created.batchCode,
+          status: created.status,
+          itemsCount: requestedItems.length,
+        },
       });
 
       return created;
@@ -230,8 +265,12 @@ export class SheinBatchesService {
               },
             },
             orderItem: { select: { id: true, status: true } },
-            product: { select: { id: true, slug: true, nameAr: true, nameEn: true, sourceSheinUrl: true } },
-            productVariant: { select: { id: true, sku: true, nameAr: true, nameEn: true, size: true, color: true } },
+            product: {
+              select: { id: true, slug: true, nameAr: true, nameEn: true, sourceSheinUrl: true },
+            },
+            productVariant: {
+              select: { id: true, sku: true, nameAr: true, nameEn: true, size: true, color: true },
+            },
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -253,16 +292,22 @@ export class SheinBatchesService {
 
   async update(id: string, dto: UpdateSheinBatchDto, user: AuthenticatedUser) {
     await this.ensureBatchExists(id);
-    const nextExchangeRate = dto.exchangeRateSarToEgp !== undefined ? this.parseRate(dto.exchangeRateSarToEgp) : undefined;
+    const nextExchangeRate =
+      dto.exchangeRateSarToEgp !== undefined ? this.parseRate(dto.exchangeRateSarToEgp) : undefined;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const batch = await tx.sheinBatch.update({
         where: { id },
         data: {
           title: dto.title !== undefined ? dto.title.trim() || null : undefined,
-          sheinOrderReference: dto.sheinOrderReference !== undefined ? dto.sheinOrderReference.trim() || null : undefined,
-          trackingNumber: dto.trackingNumber !== undefined ? dto.trackingNumber.trim() || null : undefined,
-          trackingCarrier: dto.trackingCarrier !== undefined ? dto.trackingCarrier.trim() || null : undefined,
+          sheinOrderReference:
+            dto.sheinOrderReference !== undefined
+              ? dto.sheinOrderReference.trim() || null
+              : undefined,
+          trackingNumber:
+            dto.trackingNumber !== undefined ? dto.trackingNumber.trim() || null : undefined,
+          trackingCarrier:
+            dto.trackingCarrier !== undefined ? dto.trackingCarrier.trim() || null : undefined,
           trackingUrl: dto.trackingUrl !== undefined ? dto.trackingUrl.trim() || null : undefined,
           exchangeRateSarToEgp: nextExchangeRate,
           notes: dto.notes !== undefined ? dto.notes.trim() || null : undefined,
@@ -281,7 +326,10 @@ export class SheinBatchesService {
         action: 'SHEIN_BATCH_UPDATED',
         entityType: 'SHEIN_BATCH',
         entityId: batch.id,
-        metadata: { batchCode: batch.batchCode, exchangeRateUpdated: nextExchangeRate !== undefined },
+        metadata: {
+          batchCode: batch.batchCode,
+          exchangeRateUpdated: nextExchangeRate !== undefined,
+        },
       });
 
       return batch;
@@ -296,7 +344,9 @@ export class SheinBatchesService {
       return this.findById(id);
     }
     if (terminalStatuses.has(current.status)) {
-      throw new BadRequestException('Delivered or cancelled SHEIN batches cannot be moved to another status');
+      throw new BadRequestException(
+        'Delivered or cancelled SHEIN batches cannot be moved to another status',
+      );
     }
 
     const syncedItemStatus = batchStatusToOrderItemStatus[dto.status];
@@ -310,14 +360,20 @@ export class SheinBatchesService {
         },
       });
 
-      const syncResult = await this.syncOrderItemsForBatchStatusInTransaction(tx, id, syncedItemStatus);
-      const openedFinalPaymentCount = syncedItemStatus === OrderItemStatus.SHOP
-        ? await this.openFinalPaymentForOrdersInTransaction(tx, syncResult.orderIds, user.id)
-        : 0;
+      const syncResult = await this.syncOrderItemsForBatchStatusInTransaction(
+        tx,
+        id,
+        syncedItemStatus,
+      );
+      const openedFinalPaymentCount =
+        syncedItemStatus === OrderItemStatus.SHOP
+          ? await this.openFinalPaymentForOrdersInTransaction(tx, syncResult.orderIds, user.id)
+          : 0;
 
-      const autoFinalPaymentNote = openedFinalPaymentCount > 0
-        ? ` Final payment opened for ${openedFinalPaymentCount} order(s).`
-        : '';
+      const autoFinalPaymentNote =
+        openedFinalPaymentCount > 0
+          ? ` Final payment opened for ${openedFinalPaymentCount} order(s).`
+          : '';
 
       await tx.sheinBatchStatusHistory.create({
         data: {
@@ -352,7 +408,12 @@ export class SheinBatchesService {
     return this.findById(id);
   }
 
-  async updateItemStatus(batchId: string, itemId: string, dto: UpdateSheinBatchItemStatusDto, user: AuthenticatedUser) {
+  async updateItemStatus(
+    batchId: string,
+    itemId: string,
+    dto: UpdateSheinBatchItemStatusDto,
+    user: AuthenticatedUser,
+  ) {
     const item = await this.prisma.sheinBatchItem.findFirst({
       where: { id: itemId, batchId },
       include: { batch: { select: { id: true, batchCode: true, status: true } } },
@@ -361,7 +422,9 @@ export class SheinBatchesService {
       throw new NotFoundException('SHEIN batch item was not found');
     }
     if (terminalStatuses.has(item.batch.status)) {
-      throw new BadRequestException('Items inside delivered or cancelled SHEIN batches cannot be updated');
+      throw new BadRequestException(
+        'Items inside delivered or cancelled SHEIN batches cannot be updated',
+      );
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -370,9 +433,10 @@ export class SheinBatchesService {
         data: { status: dto.status },
       });
 
-      const openedFinalPaymentCount = dto.status === OrderItemStatus.SHOP
-        ? await this.openFinalPaymentForOrdersInTransaction(tx, [item.orderId], user.id)
-        : 0;
+      const openedFinalPaymentCount =
+        dto.status === OrderItemStatus.SHOP
+          ? await this.openFinalPaymentForOrdersInTransaction(tx, [item.orderId], user.id)
+          : 0;
 
       await this.audit.logInTransaction(tx, {
         actorUserId: user.id,
@@ -414,7 +478,10 @@ export class SheinBatchesService {
         action: 'SHEIN_BATCH_ITEMS_ADDED',
         entityType: 'SHEIN_BATCH',
         entityId: batchId,
-        metadata: { count: dto.items.length, orderItemIds: dto.items.map((item) => item.orderItemId) },
+        metadata: {
+          count: dto.items.length,
+          orderItemIds: dto.items.map((item) => item.orderItemId),
+        },
       });
     });
 
@@ -424,7 +491,9 @@ export class SheinBatchesService {
   async removeItem(batchId: string, itemId: string, user: AuthenticatedUser) {
     const batch = await this.ensureBatchExists(batchId);
     if (batch.status !== SheinBatchStatus.DRAFT) {
-      throw new BadRequestException('Order items can only be removed while the SHEIN batch is still collecting. Use an item cancellation workflow after the batch has been ordered or shipped.');
+      throw new BadRequestException(
+        'Order items can only be removed while the SHEIN batch is still collecting. Use an item cancellation workflow after the batch has been ordered or shipped.',
+      );
     }
 
     const item = await this.prisma.sheinBatchItem.findFirst({ where: { id: itemId, batchId } });
@@ -444,7 +513,11 @@ export class SheinBatchesService {
         action: 'SHEIN_BATCH_ITEM_REMOVED',
         entityType: 'SHEIN_BATCH',
         entityId: batchId,
-        metadata: { sheinBatchItemId: item.id, orderItemId: item.orderItemId, batchStatus: batch.status },
+        metadata: {
+          sheinBatchItemId: item.id,
+          orderItemId: item.orderItemId,
+          batchStatus: batch.status,
+        },
       });
     });
 
@@ -494,7 +567,12 @@ export class SheinBatchesService {
     return this.findById(id);
   }
 
-  async updateItemWhatsappMessage(batchId: string, itemId: string, message: string, user: AuthenticatedUser) {
+  async updateItemWhatsappMessage(
+    batchId: string,
+    itemId: string,
+    message: string,
+    user: AuthenticatedUser,
+  ) {
     await this.ensureBatchExists(batchId);
     const cleanedMessage = message.trim();
     if (!cleanedMessage) {
@@ -507,7 +585,10 @@ export class SheinBatchesService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.sheinBatchItem.update({ where: { id: item.id }, data: { whatsappMessageTemplate: cleanedMessage } });
+      await tx.sheinBatchItem.update({
+        where: { id: item.id },
+        data: { whatsappMessageTemplate: cleanedMessage },
+      });
       await this.audit.logInTransaction(tx, {
         actorUserId: user.id,
         action: 'SHEIN_BATCH_WHATSAPP_MESSAGE_UPDATED',
@@ -527,7 +608,11 @@ export class SheinBatchesService {
         status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] },
         paymentStatus: OrderPaymentStatus.DEPOSIT_APPROVED,
       },
-      sheinBatchItems: { none: { batch: { status: { notIn: [SheinBatchStatus.CANCELLED, SheinBatchStatus.DELIVERED] } } } },
+      sheinBatchItems: {
+        none: {
+          batch: { status: { notIn: [SheinBatchStatus.CANCELLED, SheinBatchStatus.DELIVERED] } },
+        },
+      },
     };
 
     const search = query.search?.trim();
@@ -567,14 +652,29 @@ export class SheinBatchesService {
               nameEn: true,
               sourceSheinUrl: true,
               sheinImports: {
-                where: { status: { in: [SheinImportStatus.PUBLISHED, SheinImportStatus.PRODUCT_CREATED, SheinImportStatus.SUCCEEDED] } },
-                select: { editedPayload: true, previewPayload: true, publishedAt: true, createdAt: true },
+                where: {
+                  status: {
+                    in: [
+                      SheinImportStatus.PUBLISHED,
+                      SheinImportStatus.PRODUCT_CREATED,
+                      SheinImportStatus.SUCCEEDED,
+                    ],
+                  },
+                },
+                select: {
+                  editedPayload: true,
+                  previewPayload: true,
+                  publishedAt: true,
+                  createdAt: true,
+                },
                 orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
                 take: 1,
               },
             },
           },
-          productVariant: { select: { id: true, sku: true, nameAr: true, nameEn: true, size: true, color: true } },
+          productVariant: {
+            select: { id: true, sku: true, nameAr: true, nameEn: true, size: true, color: true },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (query.page - 1) * query.limit,
@@ -583,7 +683,10 @@ export class SheinBatchesService {
       this.prisma.orderItem.count({ where }),
     ]);
 
-    return { items: items.map((item) => this.mapAvailableOrderItem(item)), meta: buildPaginationMeta(query, total) };
+    return {
+      items: items.map((item) => this.mapAvailableOrderItem(item)),
+      meta: buildPaginationMeta(query, total),
+    };
   }
 
   private mapAvailableOrderItem<T extends AvailableOrderItemPricingInput>(item: T) {
@@ -608,10 +711,14 @@ export class SheinBatchesService {
     const payload = this.resolveSheinImportPayload(item.product?.sheinImports ?? []);
     if (!payload) return null;
 
-    return this.resolveSheinVariantPrice(payload, item) ?? this.normalizeMajorMoney(payload.priceAmount);
+    return (
+      this.resolveSheinVariantPrice(payload, item) ?? this.normalizeMajorMoney(payload.priceAmount)
+    );
   }
 
-  private resolveSheinImportPayload(imports: SheinImportPayloadSource[]): Record<string, unknown> | null {
+  private resolveSheinImportPayload(
+    imports: SheinImportPayloadSource[],
+  ): Record<string, unknown> | null {
     for (const item of imports) {
       if (this.isRecord(item.editedPayload)) return item.editedPayload;
       if (this.isRecord(item.previewPayload)) return item.previewPayload;
@@ -619,14 +726,21 @@ export class SheinBatchesService {
     return null;
   }
 
-  private resolveSheinVariantPrice(payload: Record<string, unknown>, item: AvailableOrderItemPricingInput): string | null {
+  private resolveSheinVariantPrice(
+    payload: Record<string, unknown>,
+    item: AvailableOrderItemPricingInput,
+  ): string | null {
     if (!Array.isArray(payload.variants)) return null;
 
-    const variants = payload.variants.filter((variant): variant is Record<string, unknown> => this.isRecord(variant));
-    const skuCandidates = new Set([
-      this.normalizeComparable(item.productVariantSkuSnapshot),
-      this.normalizeComparable(item.productVariant?.sku),
-    ].filter((value): value is string => Boolean(value)));
+    const variants = payload.variants.filter((variant): variant is Record<string, unknown> =>
+      this.isRecord(variant),
+    );
+    const skuCandidates = new Set(
+      [
+        this.normalizeComparable(item.productVariantSkuSnapshot),
+        this.normalizeComparable(item.productVariant?.sku),
+      ].filter((value): value is string => Boolean(value)),
+    );
 
     for (const variant of variants) {
       const price = this.normalizeMajorMoney(variant.priceAmount);
@@ -634,8 +748,12 @@ export class SheinBatchesService {
       if (price && sku && skuCandidates.has(sku)) return price;
     }
 
-    const size = this.normalizeComparable(item.productVariantSizeSnapshot ?? item.productVariant?.size);
-    const color = this.normalizeComparable(item.productVariantColorSnapshot ?? item.productVariant?.color);
+    const size = this.normalizeComparable(
+      item.productVariantSizeSnapshot ?? item.productVariant?.size,
+    );
+    const color = this.normalizeComparable(
+      item.productVariantColorSnapshot ?? item.productVariant?.color,
+    );
     if (size || color) {
       for (const variant of variants) {
         const price = this.normalizeMajorMoney(variant.priceAmount);
@@ -648,11 +766,13 @@ export class SheinBatchesService {
       }
     }
 
-    const nameCandidates = new Set([
-      this.normalizeComparable(item.productVariantNameSnapshot),
-      this.normalizeComparable(item.productVariant?.nameEn),
-      this.normalizeComparable(item.productVariant?.nameAr),
-    ].filter((value): value is string => Boolean(value)));
+    const nameCandidates = new Set(
+      [
+        this.normalizeComparable(item.productVariantNameSnapshot),
+        this.normalizeComparable(item.productVariant?.nameEn),
+        this.normalizeComparable(item.productVariant?.nameAr),
+      ].filter((value): value is string => Boolean(value)),
+    );
 
     for (const variant of variants) {
       const price = this.normalizeMajorMoney(variant.priceAmount);
@@ -669,7 +789,11 @@ export class SheinBatchesService {
   }
 
   private normalizeMajorMoney(value: unknown): string | null {
-    const number = Number(String(value ?? '').replace(/,/g, '').trim());
+    const number = Number(
+      String(value ?? '')
+        .replace(/,/g, '')
+        .trim(),
+    );
     if (!Number.isFinite(number) || number <= 0) return null;
     return number.toFixed(2).replace(/\.00$/, '');
   }
@@ -684,8 +808,19 @@ export class SheinBatchesService {
     return Boolean(value && typeof value === 'object' && !Array.isArray(value));
   }
 
-  private async createBatchItem(tx: Prisma.TransactionClient, batch: { id: string; batchCode: string; status: SheinBatchStatus; exchangeRateSarToEgp: Prisma.Decimal }, dto: AddSheinBatchItemDto) {
-    const existingInThisBatch = await tx.sheinBatchItem.findFirst({ where: { batchId: batch.id, orderItemId: dto.orderItemId } });
+  private async createBatchItem(
+    tx: Prisma.TransactionClient,
+    batch: {
+      id: string;
+      batchCode: string;
+      status: SheinBatchStatus;
+      exchangeRateSarToEgp: Prisma.Decimal;
+    },
+    dto: AddSheinBatchItemDto,
+  ) {
+    const existingInThisBatch = await tx.sheinBatchItem.findFirst({
+      where: { batchId: batch.id, orderItemId: dto.orderItemId },
+    });
     if (existingInThisBatch) {
       throw new ConflictException('This order item already exists in this SHEIN batch');
     }
@@ -698,7 +833,9 @@ export class SheinBatchesService {
       include: { batch: { select: { batchCode: true, status: true } } },
     });
     if (existingActiveBatch) {
-      throw new ConflictException(`This order item is already assigned to active batch ${existingActiveBatch.batch.batchCode}`);
+      throw new ConflictException(
+        `This order item is already assigned to active batch ${existingActiveBatch.batch.batchCode}`,
+      );
     }
 
     const orderItem = await tx.orderItem.findUnique({
@@ -718,14 +855,29 @@ export class SheinBatchesService {
           select: {
             id: true,
             sheinImports: {
-              where: { status: { in: [SheinImportStatus.PUBLISHED, SheinImportStatus.PRODUCT_CREATED, SheinImportStatus.SUCCEEDED] } },
-              select: { editedPayload: true, previewPayload: true, publishedAt: true, createdAt: true },
+              where: {
+                status: {
+                  in: [
+                    SheinImportStatus.PUBLISHED,
+                    SheinImportStatus.PRODUCT_CREATED,
+                    SheinImportStatus.SUCCEEDED,
+                  ],
+                },
+              },
+              select: {
+                editedPayload: true,
+                previewPayload: true,
+                publishedAt: true,
+                createdAt: true,
+              },
               orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
               take: 1,
             },
           },
         },
-        productVariant: { select: { id: true, sku: true, nameAr: true, nameEn: true, size: true, color: true } },
+        productVariant: {
+          select: { id: true, sku: true, nameAr: true, nameEn: true, size: true, color: true },
+        },
       },
     });
     if (!orderItem) {
@@ -734,11 +886,18 @@ export class SheinBatchesService {
     if (orderItem.status === OrderItemStatus.CANCELLED) {
       throw new BadRequestException('Cancelled order items cannot be added to a SHEIN batch');
     }
-    if (orderItem.order.status === OrderStatus.CANCELLED || orderItem.order.status === OrderStatus.COMPLETED) {
-      throw new BadRequestException('Cancelled or completed orders cannot be added to a SHEIN batch');
+    if (
+      orderItem.order.status === OrderStatus.CANCELLED ||
+      orderItem.order.status === OrderStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        'Cancelled or completed orders cannot be added to a SHEIN batch',
+      );
     }
     if (orderItem.order.paymentStatus !== OrderPaymentStatus.DEPOSIT_APPROVED) {
-      throw new BadRequestException('Only orders with approved deposit can be added to a SHEIN batch');
+      throw new BadRequestException(
+        'Only orders with approved deposit can be added to a SHEIN batch',
+      );
     }
 
     const quantity = dto.quantity ?? orderItem.quantity;
@@ -753,7 +912,9 @@ export class SheinBatchesService {
       : suggestedUnitSarAmount
         ? this.parseMoney(suggestedUnitSarAmount)
         : 0;
-    const unitEgpAmount = dto.unitEgpAmount ? this.parseMoney(dto.unitEgpAmount) : this.convertSarToEgp(unitSarAmount, batch.exchangeRateSarToEgp);
+    const unitEgpAmount = dto.unitEgpAmount
+      ? this.parseMoney(dto.unitEgpAmount)
+      : this.convertSarToEgp(unitSarAmount, batch.exchangeRateSarToEgp);
     const totalSarAmount = unitSarAmount * quantity;
     const totalEgpAmount = unitEgpAmount * quantity;
 
@@ -774,16 +935,18 @@ export class SheinBatchesService {
         totalSarAmount,
         unitEgpAmount,
         totalEgpAmount,
-        whatsappMessageTemplate: dto.whatsappMessageTemplate?.trim() || this.buildWhatsappMessageTemplate({
-          customerName: orderItem.order.customerNameSnapshot,
-          orderNumber: orderItem.order.orderNumber,
-          batchCode: batch.batchCode,
-          status: batch.status,
-          productName: orderItem.productNameSnapshot,
-          variantName: orderItem.productVariantNameSnapshot,
-          quantity,
-          totalEgpAmount,
-        }),
+        whatsappMessageTemplate:
+          dto.whatsappMessageTemplate?.trim() ||
+          this.buildWhatsappMessageTemplate({
+            customerName: orderItem.order.customerNameSnapshot,
+            orderNumber: orderItem.order.orderNumber,
+            batchCode: batch.batchCode,
+            status: batch.status,
+            productName: orderItem.productNameSnapshot,
+            variantName: orderItem.productVariantNameSnapshot,
+            quantity,
+            totalEgpAmount,
+          }),
         notes: dto.notes?.trim() || null,
       },
     });
@@ -868,7 +1031,11 @@ export class SheinBatchesService {
     });
   }
 
-  private async refreshItemEgpAmountsInTransaction(tx: Prisma.TransactionClient, batchId: string, rate: Prisma.Decimal) {
+  private async refreshItemEgpAmountsInTransaction(
+    tx: Prisma.TransactionClient,
+    batchId: string,
+    rate: Prisma.Decimal,
+  ) {
     const items = await tx.sheinBatchItem.findMany({
       where: { batchId, unitSarAmount: { gt: 0 } },
       select: { id: true, unitSarAmount: true, quantity: true },
@@ -886,7 +1053,10 @@ export class SheinBatchesService {
     }
   }
 
-  private async regenerateWhatsappMessagesInTransaction(tx: Prisma.TransactionClient, batchId: string) {
+  private async regenerateWhatsappMessagesInTransaction(
+    tx: Prisma.TransactionClient,
+    batchId: string,
+  ) {
     const batch = await tx.sheinBatch.findUnique({
       where: { id: batchId },
       select: { id: true, batchCode: true, status: true },
@@ -915,7 +1085,11 @@ export class SheinBatchesService {
     }
   }
 
-  private async syncOrderItemsForBatchStatusInTransaction(tx: Prisma.TransactionClient, batchId: string, status: OrderItemStatus) {
+  private async syncOrderItemsForBatchStatusInTransaction(
+    tx: Prisma.TransactionClient,
+    batchId: string,
+    status: OrderItemStatus,
+  ) {
     const items = await tx.sheinBatchItem.findMany({
       where: { batchId },
       include: { orderItem: { select: { id: true, status: true } } },
@@ -952,7 +1126,12 @@ export class SheinBatchesService {
           status: true,
         },
       });
-      if (!order || order.status === OrderStatus.CANCELLED || order.status === OrderStatus.COMPLETED) continue;
+      if (
+        !order ||
+        order.status === OrderStatus.CANCELLED ||
+        order.status === OrderStatus.COMPLETED
+      )
+        continue;
       if (order.paymentStatus !== OrderPaymentStatus.DEPOSIT_APPROVED) continue;
 
       const notReadyItems = await tx.orderItem.count({
@@ -996,7 +1175,10 @@ export class SheinBatchesService {
   private mapBatch(batch: BatchWithItems) {
     const items = batch.items.map((item) => ({
       ...item,
-      whatsappUrl: this.buildWhatsappUrl(item.customerPhoneSnapshot, item.whatsappMessageTemplate ?? ''),
+      whatsappUrl: this.buildWhatsappUrl(
+        item.customerPhoneSnapshot,
+        item.whatsappMessageTemplate ?? '',
+      ),
     }));
     return {
       ...batch,
@@ -1039,7 +1221,9 @@ export class SheinBatchesService {
 
   private formatMinorMoney(value: Prisma.Decimal | number, currency: string) {
     const numeric = value instanceof Prisma.Decimal ? value.toNumber() : Number(value);
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format((Number.isFinite(numeric) ? numeric : 0) / 100);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(
+      (Number.isFinite(numeric) ? numeric : 0) / 100,
+    );
   }
 
   private parseMoney(value: string) {
@@ -1066,15 +1250,15 @@ export class SheinBatchesService {
   }
 
   private statusTimestampPatch(status: SheinBatchStatus): {
-  orderedAt?: Date;
-  shippedAt?: Date;
-  customsAt?: Date;
-  arrivedEgyptAt?: Date;
-  arrivedStoreAt?: Date;
-  readyForPickupAt?: Date;
-  deliveredAt?: Date;
-  cancelledAt?: Date;
-} {
+    orderedAt?: Date;
+    shippedAt?: Date;
+    customsAt?: Date;
+    arrivedEgyptAt?: Date;
+    arrivedStoreAt?: Date;
+    readyForPickupAt?: Date;
+    deliveredAt?: Date;
+    cancelledAt?: Date;
+  } {
     const now = new Date();
     if (status === SheinBatchStatus.ORDERED_FROM_SHEIN) return { orderedAt: now };
     if (status === SheinBatchStatus.SHIPPING) return { shippedAt: now };
@@ -1099,14 +1283,21 @@ export class SheinBatchesService {
   }) {
     const totalEgp = (input.totalEgpAmount / 100).toFixed(2);
     const variantLine = input.variantName ? `\nSize/Color: ${input.variantName}` : '';
-    const pickupLine = input.status === SheinBatchStatus.READY_FOR_PICKUP ? '\nYour order is ready for pickup from the store' : '';
-    const deliveredLine = input.status === SheinBatchStatus.DELIVERED ? '\nYour order has been delivered. Thank you for trusting us.' : '';
+    const pickupLine =
+      input.status === SheinBatchStatus.READY_FOR_PICKUP
+        ? '\nYour order is ready for pickup from the store'
+        : '';
+    const deliveredLine =
+      input.status === SheinBatchStatus.DELIVERED
+        ? '\nYour order has been delivered. Thank you for trusting us.'
+        : '';
     return `Hello ${input.customerName}\nUpdate for order #${input.orderNumber}\nProduct: ${input.productName}${variantLine}\nItems: ${input.quantity}\nShipment: ${input.batchCode}\nCurrent status: ${statusLabels[input.status]}\nTotal: ${totalEgp} EGP${pickupLine}${deliveredLine}\nWe will notify you of any new updates`;
   }
 
   private buildWhatsappUrl(phone: string, message: string) {
     const digits = phone.replace(/\D/g, '');
-    const normalized = digits.startsWith('0') && digits.length >= 10 ? `20${digits.slice(1)}` : digits;
+    const normalized =
+      digits.startsWith('0') && digits.length >= 10 ? `20${digits.slice(1)}` : digits;
     return normalized ? `https://wa.me/${normalized}?text=${encodeURIComponent(message)}` : null;
   }
 }

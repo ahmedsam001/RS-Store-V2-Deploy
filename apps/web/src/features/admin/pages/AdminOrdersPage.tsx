@@ -91,7 +91,8 @@ export function AdminOrdersPage() {
   const [filters, setFilters] = useState(() => getOrderFiltersFromSearchParams(searchParams));
   const [notice, setNotice] = useState<AdminNoticeState>(null);
   const orders = response?.items ?? [];
-  const currentTab = ORDER_WORKFLOW_TABS.find((tab) => tab.key === filters.workflow) ?? ORDER_WORKFLOW_TABS[0];
+  const currentTab =
+    ORDER_WORKFLOW_TABS.find((tab) => tab.key === filters.workflow) ?? ORDER_WORKFLOW_TABS[0];
   const selectedInList = useMemo(
     () => orders.find((order) => order.id === selected?.id),
     [orders, selected],
@@ -180,7 +181,11 @@ export function AdminOrdersPage() {
             <Button
               variant="outline"
               type="button"
-              onClick={() => Promise.all([load(), loadBadgeCounts()]).catch((error) => setNotice(toNotice(error)))}
+              onClick={() =>
+                Promise.all([load(), loadBadgeCounts()]).catch((error) =>
+                  setNotice(toNotice(error)),
+                )
+              }
             >
               Refresh
             </Button>
@@ -251,13 +256,7 @@ export function AdminOrdersPage() {
           />
         </AdminCard>
 
-        {selected ? (
-          <OrderDetails
-            order={selected}
-            csrfToken={csrfToken}
-            run={run}
-          />
-        ) : null}
+        {selected ? <OrderDetails order={selected} csrfToken={csrfToken} run={run} /> : null}
       </div>
     </div>
   );
@@ -290,7 +289,10 @@ function OrderListCard({
       <AdminMobileField label="Items" value={order.items?.length ?? 0} />
       <AdminMobileField label="Total" value={formatMoney(order.totalAmount, order.currency)} />
       <AdminMobileField label="Paid" value={formatMoney(getPaidAmount(order), order.currency)} />
-      <AdminMobileField label="Remaining" value={formatMoney(getRemainingAmount(order), order.currency)} />
+      <AdminMobileField
+        label="Remaining"
+        value={formatMoney(getRemainingAmount(order), order.currency)}
+      />
       <AdminMobileField label="Next action" value={action.title} />
       <div className="admin-mobile-field-full">
         <CustomerWhatsappButton
@@ -354,7 +356,10 @@ function OrderDetails({
         <AdminInfoItem label="Phone" value={order.customerPhoneSnapshot ?? '-'} dir="ltr" />
         <AdminInfoItem label="Order total" value={formatMoney(order.totalAmount, order.currency)} />
         <AdminInfoItem label="Paid" value={formatMoney(getPaidAmount(order), order.currency)} />
-        <AdminInfoItem label="Remaining" value={formatMoney(getRemainingAmount(order), order.currency)} />
+        <AdminInfoItem
+          label="Remaining"
+          value={formatMoney(getRemainingAmount(order), order.currency)}
+        />
         <AdminInfoItem label="Created" value={new Date(order.createdAt).toLocaleString()} />
         <div className="sm:col-span-2">
           <AdminInfoItem label="Address" value={order.shippingAddressSnapshot ?? '-'} />
@@ -385,18 +390,23 @@ function OrderDetails({
                 <AdminStatusBadge value={item.status} />
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                {item.productVariantSizeSnapshot ?? '-'} · {item.productVariantColorSnapshot ?? '-'} · Qty{' '}
-                {item.quantity} · {formatMoney(item.lineTotalAmount, order.currency)}
+                {item.productVariantSizeSnapshot ?? '-'} · {item.productVariantColorSnapshot ?? '-'}{' '}
+                · Qty {item.quantity} · {formatMoney(item.lineTotalAmount, order.currency)}
               </p>
               {item.sheinBatchItems?.length ? (
                 <p className="mt-2 text-xs font-black text-[#6f4a17]">
                   Batch:{' '}
                   {item.sheinBatchItems
-                    .map((tracking) => `${tracking.batch.batchCode} · ${labelStatus(tracking.batch.status)}`)
+                    .map(
+                      (tracking) =>
+                        `${tracking.batch.batchCode} · ${labelStatus(tracking.batch.status)}`,
+                    )
                     .join(', ')}
                 </p>
               ) : (
-                <p className="mt-2 text-xs font-black text-muted-foreground">Not added to a batch yet</p>
+                <p className="mt-2 text-xs font-black text-muted-foreground">
+                  Not added to a batch yet
+                </p>
               )}
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 {item.product?.sourceSheinUrl ? (
@@ -438,13 +448,26 @@ function OrderDetails({
       <section className="space-y-3">
         <h3 className="font-black text-[#241611]">Payment Summary</h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          <AdminInfoItem label="Deposit required" value={formatMoney(order.depositAmount, order.currency)} />
-          <AdminInfoItem label="Deposit paid" value={formatMoney(order.depositPaidAmount, order.currency)} />
-          <AdminInfoItem label="Final paid" value={formatMoney(order.finalPaidAmount, order.currency)} />
-          <AdminInfoItem label="Remaining" value={formatMoney(getRemainingAmount(order), order.currency)} />
+          <AdminInfoItem
+            label="Deposit required"
+            value={formatMoney(order.depositAmount, order.currency)}
+          />
+          <AdminInfoItem
+            label="Deposit paid"
+            value={formatMoney(order.depositPaidAmount, order.currency)}
+          />
+          <AdminInfoItem
+            label="Final paid"
+            value={formatMoney(order.finalPaidAmount, order.currency)}
+          />
+          <AdminInfoItem
+            label="Remaining"
+            value={formatMoney(getRemainingAmount(order), order.currency)}
+          />
         </div>
         <p className="text-sm font-bold text-muted-foreground">
-          Payment proof actions stay in Payments Review. This page only shows totals and the next order step.
+          Payment proof actions stay in Payments Review. This page only shows totals and the next
+          order step.
         </p>
       </section>
 
@@ -460,14 +483,19 @@ function OrderDetails({
                 type="button"
                 className={actionTone(status)}
                 onClick={() =>
-                  run(() => adminApi.updateOrderStatus(order.id, status, { csrfToken }), 'Order status updated')
+                  run(
+                    () => adminApi.updateOrderStatus(order.id, status, { csrfToken }),
+                    'Order status updated',
+                  )
                 }
               >
                 {labelAction(status)}
               </Button>
             ))
           ) : (
-            <p className="text-sm text-muted-foreground">No actions available for this order status</p>
+            <p className="text-sm text-muted-foreground">
+              No actions available for this order status
+            </p>
           )}
         </div>
       </section>
@@ -535,16 +563,23 @@ function getNextAction(order: AdminOrder): {
       cta: 'Open Payments Review',
     };
   }
-  if (order.paymentStatus === 'FINAL_PAYMENT_PENDING' && order.finalPaymentMethod === 'CASH_AT_SHOP') {
+  if (
+    order.paymentStatus === 'FINAL_PAYMENT_PENDING' &&
+    order.finalPaymentMethod === 'CASH_AT_SHOP'
+  ) {
     return {
       title: 'Review cash final payment',
-      description: 'The customer selected cash at store. Confirm the received amount from Payments Review.',
+      description:
+        'The customer selected cash at store. Confirm the received amount from Payments Review.',
       badge: 'Cash review',
       href: PATHS.adminPaymentsReview,
       cta: 'Open Payments Review',
     };
   }
-  if (order.paymentStatus === 'FINAL_PAYMENT_PENDING' || order.paymentStatus === 'FINAL_PAYMENT_REJECTED') {
+  if (
+    order.paymentStatus === 'FINAL_PAYMENT_PENDING' ||
+    order.paymentStatus === 'FINAL_PAYMENT_REJECTED'
+  ) {
     return {
       title: 'Waiting final payment',
       description: 'The customer should pay the remaining amount before delivery.',
@@ -561,7 +596,8 @@ function getNextAction(order: AdminOrder): {
   if (hasActiveBatch(order)) {
     return {
       title: 'Track in SHEIN Batch',
-      description: 'This order is already inside a SHEIN batch. Track shipment progress from SHEIN Batches.',
+      description:
+        'This order is already inside a SHEIN batch. Track shipment progress from SHEIN Batches.',
       badge: 'In batch',
       href: PATHS.adminSheinBatches,
       cta: 'Open SHEIN Batches',
@@ -579,8 +615,8 @@ function getNextAction(order: AdminOrder): {
 function hasActiveBatch(order: AdminOrder): boolean {
   return Boolean(
     order.items?.some((item) =>
-      item.sheinBatchItems?.some((tracking) =>
-        !['CANCELLED', 'DELIVERED'].includes(tracking.batch.status),
+      item.sheinBatchItems?.some(
+        (tracking) => !['CANCELLED', 'DELIVERED'].includes(tracking.batch.status),
       ),
     ),
   );
@@ -616,21 +652,31 @@ function getRemainingAmount(order: AdminOrder): string | number {
 function actionTone(status: string): string {
   const upper = status.toUpperCase();
   if (
-    ['APPROVED', 'CONFIRMED', 'COMPLETED', 'PAID', 'SHIPPED', 'DEPOSIT_APPROVED', 'FINAL_PAYMENT_APPROVED', 'SHOP'].includes(
-      upper,
-    )
+    [
+      'APPROVED',
+      'CONFIRMED',
+      'COMPLETED',
+      'PAID',
+      'SHIPPED',
+      'DEPOSIT_APPROVED',
+      'FINAL_PAYMENT_APPROVED',
+      'SHOP',
+    ].includes(upper)
   ) {
     return 'admin-tone-success border border-emerald-200 text-emerald-800 hover:bg-emerald-100';
   }
-  if (
-    ['CANCELLED', 'REJECTED', 'DEPOSIT_REJECTED', 'FINAL_PAYMENT_REJECTED'].includes(upper)
-  ) {
+  if (['CANCELLED', 'REJECTED', 'DEPOSIT_REJECTED', 'FINAL_PAYMENT_REJECTED'].includes(upper)) {
     return 'admin-tone-danger border border-red-200 text-red-800 hover:bg-red-50';
   }
   if (
-    ['PENDING', 'PROCESSING', 'DEPOSIT_PENDING', 'DEPOSIT_SUBMITTED', 'FINAL_PAYMENT_PENDING', 'FINAL_PAYMENT_SUBMITTED'].includes(
-      upper,
-    )
+    [
+      'PENDING',
+      'PROCESSING',
+      'DEPOSIT_PENDING',
+      'DEPOSIT_SUBMITTED',
+      'FINAL_PAYMENT_PENDING',
+      'FINAL_PAYMENT_SUBMITTED',
+    ].includes(upper)
   ) {
     return 'admin-tone-warning border border-amber-200 text-amber-800 hover:bg-amber-50';
   }
@@ -665,13 +711,14 @@ function labelStatus(status: string) {
   return labelBatchStatus(status);
 }
 
-
 function isOrderWorkflowTab(value: string | null): value is OrderWorkflowTab {
   return ORDER_WORKFLOW_TABS.some((tab) => tab.key === value);
 }
 
-
-function getOrderWorkflowBadgeCount(reports: AdminReports | null, workflow: OrderWorkflowTab): number {
+function getOrderWorkflowBadgeCount(
+  reports: AdminReports | null,
+  workflow: OrderWorkflowTab,
+): number {
   if (!reports) return 0;
   const map: Record<OrderWorkflowTab, number> = {
     READY_FOR_SHEIN_BATCH: reports.orders.readyForBatch,
@@ -690,7 +737,7 @@ function getOrderFiltersFromSearchParams(params: URLSearchParams): {
   page: number;
 } {
   const workflow = isOrderWorkflowTab(params.get('workflow'))
-    ? params.get('workflow') as OrderWorkflowTab
+    ? (params.get('workflow') as OrderWorkflowTab)
     : 'READY_FOR_SHEIN_BATCH';
   const pageValue = Number(params.get('page') ?? '1');
   return {
@@ -711,11 +758,7 @@ function buildOrderUrlSearchParams(filters: {
   return params;
 }
 
-function buildOrderQuery(filters: {
-  search: string;
-  workflow: OrderWorkflowTab;
-  page: number;
-}) {
+function buildOrderQuery(filters: { search: string; workflow: OrderWorkflowTab; page: number }) {
   const params = new URLSearchParams({ page: String(filters.page), workflow: filters.workflow });
   if (filters.search.trim()) params.set('search', filters.search.trim());
   return `&${params.toString()}`;

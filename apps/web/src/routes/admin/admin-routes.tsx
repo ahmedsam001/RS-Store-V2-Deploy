@@ -84,7 +84,10 @@ export const adminRoutes: RouteObject[] = [
       { path: ROUTES.adminSettings, element: withRouteLoading(<AdminSettingsPage />) },
       { path: ROUTES.adminFlashSales, element: withRouteLoading(<AdminFlashSalesPage />) },
       { path: ROUTES.adminShein, element: withRouteLoading(<AdminSheinPage />) },
-      { path: ROUTES.adminSheinBatchesNew, element: withRouteLoading(<AdminSheinBatchCreatePage />) },
+      {
+        path: ROUTES.adminSheinBatchesNew,
+        element: withRouteLoading(<AdminSheinBatchCreatePage />),
+      },
       { path: ROUTES.adminSheinBatches, element: withRouteLoading(<AdminSheinBatchesPage />) },
       { path: ROUTES.adminUploads, element: withRouteLoading(<AdminUploadsPage />) },
       { path: ROUTES.adminAuditLogs, element: withRouteLoading(<AdminAuditLogsPage />) },

@@ -153,7 +153,6 @@ export function AdminStatusBadge({
   );
 }
 
-
 export function AdminCountBadge({ count }: { count?: number | null }) {
   const display = typeof count === 'number' ? count : 0;
   return (
@@ -395,7 +394,13 @@ export function CustomerWhatsappButton({
   orderStatus,
   paymentStatus,
 }: CustomerWhatsappButtonProps) {
-  const whatsappUrl = buildCustomerWhatsappUrl(phone, customerName, orderNumber, orderStatus, paymentStatus);
+  const whatsappUrl = buildCustomerWhatsappUrl(
+    phone,
+    customerName,
+    orderNumber,
+    orderStatus,
+    paymentStatus,
+  );
   return whatsappUrl ? (
     <Button asChild variant="outline" size="sm">
       <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
@@ -409,4 +414,3 @@ export function CustomerWhatsappButton({
     </Button>
   );
 }
-

@@ -16,5 +16,8 @@ export function AdminFeedback({ notice }: { notice: AdminNoticeState }) {
 }
 
 export function toNotice(error: unknown): Exclude<AdminNoticeState, null> {
-  return { type: 'error', message: error instanceof Error ? error.message : 'An unexpected error occurred' };
+  return {
+    type: 'error',
+    message: error instanceof Error ? error.message : 'An unexpected error occurred',
+  };
 }

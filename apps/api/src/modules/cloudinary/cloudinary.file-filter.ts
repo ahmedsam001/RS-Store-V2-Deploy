@@ -1,11 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 
-const ALLOWED_IMAGE_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-]);
+const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
 
@@ -23,7 +18,11 @@ export function imageFileFilter(
 ): void {
   const extension = extensionFromName(file.originalname ?? '');
 
-  if (!file.mimetype || !ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype) || !ALLOWED_IMAGE_EXTENSIONS.has(extension)) {
+  if (
+    !file.mimetype ||
+    !ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype) ||
+    !ALLOWED_IMAGE_EXTENSIONS.has(extension)
+  ) {
     callback(new BadRequestException('Only JPG, PNG, WEBP, or GIF image files are allowed'), false);
     return;
   }

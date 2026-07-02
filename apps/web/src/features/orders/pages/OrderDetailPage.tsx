@@ -7,7 +7,12 @@ import { useDocumentMetadata } from '@/shared/seo/use-document-metadata';
 import { useAuth } from '@/features/auth';
 import { buildCustomerAuthPath, currentPathWithSearch } from '@/shared/lib/return-to';
 import { CatalogState } from '@/features/catalog/components/CatalogState';
-import { settingsApi, readSetting, type StorefrontSettings } from '@/features/settings/settings-api';
+import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
+import {
+  settingsApi,
+  readSetting,
+  type StorefrontSettings,
+} from '@/features/settings/settings-api';
 import { ordersApi } from '@/features/orders/api/orders-api';
 import { PaymentProofUploader } from '@/features/orders/components/PaymentProofUploader';
 import {
@@ -17,7 +22,12 @@ import {
   PaymentStatusBadge,
 } from '@/features/orders/components/OrderStatusBadge';
 import { formatOrderDate, formatOrderMoney } from '@/features/orders/order-format';
-import type { CustomerSheinBatchStatus, Order, OrderItem, OrderPaymentProof } from '@/shared/types/OrderTypes';
+import type {
+  CustomerSheinBatchStatus,
+  Order,
+  OrderItem,
+  OrderPaymentProof,
+} from '@/shared/types/OrderTypes';
 
 type FinalPaymentMethodChoice = 'instapay' | 'vodafone' | 'cash_at_shop';
 
@@ -46,7 +56,8 @@ export function OrderDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<StorefrontSettings | null>(null);
-  const [finalPaymentMethod, setFinalPaymentMethod] = useState<FinalPaymentMethodChoice>('instapay');
+  const [finalPaymentMethod, setFinalPaymentMethod] =
+    useState<FinalPaymentMethodChoice>('instapay');
   const [cashSubmitError, setCashSubmitError] = useState<string | null>(null);
 
   const canUploadDeposit = order?.paymentStatus === 'DEPOSIT_REJECTED';
@@ -58,15 +69,20 @@ export function OrderDetailPage() {
   const finalPaymentProof = paymentProofs.find((proof) => proof.type === 'FINAL_PAYMENT') ?? null;
   const rejectedDepositProof =
     order?.paymentStatus === 'DEPOSIT_REJECTED'
-      ? paymentProofs.find((proof) => proof.type === 'DEPOSIT' && proof.status === 'REJECTED') ?? null
+      ? (paymentProofs.find((proof) => proof.type === 'DEPOSIT' && proof.status === 'REJECTED') ??
+        null)
       : null;
   const rejectedFinalPaymentProof =
     order?.paymentStatus === 'FINAL_PAYMENT_REJECTED'
-      ? paymentProofs.find((proof) => proof.type === 'FINAL_PAYMENT' && proof.status === 'REJECTED') ?? null
+      ? (paymentProofs.find(
+          (proof) => proof.type === 'FINAL_PAYMENT' && proof.status === 'REJECTED',
+        ) ?? null)
       : null;
   const vodafoneCash = readSetting(settings, 'payment.vodafoneCash', '01018313022');
   const instapay = readSetting(settings, 'payment.instapay', '01018313022');
-  const vodafoneFeePercent = toSafePercent(readSetting(settings, 'payment.vodafoneFeePercent', '1'));
+  const vodafoneFeePercent = toSafePercent(
+    readSetting(settings, 'payment.vodafoneFeePercent', '1'),
+  );
   const finalPaymentPreview = useMemo(
     () =>
       order
@@ -176,16 +192,28 @@ export function OrderDetailPage() {
         />
       </div>
     );
-  if (error) return (
-    <div className="rs-page-stack">
-      <CatalogState title="Failed to load order" message={error} ctaLabel="Try Again" ctaHref={PATHS.orders} />
-    </div>
-  );
-  if (!order) return (
-    <div className="rs-page-stack">
-      <CatalogState title="Order not found" message="Verify your order link or check your order history" ctaLabel="View Orders" ctaHref={PATHS.orders} />
-    </div>
-  );
+  if (error)
+    return (
+      <div className="rs-page-stack">
+        <CatalogState
+          title="Failed to load order"
+          message={error}
+          ctaLabel="Try Again"
+          ctaHref={PATHS.orders}
+        />
+      </div>
+    );
+  if (!order)
+    return (
+      <div className="rs-page-stack">
+        <CatalogState
+          title="Order not found"
+          message="Verify your order link or check your order history"
+          ctaLabel="View Orders"
+          ctaHref={PATHS.orders}
+        />
+      </div>
+    );
 
   return (
     <div className="rs-page-stack">
@@ -270,36 +298,43 @@ export function OrderDetailPage() {
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {order.items.map((item) => (
-                <article
-                  key={item.id}
-                  className="rounded-2xl border border-rs-peach-light bg-card p-4 shadow-sm"
-                >
-                  <div className="flex min-h-full flex-col justify-between gap-4">
-                    <div>
-                      <p className="font-extrabold text-sm leading-snug text-rs-ink">
-                        {item.productNameSnapshot}
-                      </p>
+                <article key={item.id} className="rs-order-product-card">
+                  <div className="rs-order-product-main">
+                    <div className="rs-order-product-thumb">
+                      <ImageWithFallback
+                        src={resolveOrderItemImageUrl(item)}
+                        alt={resolveOrderItemImageAlt(item)}
+                        loading="lazy"
+                        className="rs-order-product-thumb-media"
+                        fallbackVariant="product"
+                      />
+                    </div>
+
+                    <div className="rs-order-product-info">
+                      <h3 className="rs-order-product-title">{item.productNameSnapshot}</h3>
                       {item.productVariantNameSnapshot ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="rs-order-product-variant">
                           {item.productVariantNameSnapshot}
                         </p>
                       ) : null}
                       {item.productVariantSizeSnapshot || item.productVariantColorSnapshot ? (
-                        <p className="mt-2 inline-flex rounded-full bg-rs-cream-warm px-2.5 py-1 text-xs font-bold text-muted-foreground">
+                        <p className="rs-order-product-options">
                           {[item.productVariantSizeSnapshot, item.productVariantColorSnapshot]
                             .filter(Boolean)
                             .join(' • ')}
                         </p>
                       ) : null}
+
+                      <div className="rs-order-product-meta">
+                        <span>Qty {item.quantity}</span>
+                        <span className="rs-order-product-store-badge">
+                          <OrderItemStatusLabel status={item.status} />
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3 text-sm">
-                      <span className="text-muted-foreground">Qty {item.quantity}</span>
-                      <span className="rounded-full bg-rs-gold-bg px-3 py-1 text-xs font-black text-rs-gold">
-                        <OrderItemStatusLabel status={item.status} />
-                      </span>
-                    </div>
-                    <OrderItemSheinBadge item={item} />
                   </div>
+
+                  <OrderItemSheinBadge item={item} />
                 </article>
               ))}
             </div>
@@ -312,14 +347,19 @@ export function OrderDetailPage() {
                   <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-rs-gold">
                     Deposit Payment
                   </p>
-                  <h2 className="mt-1 text-lg font-black text-rs-ink">Upload Deposit Proof Again</h2>
+                  <h2 className="mt-1 text-lg font-black text-rs-ink">
+                    Upload Deposit Proof Again
+                  </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Upload a clearer transfer image so admin can review your deposit again.
                   </p>
                 </div>
               </div>
 
-              <RejectionNotice proof={rejectedDepositProof} fallback="Deposit proof was rejected. Please upload a new clear image." />
+              <RejectionNotice
+                proof={rejectedDepositProof}
+                fallback="Deposit proof was rejected. Please upload a new clear image."
+              />
 
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <div className="rounded-2xl border border-rs-peach-light bg-rs-cream-warm p-3">
@@ -337,7 +377,6 @@ export function OrderDetailPage() {
               </div>
             </section>
           ) : null}
-
         </div>
 
         <aside className="space-y-4">
@@ -348,6 +387,31 @@ export function OrderDetailPage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+function resolveOrderItemImageUrl(item: OrderItem): string | null {
+  return (
+    item.imageUrl ||
+    item.thumbnailUrl ||
+    item.productImage ||
+    item.product?.imageUrl ||
+    item.product?.thumbnailUrl ||
+    item.product?.images?.[0]?.url ||
+    item.product?.images?.[0]?.secureUrl ||
+    null
+  );
+}
+
+function resolveOrderItemImageAlt(item: OrderItem): string {
+  return (
+    item.product?.images?.[0]?.altText ||
+    item.product?.images?.[0]?.altTextEn ||
+    item.product?.images?.[0]?.altTextAr ||
+    item.productNameSnapshot ||
+    item.product?.nameEn ||
+    item.product?.nameAr ||
+    'Product image'
   );
 }
 
@@ -393,7 +457,8 @@ function SheinBatchTracking({ order }: { order: Order }) {
               Your order is inside shipment {primaryBatch.batchCode}
             </h2>
             <p className="mt-1 text-sm font-semibold text-muted-foreground">
-              Current state {sheinStatusLabel(primaryBatch.status)} · Updated {formatOrderDate(primaryBatch.updatedAt)}
+              Current state {sheinStatusLabel(primaryBatch.status)} · Updated{' '}
+              {formatOrderDate(primaryBatch.updatedAt)}
             </p>
           </div>
           <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-rs-gold shadow-sm">
@@ -401,15 +466,26 @@ function SheinBatchTracking({ order }: { order: Order }) {
           </span>
         </div>
 
-        <SheinStatusTimeline status={primaryBatch.status} history={primaryBatch.statusHistory ?? []} />
+        <SheinStatusTimeline
+          status={primaryBatch.status}
+          history={primaryBatch.statusHistory ?? []}
+        />
 
         <div className="mt-4 grid gap-2 md:grid-cols-2">
           {trackedItems.map(({ item, tracking }) => (
-            <article key={`${item.id}-${tracking!.id}`} className="rounded-2xl border border-rs-peach-light bg-white/85 p-3 shadow-sm">
+            <article
+              key={`${item.id}-${tracking!.id}`}
+              className="rounded-2xl border border-rs-peach-light bg-white/85 p-3 shadow-sm"
+            >
               <p className="text-sm font-black text-rs-ink">{item.productNameSnapshot}</p>
-              {item.productVariantNameSnapshot ? <p className="mt-1 text-xs text-muted-foreground">{item.productVariantNameSnapshot}</p> : null}
+              {item.productVariantNameSnapshot ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {item.productVariantNameSnapshot}
+                </p>
+              ) : null}
               <p className="mt-2 text-xs font-bold text-muted-foreground">
-                Qty {tracking!.quantity} · Shipment {tracking!.batch.batchCode} · {sheinStatusLabel(tracking!.batch.status)}
+                Qty {tracking!.quantity} · Shipment {tracking!.batch.batchCode} ·{' '}
+                {sheinStatusLabel(tracking!.batch.status)}
               </p>
             </article>
           ))}
@@ -423,9 +499,9 @@ function OrderItemSheinBadge({ item }: { item: OrderItem }) {
   const tracking = item.sheinBatchItems?.[0];
   if (!tracking?.batch) return null;
   return (
-    <div className="rounded-2xl border border-rs-peach-light bg-rs-cream-warm px-3 py-2 text-xs font-bold text-muted-foreground">
-      SHEIN shipment <span className="font-black text-rs-ink">{tracking.batch.batchCode}</span> ·{' '}
-      <span className="text-rs-gold">{sheinStatusLabel(tracking.batch.status)}</span>
+    <div className="rs-order-product-shipment">
+      SHEIN shipment <strong>{tracking.batch.batchCode}</strong> ·{' '}
+      <span>{sheinStatusLabel(tracking.batch.status)}</span>
     </div>
   );
 }
@@ -448,10 +524,18 @@ function SheinStatusTimeline({
   history: Array<{ toStatus: CustomerSheinBatchStatus; createdAt: string }>;
 }) {
   if (status === 'DRAFT') {
-    return <p className="mt-4 rounded-2xl bg-white/75 p-3 text-sm font-bold text-muted-foreground">Shipment is being prepared by the admin</p>;
+    return (
+      <p className="mt-4 rounded-2xl bg-white/75 p-3 text-sm font-bold text-muted-foreground">
+        Shipment is being prepared by the admin
+      </p>
+    );
   }
   if (status === 'CANCELLED') {
-    return <p className="mt-4 rounded-2xl bg-destructive/10 p-3 text-sm font-bold text-destructive">This SHEIN shipment was cancelled</p>;
+    return (
+      <p className="mt-4 rounded-2xl bg-destructive/10 p-3 text-sm font-bold text-destructive">
+        This SHEIN shipment was cancelled
+      </p>
+    );
   }
 
   const currentIndex = SHEIN_TRACKING_STEPS.indexOf(status);
@@ -465,11 +549,17 @@ function SheinStatusTimeline({
             key={step}
             className={`rounded-2xl border p-3 text-center shadow-sm ${completed ? 'border-rs-gold bg-white text-rs-ink' : 'border-rs-peach-light bg-white/55 text-muted-foreground'}`}
           >
-            <div className={`mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${completed ? 'bg-rs-gold text-white' : 'bg-rs-cream-warm'}`}>
+            <div
+              className={`mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${completed ? 'bg-rs-gold text-white' : 'bg-rs-cream-warm'}`}
+            >
               {completed ? '✓' : index + 1}
             </div>
             <p className="text-xs font-black leading-5">{sheinStatusLabel(step)}</p>
-            {historyEvent ? <p className="mt-1 text-[10px] font-semibold opacity-75">{formatOrderDate(historyEvent.createdAt)}</p> : null}
+            {historyEvent ? (
+              <p className="mt-1 text-[10px] font-semibold opacity-75">
+                {formatOrderDate(historyEvent.createdAt)}
+              </p>
+            ) : null}
           </div>
         );
       })}
@@ -718,7 +808,8 @@ function PaymentSummary({
 }) {
   const savedFinalDue = toOrderRawAmount(order.finalAmountDue);
   const displayFinalDue =
-    finalPaymentPreview?.amountDue ?? (savedFinalDue > 0 ? savedFinalDue : toOrderRawAmount(order.remainingAmount));
+    finalPaymentPreview?.amountDue ??
+    (savedFinalDue > 0 ? savedFinalDue : toOrderRawAmount(order.remainingAmount));
   return (
     <div className="rs-panel p-4 sm:p-5">
       <h2 className="text-sm font-extrabold uppercase tracking-[0.22em] text-rs-gold mb-3">
@@ -729,7 +820,10 @@ function PaymentSummary({
           label="Subtotal"
           value={formatOrderMoney(order.subtotalAmount, order.currency)}
         />
-        <SummaryRow label="Discount" value={formatOrderMoney(order.discountAmount, order.currency)} />
+        <SummaryRow
+          label="Discount"
+          value={formatOrderMoney(order.discountAmount, order.currency)}
+        />
         <SummaryRow
           label={`Deposit ${order.depositPercent}%`}
           value={formatOrderMoney(order.depositAmount, order.currency)}
@@ -745,7 +839,10 @@ function PaymentSummary({
         />
         <SummaryRow
           label="Final payment fee"
-          value={formatOrderMoney(finalPaymentPreview?.feeAmount ?? order.finalPaymentFeeAmount, order.currency)}
+          value={formatOrderMoney(
+            finalPaymentPreview?.feeAmount ?? order.finalPaymentFeeAmount,
+            order.currency,
+          )}
         />
         <SummaryRow
           label="Final method"
@@ -794,8 +891,18 @@ function SummaryRow({
     <div
       className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 ${isStrong ? 'border-t pt-2 text-base font-black text-rs-ink' : ''}`}
     >
-      <span className={isStrong ? 'min-w-0 break-words' : 'min-w-0 break-words text-muted-foreground'}>{label}</span>
-      <span className={isStrong ? 'break-words text-end rs-price-primary' : 'break-words text-end font-semibold'}>{value}</span>
+      <span
+        className={isStrong ? 'min-w-0 break-words' : 'min-w-0 break-words text-muted-foreground'}
+      >
+        {label}
+      </span>
+      <span
+        className={
+          isStrong ? 'break-words text-end rs-price-primary' : 'break-words text-end font-semibold'
+        }
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -885,7 +992,8 @@ function getNextAction(
   if (order.paymentStatus === 'DEPOSIT_SUBMITTED') {
     return {
       title: 'Deposit under review',
-      message: 'We received your transfer image. Admin will approve it before SHEIN purchasing starts.',
+      message:
+        'We received your transfer image. Admin will approve it before SHEIN purchasing starts.',
       amount: formatOrderMoney(order.depositAmount, order.currency),
       amountLabel: 'Submitted deposit',
     };
@@ -903,7 +1011,8 @@ function getNextAction(
   if (order.paymentStatus === 'DEPOSIT_APPROVED') {
     return {
       title: 'Deposit approved',
-      message: 'Your order is confirmed. Final payment will open when the items arrive at the store.',
+      message:
+        'Your order is confirmed. Final payment will open when the items arrive at the store.',
       amount: formatOrderMoney(order.remainingAmount, order.currency),
       amountLabel: 'Remaining before fees',
     };
@@ -1008,7 +1117,8 @@ function buildFinalPaymentPreview({
 }
 
 function toOrderRawAmount(amount: string | number | null | undefined): number {
-  if (typeof amount === 'number') return Number.isFinite(amount) ? Math.max(0, Math.round(amount)) : 0;
+  if (typeof amount === 'number')
+    return Number.isFinite(amount) ? Math.max(0, Math.round(amount)) : 0;
   if (!amount) return 0;
   const trimmed = amount.trim();
   const parsed = Number(trimmed);

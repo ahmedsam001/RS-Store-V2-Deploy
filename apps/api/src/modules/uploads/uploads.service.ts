@@ -23,7 +23,10 @@ export class UploadsService {
     private readonly auditService: AuditService,
   ) {}
 
-  async uploadImage(file: UploadedImageFile | undefined, dto: UploadImageDto): Promise<UploadedImageResponse> {
+  async uploadImage(
+    file: UploadedImageFile | undefined,
+    dto: UploadImageDto,
+  ): Promise<UploadedImageResponse> {
     this.validateFile(file);
 
     const folder = this.resolveFolder(dto.folder);
@@ -38,10 +41,6 @@ export class UploadsService {
       format: result.format,
     };
   }
-
-
-
-
 
   async uploadRemoteImage(imageUrl: string, folder: string): Promise<UploadedImageResponse> {
     const resolvedFolder = this.resolveFolder(folder);
@@ -66,22 +65,31 @@ export class UploadsService {
   }
 
   async reconcileProductImages(): Promise<{ databaseOrphans: number; cloudinaryOrphans: number }> {
-    const databaseOrphansResult = await this.prisma.$queryRaw<Array<{ count: bigint }>>`SELECT COUNT(*)::bigint AS count FROM product_images pi LEFT JOIN products p ON p.id = pi.product_id WHERE p.id IS NULL`;
+    const databaseOrphansResult = await this.prisma.$queryRaw<
+      Array<{ count: bigint }>
+    >`SELECT COUNT(*)::bigint AS count FROM product_images pi LEFT JOIN products p ON p.id = pi.product_id WHERE p.id IS NULL`;
     const databaseOrphans = Number(databaseOrphansResult[0]?.count ?? 0n);
-    const productImages = await this.prisma.productImage.findMany({ select: { cloudinaryPublicId: true } });
+    const productImages = await this.prisma.productImage.findMany({
+      select: { cloudinaryPublicId: true },
+    });
     const knownPublicIds = new Set(productImages.map((image) => image.cloudinaryPublicId));
     const cloudinaryOrphans = await this.countCloudinaryOrphans(knownPublicIds);
     return { databaseOrphans, cloudinaryOrphans };
   }
 
-
-
-  async cleanupOrphanProductImages(actor?: AuthenticatedUser): Promise<{ databaseRecordsDeleted: number; cloudinaryFilesDeleted: number }> {
-    const dbResult = await this.prisma.$executeRaw`DELETE FROM product_images pi WHERE NOT EXISTS (SELECT 1 FROM products p WHERE p.id = pi.product_id)`;
-    const productImages = await this.prisma.productImage.findMany({ select: { cloudinaryPublicId: true } });
+  async cleanupOrphanProductImages(
+    actor?: AuthenticatedUser,
+  ): Promise<{ databaseRecordsDeleted: number; cloudinaryFilesDeleted: number }> {
+    const dbResult = await this.prisma
+      .$executeRaw`DELETE FROM product_images pi WHERE NOT EXISTS (SELECT 1 FROM products p WHERE p.id = pi.product_id)`;
+    const productImages = await this.prisma.productImage.findMany({
+      select: { cloudinaryPublicId: true },
+    });
     const knownPublicIds = new Set(productImages.map((image) => image.cloudinaryPublicId));
     const publicIds = await this.findCloudinaryOrphanPublicIds(knownPublicIds);
-    await Promise.all(publicIds.map((publicId) => this.deleteImage(publicId).catch(() => undefined)));
+    await Promise.all(
+      publicIds.map((publicId) => this.deleteImage(publicId).catch(() => undefined)),
+    );
     const result = { databaseRecordsDeleted: dbResult, cloudinaryFilesDeleted: publicIds.length };
     await this.auditService.log({
       actorUserId: actor?.id,
@@ -106,7 +114,10 @@ export class UploadsService {
     }
 
     const extension = this.fileExtension(file.originalname);
-    if (!ALLOWED_IMAGE_EXTENSIONS.has(extension) || !this.hasExpectedImageSignature(file.buffer, extension)) {
+    if (
+      !ALLOWED_IMAGE_EXTENSIONS.has(extension) ||
+      !this.hasExpectedImageSignature(file.buffer, extension)
+    ) {
       throw new BadRequestException('Image file content does not match an allowed image type');
     }
   }
@@ -146,8 +157,6 @@ export class UploadsService {
       stream.end(buffer);
     });
   }
-
-
 
   private async countCloudinaryOrphans(knownPublicIds: Set<string>): Promise<number> {
     return (await this.findCloudinaryOrphanPublicIds(knownPublicIds)).length;
@@ -195,11 +204,16 @@ export class UploadsService {
     }
 
     if (extension === 'png') {
-      return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+      return buffer
+        .subarray(0, 8)
+        .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
     }
 
     if (extension === 'webp') {
-      return buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+      return (
+        buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+        buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+      );
     }
 
     if (extension === 'gif') {

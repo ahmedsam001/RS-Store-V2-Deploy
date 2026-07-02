@@ -76,9 +76,7 @@ export function FlashSaleHomeStrip({ sales }: FlashSaleHomeStripProps) {
                     {formatPrice(product.originalPrice)}
                   </span>
                 ) : null}
-                <span className="rs-flash-compact-sale-price">
-                  {formatPrice(product.price)}
-                </span>
+                <span className="rs-flash-compact-sale-price">{formatPrice(product.price)}</span>
               </div>
             </div>
           </CatalogLink>

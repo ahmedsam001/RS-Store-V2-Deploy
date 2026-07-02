@@ -23,9 +23,15 @@ export function hashCheckoutRequest(dto: CheckoutOrderDto): string {
   return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
 
-export function assertCheckoutIdempotencyReplay(existingHash: string, requestHash: string, hasOrder: boolean): void {
+export function assertCheckoutIdempotencyReplay(
+  existingHash: string,
+  requestHash: string,
+  hasOrder: boolean,
+): void {
   if (existingHash !== requestHash) {
-    throw new ConflictException('Idempotency key was already used with a different checkout request');
+    throw new ConflictException(
+      'Idempotency key was already used with a different checkout request',
+    );
   }
   if (!hasOrder) {
     throw new ConflictException('Checkout is already being processed');

@@ -15,7 +15,11 @@ export function imageFileFilter(
 ): void {
   const extension = extensionFromName(file.originalname ?? '');
 
-  if (!file.mimetype || !ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype) || !ALLOWED_IMAGE_EXTENSIONS.has(extension)) {
+  if (
+    !file.mimetype ||
+    !ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype) ||
+    !ALLOWED_IMAGE_EXTENSIONS.has(extension)
+  ) {
     callback(new BadRequestException('Only JPG PNG WEBP or GIF image files are allowed'), false);
     return;
   }

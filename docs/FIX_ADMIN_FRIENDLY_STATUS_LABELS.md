@@ -23,9 +23,9 @@ apps/web/src/features/admin/components/AdminDesign.tsx
 New helpers:
 
 ```ts
-labelBatchStatus(value)
-labelOrderItemStatus(value)
-labelPaymentStatus(value)
+labelBatchStatus(value);
+labelOrderItemStatus(value);
+labelPaymentStatus(value);
 ```
 
 Updated the shared `labelStatus` map to use clearer names for common payment and tracking states.

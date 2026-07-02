@@ -51,7 +51,6 @@ export class AdminBootstrapService implements OnApplicationBootstrap {
     this.logger.warn('Initial OWNER account has been created from bootstrap environment variables');
   }
 
-
   private async ensureDefaultStorefrontCategories(): Promise<void> {
     const categories = [
       {
@@ -163,10 +162,14 @@ export class AdminBootstrapService implements OnApplicationBootstrap {
   private handleMissingOwner(): void {
     const nodeEnvironment = this.configService.getOrThrow<string>('NODE_ENV');
     if (nodeEnvironment === 'production') {
-      throw new Error('No OWNER account exists. Enable ADMIN_BOOTSTRAP_ENABLED once to create the first owner.');
+      throw new Error(
+        'No OWNER account exists. Enable ADMIN_BOOTSTRAP_ENABLED once to create the first owner.',
+      );
     }
 
-    this.logger.warn('No OWNER account exists. Admin login will be unavailable until an owner is created.');
+    this.logger.warn(
+      'No OWNER account exists. Admin login will be unavailable until an owner is created.',
+    );
   }
 
   private async assertBootstrapIdentityAvailable(email: string, phone: string): Promise<void> {

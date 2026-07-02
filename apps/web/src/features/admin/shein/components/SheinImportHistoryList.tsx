@@ -2,7 +2,12 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
 import { AdminEmpty } from '@/features/admin/components/AdminState';
 import { SheinImportHistoryListProps } from '@/features/admin/shein/types/shein.types';
-import { formatSheinStatus, sanitizeSheinAdminMessage, shouldShowManualNotice, shortSheinUrl } from '@/features/admin/shein/utils/shein-review-utils';
+import {
+  formatSheinStatus,
+  sanitizeSheinAdminMessage,
+  shouldShowManualNotice,
+  shortSheinUrl,
+} from '@/features/admin/shein/utils/shein-review-utils';
 import { AdminSheinImport } from '@/features/admin/api/admin-api';
 
 const MANUAL_REVIEW_MESSAGE =

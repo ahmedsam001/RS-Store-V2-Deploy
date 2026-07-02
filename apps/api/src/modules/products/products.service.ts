@@ -24,7 +24,10 @@ export class ProductsService {
     category: true,
     subCategoryRef: true,
     images: { orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }] },
-    variants: { where: { deletedAt: null }, orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }] },
+    variants: {
+      where: { deletedAt: null },
+      orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }],
+    },
   } satisfies Prisma.ProductInclude;
 
   constructor(
@@ -34,9 +37,15 @@ export class ProductsService {
   ) {}
 
   async create(dto: CreateProductDto, actor?: AuthenticatedUser) {
-    const resolvedSlug = dto.slug ?? (await this.resolveUniqueSlug(dto.nameEn ?? dto.sku ?? dto.nameAr));
+    const resolvedSlug =
+      dto.slug ?? (await this.resolveUniqueSlug(dto.nameEn ?? dto.sku ?? dto.nameAr));
     const product = await this.prisma.$transaction(async (tx) => {
-      const categorySelection = await this.resolveCategorySelection(tx, dto.categoryId, dto.subCategoryId, dto.subCategory);
+      const categorySelection = await this.resolveCategorySelection(
+        tx,
+        dto.categoryId,
+        dto.subCategoryId,
+        dto.subCategory,
+      );
       const created = await tx.product.create({
         data: this.mapProductCreate(dto, resolvedSlug, categorySelection),
       });
@@ -54,8 +63,18 @@ export class ProductsService {
         });
       }
 
-      await tx.auditLog.create({ data: { actorUserId: actor?.id, action: 'PRODUCT_CREATED', entityType: 'PRODUCT', entityId: created.id } });
-      return tx.product.findUniqueOrThrow({ where: { id: created.id }, include: this.productInclude });
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor?.id,
+          action: 'PRODUCT_CREATED',
+          entityType: 'PRODUCT',
+          entityId: created.id,
+        },
+      });
+      return tx.product.findUniqueOrThrow({
+        where: { id: created.id },
+        include: this.productInclude,
+      });
     });
     return product;
   }
@@ -123,13 +142,21 @@ export class ProductsService {
   }
 
   findById(id: string) {
-    return this.prisma.product.findFirstOrThrow({ where: { id, deletedAt: null }, include: this.productInclude });
+    return this.prisma.product.findFirstOrThrow({
+      where: { id, deletedAt: null },
+      include: this.productInclude,
+    });
   }
 
   async update(id: string, dto: UpdateProductDto, actor?: AuthenticatedUser) {
     await this.assertProductExists(id);
     const product = await this.prisma.$transaction(async (tx) => {
-      const categorySelection = await this.resolveCategorySelection(tx, dto.categoryId, dto.subCategoryId, dto.subCategory);
+      const categorySelection = await this.resolveCategorySelection(
+        tx,
+        dto.categoryId,
+        dto.subCategoryId,
+        dto.subCategory,
+      );
       const updated = await tx.product.update({
         where: { id },
         data: this.mapProductUpdate(dto, categorySelection),
@@ -137,12 +164,22 @@ export class ProductsService {
 
       await this.syncProductAvailability(tx, id, dto);
 
-      await tx.auditLog.create({ data: { actorUserId: actor?.id, action: 'PRODUCT_UPDATED', entityType: 'PRODUCT', entityId: id, metadata: { status: dto.status ?? null } } });
-      return tx.product.findUniqueOrThrow({ where: { id: updated.id }, include: this.productInclude });
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor?.id,
+          action: 'PRODUCT_UPDATED',
+          entityType: 'PRODUCT',
+          entityId: id,
+          metadata: { status: dto.status ?? null },
+        },
+      });
+      return tx.product.findUniqueOrThrow({
+        where: { id: updated.id },
+        include: this.productInclude,
+      });
     });
     return product;
   }
-
 
   async applyBulkDiscount(discount: number, actor?: AuthenticatedUser) {
     const result = await this.prisma.$transaction(async (tx) => {
@@ -174,7 +211,12 @@ export class ProductsService {
       data: { deletedAt: new Date(), status: ProductStatus.ARCHIVED },
       include: this.productInclude,
     });
-    await this.auditService.log({ actorUserId: actor?.id, action: 'PRODUCT_DELETED', entityType: 'PRODUCT', entityId: id });
+    await this.auditService.log({
+      actorUserId: actor?.id,
+      action: 'PRODUCT_DELETED',
+      entityType: 'PRODUCT',
+      entityId: id,
+    });
     return product;
   }
 
@@ -185,7 +227,13 @@ export class ProductsService {
       data: { status },
       include: this.productInclude,
     });
-    await this.auditService.log({ actorUserId: actor?.id, action: 'PRODUCT_STATUS_CHANGED', entityType: 'PRODUCT', entityId: id, metadata: { status } });
+    await this.auditService.log({
+      actorUserId: actor?.id,
+      action: 'PRODUCT_STATUS_CHANGED',
+      entityType: 'PRODUCT',
+      entityId: id,
+      metadata: { status },
+    });
     return product;
   }
 
@@ -197,11 +245,24 @@ export class ProductsService {
       const shouldBePrimary = dto.isPrimary === true || hasImages === 0;
 
       if (shouldBePrimary) {
-        await tx.productImage.updateMany({ where: { productId, isPrimary: true }, data: { isPrimary: false } });
+        await tx.productImage.updateMany({
+          where: { productId, isPrimary: true },
+          data: { isPrimary: false },
+        });
       }
 
-      const image = await tx.productImage.create({ data: { ...dto, productId, isPrimary: shouldBePrimary } });
-      await tx.auditLog.create({ data: { actorUserId: actor?.id, action: 'PRODUCT_IMAGE_ADDED', entityType: 'PRODUCT_IMAGE', entityId: image.id, metadata: { productId } } });
+      const image = await tx.productImage.create({
+        data: { ...dto, productId, isPrimary: shouldBePrimary },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor?.id,
+          action: 'PRODUCT_IMAGE_ADDED',
+          entityType: 'PRODUCT_IMAGE',
+          entityId: image.id,
+          metadata: { productId },
+        },
+      });
       return image;
     });
   }
@@ -220,7 +281,15 @@ export class ProductsService {
           await tx.productImage.update({ where: { id: nextImage.id }, data: { isPrimary: true } });
         }
       }
-      await tx.auditLog.create({ data: { actorUserId: actor?.id, action: 'PRODUCT_IMAGE_DELETED', entityType: 'PRODUCT_IMAGE', entityId: imageId, metadata: { productId: removed.productId } } });
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor?.id,
+          action: 'PRODUCT_IMAGE_DELETED',
+          entityType: 'PRODUCT_IMAGE',
+          entityId: imageId,
+          metadata: { productId: removed.productId },
+        },
+      });
       return removed;
     });
 
@@ -237,23 +306,56 @@ export class ProductsService {
 
     return this.prisma.$transaction(async (tx) => {
       await tx.productImage.updateMany({ where: { productId }, data: { isPrimary: false } });
-      const updated = await tx.productImage.update({ where: { id: imageId }, data: { isPrimary: true } });
-      await tx.auditLog.create({ data: { actorUserId: actor?.id, action: 'PRODUCT_IMAGE_PRIMARY_CHANGED', entityType: 'PRODUCT_IMAGE', entityId: imageId, metadata: { productId } } });
+      const updated = await tx.productImage.update({
+        where: { id: imageId },
+        data: { isPrimary: true },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorUserId: actor?.id,
+          action: 'PRODUCT_IMAGE_PRIMARY_CHANGED',
+          entityType: 'PRODUCT_IMAGE',
+          entityId: imageId,
+          metadata: { productId },
+        },
+      });
       return updated;
     });
   }
 
   async addVariant(productId: string, dto: CreateProductVariantDto, actor?: AuthenticatedUser) {
     await this.assertProductExists(productId);
-    const variant = await this.prisma.productVariant.create({ data: { ...this.mapVariantCreate(dto), productId } });
-    await this.auditService.log({ actorUserId: actor?.id, action: 'PRODUCT_VARIANT_CREATED', entityType: 'PRODUCT_VARIANT', entityId: variant.id, metadata: { productId } });
+    const variant = await this.prisma.productVariant.create({
+      data: { ...this.mapVariantCreate(dto), productId },
+    });
+    await this.auditService.log({
+      actorUserId: actor?.id,
+      action: 'PRODUCT_VARIANT_CREATED',
+      entityType: 'PRODUCT_VARIANT',
+      entityId: variant.id,
+      metadata: { productId },
+    });
     return variant;
   }
 
-  async updateVariant(productId: string, variantId: string, dto: UpdateProductVariantDto, actor?: AuthenticatedUser) {
+  async updateVariant(
+    productId: string,
+    variantId: string,
+    dto: UpdateProductVariantDto,
+    actor?: AuthenticatedUser,
+  ) {
     await this.assertVariantExists(productId, variantId);
-    const variant = await this.prisma.productVariant.update({ where: { id: variantId }, data: this.mapVariantUpdate(dto) });
-    await this.auditService.log({ actorUserId: actor?.id, action: 'PRODUCT_VARIANT_UPDATED', entityType: 'PRODUCT_VARIANT', entityId: variantId, metadata: { productId } });
+    const variant = await this.prisma.productVariant.update({
+      where: { id: variantId },
+      data: this.mapVariantUpdate(dto),
+    });
+    await this.auditService.log({
+      actorUserId: actor?.id,
+      action: 'PRODUCT_VARIANT_UPDATED',
+      entityType: 'PRODUCT_VARIANT',
+      entityId: variantId,
+      metadata: { productId },
+    });
     return variant;
   }
 
@@ -263,10 +365,15 @@ export class ProductsService {
       where: { id: variantId },
       data: { deletedAt: new Date(), isActive: false, status: ProductVariantStatus.INACTIVE },
     });
-    await this.auditService.log({ actorUserId: actor?.id, action: 'PRODUCT_VARIANT_DELETED', entityType: 'PRODUCT_VARIANT', entityId: variantId, metadata: { productId } });
+    await this.auditService.log({
+      actorUserId: actor?.id,
+      action: 'PRODUCT_VARIANT_DELETED',
+      entityType: 'PRODUCT_VARIANT',
+      entityId: variantId,
+      metadata: { productId },
+    });
     return variant;
   }
-
 
   private async syncProductAvailability(
     tx: Prisma.TransactionClient,
@@ -287,7 +394,12 @@ export class ProductsService {
     if (dto.isInStock === false) {
       await tx.productVariant.updateMany({
         where: { productId, deletedAt: null },
-        data: { stockQuantity: 0, reservedQuantity: 0, status: ProductVariantStatus.OUT_OF_STOCK, isActive: false },
+        data: {
+          stockQuantity: 0,
+          reservedQuantity: 0,
+          status: ProductVariantStatus.OUT_OF_STOCK,
+          isActive: false,
+        },
       });
       return;
     }
@@ -314,7 +426,8 @@ export class ProductsService {
           data: {
             stockQuantity: requestedStock,
             reservedQuantity: 0,
-            status: requestedStock > 0 ? ProductVariantStatus.ACTIVE : ProductVariantStatus.OUT_OF_STOCK,
+            status:
+              requestedStock > 0 ? ProductVariantStatus.ACTIVE : ProductVariantStatus.OUT_OF_STOCK,
             isActive: requestedStock > 0,
           },
         });
@@ -337,11 +450,18 @@ export class ProductsService {
     }
 
     if (dto.isInStock === true && currentVariants.length > 0) {
-      const hasAvailableVariant = currentVariants.some((variant) => variant.stockQuantity - variant.reservedQuantity > 0);
+      const hasAvailableVariant = currentVariants.some(
+        (variant) => variant.stockQuantity - variant.reservedQuantity > 0,
+      );
       if (!hasAvailableVariant) {
         await tx.productVariant.updateMany({
           where: { productId, deletedAt: null },
-          data: { stockQuantity: 1, reservedQuantity: 0, status: ProductVariantStatus.ACTIVE, isActive: true },
+          data: {
+            stockQuantity: 1,
+            reservedQuantity: 0,
+            status: ProductVariantStatus.ACTIVE,
+            isActive: true,
+          },
         });
       } else {
         await tx.productVariant.updateMany({
@@ -358,8 +478,12 @@ export class ProductsService {
     categorySelection: ResolvedProductCategorySelection,
   ): Prisma.ProductCreateInput {
     return {
-      category: categorySelection.categoryId ? { connect: { id: categorySelection.categoryId } } : undefined,
-      subCategoryRef: categorySelection.subCategoryId ? { connect: { id: categorySelection.subCategoryId } } : undefined,
+      category: categorySelection.categoryId
+        ? { connect: { id: categorySelection.categoryId } }
+        : undefined,
+      subCategoryRef: categorySelection.subCategoryId
+        ? { connect: { id: categorySelection.subCategoryId } }
+        : undefined,
       sku: dto.sku,
       slug: resolvedSlug,
       nameAr: dto.nameAr,
@@ -381,16 +505,24 @@ export class ProductsService {
     categorySelection: ResolvedProductCategorySelection,
   ): Prisma.ProductUpdateInput {
     return {
-      category: categorySelection.categoryId ? { connect: { id: categorySelection.categoryId } } : undefined,
-      subCategoryRef: categorySelection.subCategoryId ? { connect: { id: categorySelection.subCategoryId } } : undefined,
+      category: categorySelection.categoryId
+        ? { connect: { id: categorySelection.categoryId } }
+        : undefined,
+      subCategoryRef: categorySelection.subCategoryId
+        ? { connect: { id: categorySelection.subCategoryId } }
+        : undefined,
       sku: dto.sku,
       slug: dto.slug,
       nameAr: dto.nameAr,
       nameEn: dto.nameEn,
       description: dto.description,
-      sourceSheinUrl: dto.sourceSheinUrl === undefined ? undefined : dto.sourceSheinUrl.trim() || null,
+      sourceSheinUrl:
+        dto.sourceSheinUrl === undefined ? undefined : dto.sourceSheinUrl.trim() || null,
       subCategory: categorySelection.subCategoryName ?? dto.subCategory,
-      priceAmount: dto.priceAmount === undefined ? undefined : moneyStringToMinorUnits(dto.priceAmount, 'priceAmount'),
+      priceAmount:
+        dto.priceAmount === undefined
+          ? undefined
+          : moneyStringToMinorUnits(dto.priceAmount, 'priceAmount'),
       discountPercent: dto.discount,
       rating: dto.rating,
       currency: dto.currency,
@@ -399,14 +531,19 @@ export class ProductsService {
     };
   }
 
-  private mapVariantCreate(dto: CreateProductVariantDto): Prisma.ProductVariantCreateWithoutProductInput {
+  private mapVariantCreate(
+    dto: CreateProductVariantDto,
+  ): Prisma.ProductVariantCreateWithoutProductInput {
     return {
       sku: dto.sku,
       nameAr: dto.nameAr,
       nameEn: dto.nameEn,
       size: dto.size,
       color: dto.color,
-      priceAmount: dto.priceAmount === undefined ? undefined : moneyStringToMinorUnits(dto.priceAmount, 'variant priceAmount'),
+      priceAmount:
+        dto.priceAmount === undefined
+          ? undefined
+          : moneyStringToMinorUnits(dto.priceAmount, 'variant priceAmount'),
       stockQuantity: dto.stockQuantity ?? 0,
       status: dto.status ?? ProductVariantStatus.ACTIVE,
       isActive: (dto.status ?? ProductVariantStatus.ACTIVE) === ProductVariantStatus.ACTIVE,
@@ -422,7 +559,10 @@ export class ProductsService {
       nameEn: dto.nameEn,
       size: dto.size,
       color: dto.color,
-      priceAmount: dto.priceAmount === undefined ? undefined : moneyStringToMinorUnits(dto.priceAmount, 'variant priceAmount'),
+      priceAmount:
+        dto.priceAmount === undefined
+          ? undefined
+          : moneyStringToMinorUnits(dto.priceAmount, 'variant priceAmount'),
       stockQuantity: dto.stockQuantity,
       status,
       isActive: status === undefined ? undefined : status === ProductVariantStatus.ACTIVE,
@@ -456,7 +596,12 @@ export class ProductsService {
 
     if (resolvedSubCategoryId) {
       const child = await tx.category.findFirst({
-        where: { id: resolvedSubCategoryId, deletedAt: null, isActive: true, parentId: resolvedCategoryId ?? undefined },
+        where: {
+          id: resolvedSubCategoryId,
+          deletedAt: null,
+          isActive: true,
+          parentId: resolvedCategoryId ?? undefined,
+        },
         select: { id: true, nameAr: true, parentId: true },
       });
       if (!child?.parentId) {
@@ -468,7 +613,11 @@ export class ProductsService {
     }
 
     if (!resolvedSubCategoryId && resolvedCategoryId && resolvedSubCategoryName) {
-      const child = await this.findOrCreateSubCategory(tx, resolvedCategoryId, resolvedSubCategoryName);
+      const child = await this.findOrCreateSubCategory(
+        tx,
+        resolvedCategoryId,
+        resolvedSubCategoryName,
+      );
       resolvedSubCategoryId = child.id;
       resolvedSubCategoryName = child.nameAr;
     }
@@ -506,7 +655,11 @@ export class ProductsService {
       where: { id: parentId, deletedAt: null, isActive: true, parentId: null },
       select: { slug: true },
     });
-    const baseSlug = `${parent.slug}-${this.toSubCategorySlug(normalizedName) || Date.now().toString(36)}`.slice(0, 180);
+    const baseSlug =
+      `${parent.slug}-${this.toSubCategorySlug(normalizedName) || Date.now().toString(36)}`.slice(
+        0,
+        180,
+      );
     const slug = await this.resolveUniqueCategorySlug(tx, baseSlug);
 
     return tx.category.create({
@@ -522,11 +675,17 @@ export class ProductsService {
     });
   }
 
-  private async resolveUniqueCategorySlug(tx: Prisma.TransactionClient, baseSlug: string): Promise<string> {
+  private async resolveUniqueCategorySlug(
+    tx: Prisma.TransactionClient,
+    baseSlug: string,
+  ): Promise<string> {
     const safeBase = baseSlug || `subcategory-${Date.now()}`;
     for (let index = 0; index < 50; index += 1) {
       const candidate = index === 0 ? safeBase : `${safeBase}-${index + 1}`.slice(0, 180);
-      const existing = await tx.category.findUnique({ where: { slug: candidate }, select: { id: true } });
+      const existing = await tx.category.findUnique({
+        where: { slug: candidate },
+        select: { id: true },
+      });
       if (!existing) {
         return candidate;
       }
@@ -547,7 +706,10 @@ export class ProductsService {
     const baseSlug = this.toSlug(seed) || `product-${Date.now()}`;
     for (let index = 0; index < 50; index += 1) {
       const candidate = index === 0 ? baseSlug : `${baseSlug}-${index + 1}`;
-      const existing = await this.prisma.product.findUnique({ where: { slug: candidate }, select: { id: true } });
+      const existing = await this.prisma.product.findUnique({
+        where: { slug: candidate },
+        select: { id: true },
+      });
       if (!existing) {
         return candidate;
       }
@@ -565,7 +727,10 @@ export class ProductsService {
   }
 
   private async assertProductExists(productId: string): Promise<void> {
-    const product = await this.prisma.product.findFirst({ where: { id: productId, deletedAt: null }, select: { id: true } });
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, deletedAt: null },
+      select: { id: true },
+    });
     if (!product) {
       throw new NotFoundException('Product not found');
     }

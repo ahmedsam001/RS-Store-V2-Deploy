@@ -14,7 +14,9 @@ export function CatalogFilters({ onSubmit, query }: CatalogFiltersProps) {
   const hasActiveAdvancedFilters = Boolean(
     query.minPrice || query.maxPrice || (query.sort && query.sort !== 'newest'),
   );
-  const hasActiveFilters = Boolean(query.search || query.subCategorySlug || hasActiveAdvancedFilters);
+  const hasActiveFilters = Boolean(
+    query.search || query.subCategorySlug || hasActiveAdvancedFilters,
+  );
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(query.search ?? '');
   const [minPriceValue, setMinPriceValue] = useState(query.minPrice ?? '');
@@ -22,8 +24,13 @@ export function CatalogFilters({ onSubmit, query }: CatalogFiltersProps) {
   const [sortValue, setSortValue] = useState<CatalogProductsQuery['sort']>(query.sort ?? 'newest');
 
   const activeFilterCount = useMemo(() => {
-    return [query.search, query.minPrice, query.maxPrice, query.subCategorySlug, query.sort && query.sort !== 'newest']
-      .filter(Boolean).length;
+    return [
+      query.search,
+      query.minPrice,
+      query.maxPrice,
+      query.subCategorySlug,
+      query.sort && query.sort !== 'newest',
+    ].filter(Boolean).length;
   }, [query.maxPrice, query.minPrice, query.search, query.sort, query.subCategorySlug]);
 
   useEffect(() => {
@@ -81,13 +88,15 @@ export function CatalogFilters({ onSubmit, query }: CatalogFiltersProps) {
   }
 
   return (
-    <form onSubmit={handleSearchSubmit} className="rs-catalog-filter-shell" aria-label="Search and filter products" noValidate>
+    <form
+      onSubmit={handleSearchSubmit}
+      className="rs-catalog-filter-shell"
+      aria-label="Search and filter products"
+      noValidate
+    >
       <div className="rs-catalog-toolbar">
         <div className="rs-search-control">
-          <Search
-            className="rs-search-control-icon"
-            aria-hidden="true"
-          />
+          <Search className="rs-search-control-icon" aria-hidden="true" />
           <Input
             name="search"
             value={searchValue}
@@ -99,7 +108,12 @@ export function CatalogFilters({ onSubmit, query }: CatalogFiltersProps) {
           />
         </div>
 
-        <Button type="submit" size="sm" className="rs-toolbar-action rs-search-submit" aria-label="Search">
+        <Button
+          type="submit"
+          size="sm"
+          className="rs-toolbar-action rs-search-submit"
+          aria-label="Search"
+        >
           Search
         </Button>
 
@@ -114,7 +128,9 @@ export function CatalogFilters({ onSubmit, query }: CatalogFiltersProps) {
         >
           <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
           Filters
-          {activeFilterCount > 0 ? <span className="rs-filter-count">{activeFilterCount}</span> : null}
+          {activeFilterCount > 0 ? (
+            <span className="rs-filter-count">{activeFilterCount}</span>
+          ) : null}
         </Button>
 
         <label className="rs-sort-control">
@@ -122,7 +138,9 @@ export function CatalogFilters({ onSubmit, query }: CatalogFiltersProps) {
           <Select
             name="sort"
             value={sortValue ?? 'newest'}
-            onChange={(event) => handleSortChange(event.target.value as CatalogProductsQuery['sort'])}
+            onChange={(event) =>
+              handleSortChange(event.target.value as CatalogProductsQuery['sort'])
+            }
             className="rs-sort-select"
             aria-label="Sort products by"
           >
@@ -152,11 +170,21 @@ export function CatalogFilters({ onSubmit, query }: CatalogFiltersProps) {
 
       {hasActiveFilters ? (
         <div className="rs-active-filter-row" aria-label="Active filters">
-          {query.search ? <span className="rs-active-filter-chip">Search: {query.search}</span> : null}
-          {query.minPrice ? <span className="rs-active-filter-chip">Min: {query.minPrice} EGP</span> : null}
-          {query.maxPrice ? <span className="rs-active-filter-chip">Max: {query.maxPrice} EGP</span> : null}
-          {query.sort && query.sort !== 'newest' ? <span className="rs-active-filter-chip">Sort: {formatSortLabel(query.sort)}</span> : null}
-          {query.subCategorySlug ? <span className="rs-active-filter-chip">Selected category</span> : null}
+          {query.search ? (
+            <span className="rs-active-filter-chip">Search: {query.search}</span>
+          ) : null}
+          {query.minPrice ? (
+            <span className="rs-active-filter-chip">Min: {query.minPrice} EGP</span>
+          ) : null}
+          {query.maxPrice ? (
+            <span className="rs-active-filter-chip">Max: {query.maxPrice} EGP</span>
+          ) : null}
+          {query.sort && query.sort !== 'newest' ? (
+            <span className="rs-active-filter-chip">Sort: {formatSortLabel(query.sort)}</span>
+          ) : null}
+          {query.subCategorySlug ? (
+            <span className="rs-active-filter-chip">Selected category</span>
+          ) : null}
         </div>
       ) : null}
 
@@ -168,13 +196,23 @@ export function CatalogFilters({ onSubmit, query }: CatalogFiltersProps) {
             onClick={() => setFiltersOpen(false)}
             aria-label="Close filters"
           />
-          <div id="catalog-advanced-filters" className="rs-filter-popover" role="region" aria-label="Advanced filters">
+          <div
+            id="catalog-advanced-filters"
+            className="rs-filter-popover"
+            role="region"
+            aria-label="Advanced filters"
+          >
             <div className="rs-filter-sheet-header">
               <div>
                 <p className="rs-filter-sheet-kicker">Refine</p>
                 <h3 className="rs-filter-sheet-title">Filter products</h3>
               </div>
-              <button type="button" className="rs-filter-sheet-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
+              <button
+                type="button"
+                className="rs-filter-sheet-close"
+                onClick={() => setFiltersOpen(false)}
+                aria-label="Close filters"
+              >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
@@ -205,7 +243,12 @@ export function CatalogFilters({ onSubmit, query }: CatalogFiltersProps) {
               />
             </label>
             <div className="rs-filter-actions">
-              <Button type="button" variant="outline" size="sm" onClick={() => setFiltersOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFiltersOpen(false)}
+              >
                 Close
               </Button>
               <Button type="button" size="sm" onClick={handleApplyFilters}>

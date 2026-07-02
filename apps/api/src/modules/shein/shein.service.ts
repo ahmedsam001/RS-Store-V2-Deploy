@@ -21,22 +21,38 @@ import { SheinFetchService } from './shein-fetch.service';
 import { SheinPreviewNormalizer } from './shein-preview.normalizer';
 import { SheinProductPublisherService } from './shein-product-publisher.service';
 import { SheinUrlService } from './shein-url.service';
-import { SheinAssistJob, SheinImportExtractionResponse, SheinImportPreview, SheinImportStep } from './shein.types';
+import {
+  SheinAssistJob,
+  SheinImportExtractionResponse,
+  SheinImportPreview,
+  SheinImportStep,
+} from './shein.types';
 import { SheinMarketplaceSettingsService } from './shein-marketplace-settings.service';
 import { FIXED_SHEIN_CURRENCY, SheinMarketplaceSettings } from './shein-marketplace';
 import { SheinWorkflowService } from './shein-workflow.service';
 import { assertValidSheinSubCategory } from './shein-category-config';
 
-const MANUAL_REVIEW_MESSAGE = 'System could not extract all data automatically. Open SHEIN link and complete product data manually like V1.';
-const ASSIST_SESSION_EXPIRED_MESSAGE = 'The import session stopped or expired. Start again from the same product link.';
-const MISSING_PRODUCT_IMAGES_MESSAGE = 'Could not find two clear product images. You can add images manually.';
+const MANUAL_REVIEW_MESSAGE =
+  'System could not extract all data automatically. Open SHEIN link and complete product data manually like V1.';
+const ASSIST_SESSION_EXPIRED_MESSAGE =
+  'The import session stopped or expired. Start again from the same product link.';
+const MISSING_PRODUCT_IMAGES_MESSAGE =
+  'Could not find two clear product images. You can add images manually.';
 
 const STEP_TEMPLATES: Array<Omit<SheinImportStep, 'status'>> = [
   { id: 'prepare_link', labelEn: 'Prepare SHEIN link', labelAr: 'Prepare SHEIN link' },
-  { id: 'open_market_link', labelEn: 'Open SHEIN with selected country and currency', labelAr: 'Open SHEIN with selected country and currency' },
+  {
+    id: 'open_market_link',
+    labelEn: 'Open SHEIN with selected country and currency',
+    labelAr: 'Open SHEIN with selected country and currency',
+  },
   { id: 'start_session', labelEn: 'Start import session', labelAr: 'Start import session' },
   { id: 'try_extraction', labelEn: 'Try extraction', labelAr: 'Try extraction' },
-  { id: 'show_preview', labelEn: 'Show preview if successful', labelAr: 'Show preview if successful' },
+  {
+    id: 'show_preview',
+    labelEn: 'Show preview if successful',
+    labelAr: 'Show preview if successful',
+  },
   { id: 'manual_review', labelEn: 'Manual review if failed', labelAr: 'Manual review if failed' },
 ];
 
@@ -78,7 +94,8 @@ export class SheinService {
     const record = await this.prisma.sheinImport.create({
       data: {
         sourceUrl: normalizedSourceUrl,
-        normalizedUrlKey: dto.normalizedUrlKey ?? this.urlService.normalizeUrlKey(normalizedSourceUrl),
+        normalizedUrlKey:
+          dto.normalizedUrlKey ?? this.urlService.normalizeUrlKey(normalizedSourceUrl),
         rawPayload: dto.rawPayload as Prisma.InputJsonValue | undefined,
         status: SheinImportStatus.PENDING,
         requestedById: user.id,
@@ -87,20 +104,41 @@ export class SheinService {
     });
 
     const importRecord = await this.buildPreview(record.id, dto.rawPayload);
-    await this.auditService.log({ actorUserId: user.id, action: 'SHEIN_IMPORT_CREATED', entityType: 'SHEIN_IMPORT', entityId: record.id, metadata: { sourceUrl: normalizedSourceUrl, status: importRecord.status } });
+    await this.auditService.log({
+      actorUserId: user.id,
+      action: 'SHEIN_IMPORT_CREATED',
+      entityType: 'SHEIN_IMPORT',
+      entityId: record.id,
+      metadata: { sourceUrl: normalizedSourceUrl, status: importRecord.status },
+    });
     return this.withExtraction(importRecord);
   }
 
   async startV1AssistedImport(dto: CreateSheinImportDto, user: AuthenticatedUser) {
     const marketplace = await this.marketplaceSettings.getSettings();
     const normalizedSourceUrl = this.urlService.parseSheinUrl(dto.sourceUrl).toString();
-    const preparedUrl = this.urlService.applyV1MarketToSheinUrl(normalizedSourceUrl, marketplace).toString();
-    this.logger.log(`SHEIN assisted import queued source=${normalizedSourceUrl} prepared=${preparedUrl} country=${marketplace.countryCode} currency=${marketplace.currencyCode} lang=${marketplace.language}`);
+    const preparedUrl = this.urlService
+      .applyV1MarketToSheinUrl(normalizedSourceUrl, marketplace)
+      .toString();
+    this.logger.log(
+      `SHEIN assisted import queued source=${normalizedSourceUrl} prepared=${preparedUrl} country=${marketplace.countryCode} currency=${marketplace.currencyCode} lang=${marketplace.language}`,
+    );
     const record = await this.prisma.sheinImport.create({
       data: {
         sourceUrl: normalizedSourceUrl,
-        normalizedUrlKey: dto.normalizedUrlKey ?? this.urlService.normalizeUrlKey(normalizedSourceUrl),
-        rawPayload: { mode: this.assistedBrowser.isInteractiveEnabled() ? 'automatic_visible_chrome_admin' : 'frontend_browser_assisted_admin', marketplace: { countryCode: marketplace.countryCode, currencyCode: marketplace.currencyCode, language: marketplace.language }, preparedUrl },
+        normalizedUrlKey:
+          dto.normalizedUrlKey ?? this.urlService.normalizeUrlKey(normalizedSourceUrl),
+        rawPayload: {
+          mode: this.assistedBrowser.isInteractiveEnabled()
+            ? 'automatic_visible_chrome_admin'
+            : 'frontend_browser_assisted_admin',
+          marketplace: {
+            countryCode: marketplace.countryCode,
+            currencyCode: marketplace.currencyCode,
+            language: marketplace.language,
+          },
+          preparedUrl,
+        },
         status: SheinImportStatus.PENDING,
         requestedById: user.id,
       },
@@ -115,8 +153,12 @@ export class SheinService {
       preparedUrl,
       assistedUrl: preparedUrl,
       status: 'queued',
-      messageEn: this.assistedBrowser.isInteractiveEnabled() ? 'Visible Chrome window will open automatically. Solve CAPTCHA if shown, then the system will read data and close the tab.' : 'Import session created. Open SHEIN in the browser, then start extraction.',
-      messageAr: this.assistedBrowser.isInteractiveEnabled() ? 'Visible Chrome window will open automatically. Solve CAPTCHA if shown, then the system will read data and close the tab.' : 'Import session created. Open SHEIN in the browser, then start extraction.',
+      messageEn: this.assistedBrowser.isInteractiveEnabled()
+        ? 'Visible Chrome window will open automatically. Solve CAPTCHA if shown, then the system will read data and close the tab.'
+        : 'Import session created. Open SHEIN in the browser, then start extraction.',
+      messageAr: this.assistedBrowser.isInteractiveEnabled()
+        ? 'Visible Chrome window will open automatically. Solve CAPTCHA if shown, then the system will read data and close the tab.'
+        : 'Import session created. Open SHEIN in the browser, then start extraction.',
       currentStep: 'prepare_link',
       progressMessage: 'queued',
       steps: STEP_TEMPLATES.map((step) => ({ ...step, status: 'pending' })),
@@ -125,7 +167,13 @@ export class SheinService {
       expiresAt: this.assistJobStore.expiresAtFrom(now),
     };
     await this.assistJobStore.save(job);
-    await this.auditService.log({ actorUserId: user.id, action: 'SHEIN_ASSIST_STARTED', entityType: 'SHEIN_IMPORT', entityId: record.id, metadata: { jobId: job.id, sourceUrl: normalizedSourceUrl, preparedUrl } });
+    await this.auditService.log({
+      actorUserId: user.id,
+      action: 'SHEIN_ASSIST_STARTED',
+      entityType: 'SHEIN_IMPORT',
+      entityId: record.id,
+      metadata: { jobId: job.id, sourceUrl: normalizedSourceUrl, preparedUrl },
+    });
 
     const opened = await this.openAssistedImportSession(job, dto.rawPayload);
     return opened;
@@ -138,48 +186,115 @@ export class SheinService {
     }
 
     const hydratedJob = this.assistJobStore.isStale(job) ? await this.expireAssistJob(job) : job;
-    const record = await this.prisma.sheinImport.findUnique({ where: { id: hydratedJob.importId }, include: this.include });
-    const extraction = record ? this.toExtractionResponse(record, hydratedJob) : { status: 'failed', reason: 'Import record was not found', product: null };
-    return { ok: true, assistedUrl: hydratedJob.assistedUrl ?? hydratedJob.preparedUrl, browserUrl: hydratedJob.assistedUrl ?? hydratedJob.preparedUrl, ...extraction, job: this.publicAssistJob(hydratedJob), import: record ? this.withExtraction(record, hydratedJob) : null };
+    const record = await this.prisma.sheinImport.findUnique({
+      where: { id: hydratedJob.importId },
+      include: this.include,
+    });
+    const extraction = record
+      ? this.toExtractionResponse(record, hydratedJob)
+      : { status: 'failed', reason: 'Import record was not found', product: null };
+    return {
+      ok: true,
+      assistedUrl: hydratedJob.assistedUrl ?? hydratedJob.preparedUrl,
+      browserUrl: hydratedJob.assistedUrl ?? hydratedJob.preparedUrl,
+      ...extraction,
+      job: this.publicAssistJob(hydratedJob),
+      import: record ? this.withExtraction(record, hydratedJob) : null,
+    };
   }
 
   async continueV1AssistedImport(jobId: string) {
     const job = await this.assistJobStore.get(jobId);
     if (!job) {
-      return { ok: false, status: 'failed', reason: ASSIST_SESSION_EXPIRED_MESSAGE, product: null, job: null, import: null };
+      return {
+        ok: false,
+        status: 'failed',
+        reason: ASSIST_SESSION_EXPIRED_MESSAGE,
+        product: null,
+        job: null,
+        import: null,
+      };
     }
-    const record = await this.prisma.sheinImport.findUnique({ where: { id: job.importId }, include: this.include });
+    const record = await this.prisma.sheinImport.findUnique({
+      where: { id: job.importId },
+      include: this.include,
+    });
     if (!record) {
-      return { ok: false, status: 'failed', reason: 'Import record was not found', product: null, job: this.publicAssistJob(job), import: null };
+      return {
+        ok: false,
+        status: 'failed',
+        reason: 'Import record was not found',
+        product: null,
+        job: this.publicAssistJob(job),
+        import: null,
+      };
     }
 
     try {
       const result = await this.assistedBrowser.readAssistedSession(job.id);
       const updated = await this.applyAssistedSessionResult(job, result, undefined);
-      const nextRecord = await this.prisma.sheinImport.findUnique({ where: { id: job.importId }, include: this.include });
+      const nextRecord = await this.prisma.sheinImport.findUnique({
+        where: { id: job.importId },
+        include: this.include,
+      });
       return {
         ok: true,
         assistedUrl: updated.assistedUrl ?? updated.preparedUrl,
         browserUrl: updated.assistedUrl ?? updated.preparedUrl,
         ...this.toExtractionResponse(nextRecord ?? record, updated),
         job: this.publicAssistJob(updated),
-        import: nextRecord ? this.withExtraction(nextRecord, updated) : this.withExtraction(record, updated),
+        import: nextRecord
+          ? this.withExtraction(nextRecord, updated)
+          : this.withExtraction(record, updated),
       };
     } catch (error) {
-      const message = this.friendlyExtractionMessage(error instanceof Error ? error.message : ASSIST_SESSION_EXPIRED_MESSAGE);
+      const message = this.friendlyExtractionMessage(
+        error instanceof Error ? error.message : ASSIST_SESSION_EXPIRED_MESSAGE,
+      );
       if (this.isTemporaryVisibleBrowserError(message)) {
-        const updated = await this.applyAssistedSessionResult(job, {
-          state: 'loading',
-          message: 'Waiting for SHEIN/CAPTCHA page to finish. Keep the visible Chrome window open; the importer will continue automatically after verification is solved.',
-          sourceUrl: job.sourceUrl,
-          preparedUrl: job.preparedUrl ?? job.assistedUrl ?? job.sourceUrl,
-        }, undefined);
-        const nextRecord = await this.prisma.sheinImport.findUnique({ where: { id: job.importId }, include: this.include });
-        return { ok: true, assistedUrl: updated.assistedUrl ?? updated.preparedUrl, browserUrl: updated.assistedUrl ?? updated.preparedUrl, ...this.toExtractionResponse(nextRecord ?? record, updated), job: this.publicAssistJob(updated), import: nextRecord ? this.withExtraction(nextRecord, updated) : this.withExtraction(record, updated) };
+        const updated = await this.applyAssistedSessionResult(
+          job,
+          {
+            state: 'loading',
+            message:
+              'Waiting for SHEIN/CAPTCHA page to finish. Keep the visible Chrome window open; the importer will continue automatically after verification is solved.',
+            sourceUrl: job.sourceUrl,
+            preparedUrl: job.preparedUrl ?? job.assistedUrl ?? job.sourceUrl,
+          },
+          undefined,
+        );
+        const nextRecord = await this.prisma.sheinImport.findUnique({
+          where: { id: job.importId },
+          include: this.include,
+        });
+        return {
+          ok: true,
+          assistedUrl: updated.assistedUrl ?? updated.preparedUrl,
+          browserUrl: updated.assistedUrl ?? updated.preparedUrl,
+          ...this.toExtractionResponse(nextRecord ?? record, updated),
+          job: this.publicAssistJob(updated),
+          import: nextRecord
+            ? this.withExtraction(nextRecord, updated)
+            : this.withExtraction(record, updated),
+        };
       }
       const failed = await this.failAssistJob(job, message, 'try_extraction');
-      const nextRecord = await this.prisma.sheinImport.findUnique({ where: { id: job.importId }, include: this.include });
-      return { ok: false, status: 'failed', reason: message, product: null, assistedUrl: failed.assistedUrl ?? failed.preparedUrl, browserUrl: failed.assistedUrl ?? failed.preparedUrl, job: this.publicAssistJob(failed), import: nextRecord ? this.withExtraction(nextRecord, failed) : this.withExtraction(record, failed) };
+      const nextRecord = await this.prisma.sheinImport.findUnique({
+        where: { id: job.importId },
+        include: this.include,
+      });
+      return {
+        ok: false,
+        status: 'failed',
+        reason: message,
+        product: null,
+        assistedUrl: failed.assistedUrl ?? failed.preparedUrl,
+        browserUrl: failed.assistedUrl ?? failed.preparedUrl,
+        job: this.publicAssistJob(failed),
+        import: nextRecord
+          ? this.withExtraction(nextRecord, failed)
+          : this.withExtraction(record, failed),
+      };
     }
   }
 
@@ -197,11 +312,17 @@ export class SheinService {
     });
 
     const prepared = await this.buildPreview(record.id, undefined);
-    const needsManualReview = prepared.status === SheinImportStatus.MANUAL_REVIEW || prepared.status === SheinImportStatus.FAILED;
+    const needsManualReview =
+      prepared.status === SheinImportStatus.MANUAL_REVIEW ||
+      prepared.status === SheinImportStatus.FAILED;
 
     await this.notificationsService.createAdminNotification({
-      titleAr: needsManualReview ? 'SHEIN request needs manual review' : 'SHEIN request ready for review',
-      titleEn: needsManualReview ? 'SHEIN request needs manual review' : 'SHEIN request ready for review',
+      titleAr: needsManualReview
+        ? 'SHEIN request needs manual review'
+        : 'SHEIN request ready for review',
+      titleEn: needsManualReview
+        ? 'SHEIN request needs manual review'
+        : 'SHEIN request ready for review',
       messageAr: needsManualReview
         ? `A customer SHEIN request needs manual review: ${dto.sourceUrl}`
         : `A customer SHEIN product request is ready for admin review: ${dto.sourceUrl}`,
@@ -217,7 +338,10 @@ export class SheinService {
   }
 
   async findAll(query: SheinImportsQueryDto) {
-    const where: Prisma.SheinImportWhereInput = { requestedById: query.requestedById, status: query.status };
+    const where: Prisma.SheinImportWhereInput = {
+      requestedById: query.requestedById,
+      status: query.status,
+    };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.sheinImport.findMany({
         where,
@@ -246,7 +370,16 @@ export class SheinService {
       },
       include: this.include,
     });
-    await this.auditService.log({ actorUserId: user?.id, action: 'SHEIN_IMPORT_UPDATED', entityType: 'SHEIN_IMPORT', entityId: id, metadata: { createdProductId: dto.createdProductId ?? null, errorCode: dto.errorCode ?? null } });
+    await this.auditService.log({
+      actorUserId: user?.id,
+      action: 'SHEIN_IMPORT_UPDATED',
+      entityType: 'SHEIN_IMPORT',
+      entityId: id,
+      metadata: {
+        createdProductId: dto.createdProductId ?? null,
+        errorCode: dto.errorCode ?? null,
+      },
+    });
     return record;
   }
 
@@ -254,7 +387,11 @@ export class SheinService {
     const record = await this.prisma.sheinImport.findUniqueOrThrow({ where: { id } });
     const marketplace = await this.marketplaceSettings.getSettings();
     this.workflow.assertCanReview(record.status);
-    const editedPayload = this.normalizer.normalize(dto.editedPayload ?? record.previewPayload ?? record.editedPayload ?? {}, record.sourceUrl, { strictImages: Boolean(dto.editedPayload), marketplace });
+    const editedPayload = this.normalizer.normalize(
+      dto.editedPayload ?? record.previewPayload ?? record.editedPayload ?? {},
+      record.sourceUrl,
+      { strictImages: Boolean(dto.editedPayload), marketplace },
+    );
 
     const updated = await this.prisma.sheinImport.update({
       where: { id },
@@ -268,7 +405,13 @@ export class SheinService {
       },
       include: this.include,
     });
-    await this.auditService.log({ actorUserId: user?.id, action: 'SHEIN_IMPORT_REVIEWED', entityType: 'SHEIN_IMPORT', entityId: id, metadata: { from: record.status, to: updated.status } });
+    await this.auditService.log({
+      actorUserId: user?.id,
+      action: 'SHEIN_IMPORT_REVIEWED',
+      entityType: 'SHEIN_IMPORT',
+      entityId: id,
+      metadata: { from: record.status, to: updated.status },
+    });
     return updated;
   }
 
@@ -276,7 +419,11 @@ export class SheinService {
     const record = await this.prisma.sheinImport.findUniqueOrThrow({ where: { id } });
     const marketplace = await this.marketplaceSettings.getSettings();
     this.workflow.assertCanApprove(record.status);
-    const editedPayload = this.normalizer.normalize(dto.editedPayload ?? record.editedPayload ?? record.previewPayload ?? {}, record.sourceUrl, { strictImages: Boolean(dto.editedPayload), marketplace });
+    const editedPayload = this.normalizer.normalize(
+      dto.editedPayload ?? record.editedPayload ?? record.previewPayload ?? {},
+      record.sourceUrl,
+      { strictImages: Boolean(dto.editedPayload), marketplace },
+    );
     this.validateProductRequiredFields(editedPayload);
 
     const updated = await this.prisma.sheinImport.update({
@@ -292,13 +439,28 @@ export class SheinService {
       },
       include: this.include,
     });
-    await this.auditService.log({ actorUserId: user?.id, action: 'SHEIN_IMPORT_APPROVED', entityType: 'SHEIN_IMPORT', entityId: id, metadata: { from: record.status, to: updated.status } });
+    await this.auditService.log({
+      actorUserId: user?.id,
+      action: 'SHEIN_IMPORT_APPROVED',
+      entityType: 'SHEIN_IMPORT',
+      entityId: id,
+      metadata: { from: record.status, to: updated.status },
+    });
     return updated;
   }
 
   async createProduct(id: string, dto: ApproveSheinImportDto, user?: AuthenticatedUser) {
     const record = await this.publisher.createProduct(id, dto);
-    await this.auditService.log({ actorUserId: user?.id, action: dto.publishStatus === ProductStatus.ACTIVE ? 'SHEIN_IMPORT_PUBLISHED' : 'SHEIN_PRODUCT_CREATED', entityType: 'SHEIN_IMPORT', entityId: id, metadata: { status: record.status, createdProductId: record.createdProductId ?? null } });
+    await this.auditService.log({
+      actorUserId: user?.id,
+      action:
+        dto.publishStatus === ProductStatus.ACTIVE
+          ? 'SHEIN_IMPORT_PUBLISHED'
+          : 'SHEIN_PRODUCT_CREATED',
+      entityType: 'SHEIN_IMPORT',
+      entityId: id,
+      metadata: { status: record.status, createdProductId: record.createdProductId ?? null },
+    });
     return record;
   }
 
@@ -317,29 +479,57 @@ export class SheinService {
       },
     });
     const prepared = await this.buildPreview(id, undefined);
-    await this.auditService.log({ actorUserId: user?.id, action: 'SHEIN_IMPORT_RETRIED', entityType: 'SHEIN_IMPORT', entityId: id, metadata: { from: record.status, to: prepared.status } });
+    await this.auditService.log({
+      actorUserId: user?.id,
+      action: 'SHEIN_IMPORT_RETRIED',
+      entityType: 'SHEIN_IMPORT',
+      entityId: id,
+      metadata: { from: record.status, to: prepared.status },
+    });
     return prepared;
   }
 
   private async openAssistedImportSession(job: SheinAssistJob, rawPayload: unknown | undefined) {
     let running = await this.assistJobStore.update(job, {
       status: 'running',
-      messageEn: 'SHEIN session opened. Complete any CAPTCHA, login, or popup in the visible page, then continue extraction.',
+      messageEn:
+        'SHEIN session opened. Complete any CAPTCHA, login, or popup in the visible page, then continue extraction.',
       currentStep: 'open_market_link',
       progressMessage: 'opening_visible_browser',
     });
-    running = await this.setJobStep(running, 'prepare_link', 'success', 'SHEIN link prepared with market settings');
-    running = await this.setJobStep(running, 'open_market_link', 'running', 'Opening SHEIN page in visible Chrome');
+    running = await this.setJobStep(
+      running,
+      'prepare_link',
+      'success',
+      'SHEIN link prepared with market settings',
+    );
+    running = await this.setJobStep(
+      running,
+      'open_market_link',
+      'running',
+      'Opening SHEIN page in visible Chrome',
+    );
 
     await this.prisma.sheinImport.update({
       where: { id: running.importId },
-      data: { status: SheinImportStatus.EXTRACTING, rawPayload: rawPayload as Prisma.InputJsonValue | undefined, completedAt: null },
+      data: {
+        status: SheinImportStatus.EXTRACTING,
+        rawPayload: rawPayload as Prisma.InputJsonValue | undefined,
+        completedAt: null,
+      },
     });
 
     try {
-      const result = await this.assistedBrowser.openAssistedSession(running.id, running.sourceUrl, await this.marketplaceSettings.getSettings());
+      const result = await this.assistedBrowser.openAssistedSession(
+        running.id,
+        running.sourceUrl,
+        await this.marketplaceSettings.getSettings(),
+      );
       const updatedJob = await this.applyAssistedSessionResult(running, result, rawPayload);
-      const record = await this.prisma.sheinImport.findUniqueOrThrow({ where: { id: running.importId }, include: this.include });
+      const record = await this.prisma.sheinImport.findUniqueOrThrow({
+        where: { id: running.importId },
+        include: this.include,
+      });
       return {
         ok: true,
         assistedUrl: updatedJob.assistedUrl ?? updatedJob.preparedUrl,
@@ -349,36 +539,76 @@ export class SheinService {
         import: this.withExtraction(record, updatedJob),
       };
     } catch (error) {
-      const message = this.friendlyExtractionMessage(error instanceof Error ? error.message : 'Unable to open visible SHEIN session');
+      const message = this.friendlyExtractionMessage(
+        error instanceof Error ? error.message : 'Unable to open visible SHEIN session',
+      );
       if (this.isTemporaryVisibleBrowserError(message)) {
-        const updatedJob = await this.applyAssistedSessionResult(running, {
-          state: 'loading',
-          message: 'Waiting for SHEIN/CAPTCHA page to finish. Keep the visible Chrome window open; the importer will continue automatically after verification is solved.',
-          sourceUrl: running.sourceUrl,
-          preparedUrl: running.preparedUrl ?? running.assistedUrl ?? running.sourceUrl,
-        }, rawPayload);
-        const record = await this.prisma.sheinImport.findUniqueOrThrow({ where: { id: running.importId }, include: this.include });
-        return { ok: true, assistedUrl: updatedJob.assistedUrl ?? updatedJob.preparedUrl, browserUrl: updatedJob.assistedUrl ?? updatedJob.preparedUrl, ...this.toExtractionResponse(record, updatedJob), job: this.publicAssistJob(updatedJob), import: this.withExtraction(record, updatedJob) };
+        const updatedJob = await this.applyAssistedSessionResult(
+          running,
+          {
+            state: 'loading',
+            message:
+              'Waiting for SHEIN/CAPTCHA page to finish. Keep the visible Chrome window open; the importer will continue automatically after verification is solved.',
+            sourceUrl: running.sourceUrl,
+            preparedUrl: running.preparedUrl ?? running.assistedUrl ?? running.sourceUrl,
+          },
+          rawPayload,
+        );
+        const record = await this.prisma.sheinImport.findUniqueOrThrow({
+          where: { id: running.importId },
+          include: this.include,
+        });
+        return {
+          ok: true,
+          assistedUrl: updatedJob.assistedUrl ?? updatedJob.preparedUrl,
+          browserUrl: updatedJob.assistedUrl ?? updatedJob.preparedUrl,
+          ...this.toExtractionResponse(record, updatedJob),
+          job: this.publicAssistJob(updatedJob),
+          import: this.withExtraction(record, updatedJob),
+        };
       }
       const failed = await this.failAssistJob(running, message, 'open_market_link');
-      const record = await this.prisma.sheinImport.findUniqueOrThrow({ where: { id: running.importId }, include: this.include });
-      return { ok: false, status: 'failed', reason: message, product: null, assistedUrl: failed.assistedUrl ?? failed.preparedUrl, browserUrl: failed.assistedUrl ?? failed.preparedUrl, job: this.publicAssistJob(failed), import: this.withExtraction(record, failed) };
+      const record = await this.prisma.sheinImport.findUniqueOrThrow({
+        where: { id: running.importId },
+        include: this.include,
+      });
+      return {
+        ok: false,
+        status: 'failed',
+        reason: message,
+        product: null,
+        assistedUrl: failed.assistedUrl ?? failed.preparedUrl,
+        browserUrl: failed.assistedUrl ?? failed.preparedUrl,
+        job: this.publicAssistJob(failed),
+        import: this.withExtraction(record, failed),
+      };
     }
   }
 
   private async applyAssistedSessionResult(
     job: SheinAssistJob,
-    result: { state: 'ready' | 'verification' | 'loading'; message: string; sourceUrl: string; preparedUrl: string; preview?: SheinImportPreview },
+    result: {
+      state: 'ready' | 'verification' | 'loading';
+      message: string;
+      sourceUrl: string;
+      preparedUrl: string;
+      preview?: SheinImportPreview;
+    },
     rawPayload: unknown | undefined,
   ): Promise<SheinAssistJob> {
     if (result.state === 'ready' && result.preview) {
       if (!this.isStrictPreviewReady(result.preview)) {
-        return this.applyAssistedSessionResult(job, {
-          ...result,
-          state: 'loading',
-          message: 'Waiting for complete product name, price, and at least two valid SHEIN product images',
-          preview: undefined,
-        }, rawPayload);
+        return this.applyAssistedSessionResult(
+          job,
+          {
+            ...result,
+            state: 'loading',
+            message:
+              'Waiting for complete product name, price, and at least two valid SHEIN product images',
+            preview: undefined,
+          },
+          rawPayload,
+        );
       }
       await this.prisma.sheinImport.update({
         where: { id: job.importId },
@@ -400,8 +630,18 @@ export class SheinService {
         progressMessage: 'ready',
         finishedAt: new Date().toISOString(),
       });
-      ready = await this.setJobStep(ready, 'open_market_link', 'success', 'Opened SHEIN page in Chrome');
-      ready = await this.setJobStep(ready, 'try_extraction', 'success', 'Extracted product data from page');
+      ready = await this.setJobStep(
+        ready,
+        'open_market_link',
+        'success',
+        'Opened SHEIN page in Chrome',
+      );
+      ready = await this.setJobStep(
+        ready,
+        'try_extraction',
+        'success',
+        'Extracted product data from page',
+      );
       ready = await this.setJobStep(ready, 'show_preview', 'success', 'Preview ready for review');
       return this.setJobStep(ready, 'manual_review', 'success', 'No manual input needed');
     }
@@ -413,7 +653,10 @@ export class SheinService {
         status: SheinImportStatus.EXTRACTING,
         errorCode: isVerification ? 'SHEIN_CAPTCHA_REQUIRED' : 'SHEIN_VISIBLE_PAGE_WAITING',
         errorMessage: result.message,
-        errors: { message: result.message, status: isVerification ? 'captcha_required' : 'waiting_for_product_page' },
+        errors: {
+          message: result.message,
+          status: isVerification ? 'captcha_required' : 'waiting_for_product_page',
+        },
         completedAt: null,
       },
     });
@@ -426,17 +669,36 @@ export class SheinService {
       progressMessage: result.message,
       lastError: undefined,
     });
-    waiting = await this.setJobStep(waiting, 'open_market_link', 'success', 'Opened SHEIN page in Chrome');
-    return this.setJobStep(waiting, 'try_extraction', isVerification ? 'verification' : 'running', result.message);
+    waiting = await this.setJobStep(
+      waiting,
+      'open_market_link',
+      'success',
+      'Opened SHEIN page in Chrome',
+    );
+    return this.setJobStep(
+      waiting,
+      'try_extraction',
+      isVerification ? 'verification' : 'running',
+      result.message,
+    );
   }
 
-  private async setJobStep(job: SheinAssistJob, stepId: string, status: SheinImportStep['status'], message?: string): Promise<SheinAssistJob> {
-    const currentJob = await this.assistJobStore.get(job.id) ?? job;
+  private async setJobStep(
+    job: SheinAssistJob,
+    stepId: string,
+    status: SheinImportStep['status'],
+    message?: string,
+  ): Promise<SheinAssistJob> {
+    const currentJob = (await this.assistJobStore.get(job.id)) ?? job;
     const index = currentJob.steps.findIndex((step) => step.id === stepId);
     if (index === -1) return currentJob;
     const now = new Date().toISOString();
-    const steps = currentJob.steps.map((step, stepIndex) => stepIndex === index ? { ...step, status, message, at: now } : step);
-    const terminalStatus = ['ready', 'manual', 'failed', 'expired', 'cancelled'].includes(currentJob.status);
+    const steps = currentJob.steps.map((step, stepIndex) =>
+      stepIndex === index ? { ...step, status, message, at: now } : step,
+    );
+    const terminalStatus = ['ready', 'manual', 'failed', 'expired', 'cancelled'].includes(
+      currentJob.status,
+    );
     return this.assistJobStore.update(currentJob, {
       steps,
       currentStep: stepId,
@@ -451,16 +713,18 @@ export class SheinService {
   }
 
   private async expireAssistJob(job: SheinAssistJob): Promise<SheinAssistJob> {
-    await this.prisma.sheinImport.update({
-      where: { id: job.importId },
-      data: {
-        status: SheinImportStatus.FAILED,
-        errorCode: 'SHEIN_ASSIST_SESSION_EXPIRED',
-        errorMessage: ASSIST_SESSION_EXPIRED_MESSAGE,
-        errors: { message: ASSIST_SESSION_EXPIRED_MESSAGE },
-        completedAt: null,
-      },
-    }).catch(() => undefined);
+    await this.prisma.sheinImport
+      .update({
+        where: { id: job.importId },
+        data: {
+          status: SheinImportStatus.FAILED,
+          errorCode: 'SHEIN_ASSIST_SESSION_EXPIRED',
+          errorMessage: ASSIST_SESSION_EXPIRED_MESSAGE,
+          errors: { message: ASSIST_SESSION_EXPIRED_MESSAGE },
+          completedAt: null,
+        },
+      })
+      .catch(() => undefined);
 
     const expired = await this.assistJobStore.update(job, {
       status: 'expired',
@@ -470,21 +734,32 @@ export class SheinService {
       lastError: ASSIST_SESSION_EXPIRED_MESSAGE,
       finishedAt: new Date().toISOString(),
     });
-    return this.setJobStep(expired, expired.currentStep ?? 'try_extraction', 'error', ASSIST_SESSION_EXPIRED_MESSAGE);
+    return this.setJobStep(
+      expired,
+      expired.currentStep ?? 'try_extraction',
+      'error',
+      ASSIST_SESSION_EXPIRED_MESSAGE,
+    );
   }
 
-  private async failAssistJob(job: SheinAssistJob, message: string, stepId: string = 'try_extraction'): Promise<SheinAssistJob> {
+  private async failAssistJob(
+    job: SheinAssistJob,
+    message: string,
+    stepId: string = 'try_extraction',
+  ): Promise<SheinAssistJob> {
     const friendlyMessage = this.friendlyExtractionMessage(message);
-    await this.prisma.sheinImport.update({
-      where: { id: job.importId },
-      data: {
-        status: SheinImportStatus.FAILED,
-        errorCode: 'SHEIN_ASSIST_FAILED',
-        errorMessage: friendlyMessage,
-        errors: { message: friendlyMessage },
-        completedAt: null,
-      },
-    }).catch(() => undefined);
+    await this.prisma.sheinImport
+      .update({
+        where: { id: job.importId },
+        data: {
+          status: SheinImportStatus.FAILED,
+          errorCode: 'SHEIN_ASSIST_FAILED',
+          errorMessage: friendlyMessage,
+          errors: { message: friendlyMessage },
+          completedAt: null,
+        },
+      })
+      .catch(() => undefined);
 
     const failed = await this.assistJobStore.update(job, {
       status: 'failed',
@@ -498,37 +773,65 @@ export class SheinService {
     return this.setJobStep(failed, stepId, 'error', friendlyMessage);
   }
 
-
   private friendlyExtractionMessage(message: string): string {
     const value = String(message || '').trim();
     if (!value) return ASSIST_SESSION_EXPIRED_MESSAGE;
     if (/visible price does not match|currency mismatch/i.test(value)) {
       return 'Detected price does not match selected currency. Reopen link with correct settings.';
     }
-    if (/price/i.test(value) && /extraction failed|could not extract|missing|required|not found|invalid|NaN/i.test(value)) {
+    if (
+      /price/i.test(value) &&
+      /extraction failed|could not extract|missing|required|not found|invalid|NaN/i.test(value)
+    ) {
       return 'Unable to determine discounted price from product page';
     }
     return value.length <= 260 ? value : MANUAL_REVIEW_MESSAGE;
   }
 
   private isTemporaryVisibleBrowserError(message: string): boolean {
-    return /timed out|timeout|DevTools|communicate|fetch failed|ECONNREFUSED|ECONNRESET|aborted|Target closed|No target|socket|terminated while loading|tab was closed|visible chrome was closed/i.test(message);
+    return /timed out|timeout|DevTools|communicate|fetch failed|ECONNREFUSED|ECONNRESET|aborted|Target closed|No target|socket|terminated while loading|tab was closed|visible chrome was closed/i.test(
+      message,
+    );
   }
 
-  private async extractV1StylePreview(sourceUrl: string, marketplace: SheinMarketplaceSettings, onStep?: (stepId: string, status: SheinImportStep['status'], message?: string) => void): Promise<SheinImportPreview> {
+  private async extractV1StylePreview(
+    sourceUrl: string,
+    marketplace: SheinMarketplaceSettings,
+    onStep?: (stepId: string, status: SheinImportStep['status'], message?: string) => void,
+  ): Promise<SheinImportPreview> {
     onStep?.('prepare_link', 'success', 'SHEIN link accepted and market settings added');
-    onStep?.('open_market_link', this.assistedBrowser.isInteractiveEnabled() ? 'running' : 'success', this.assistedBrowser.isInteractiveEnabled() ? 'Chrome will open automatically on admin device' : 'Open link in browser via Open link button');
+    onStep?.(
+      'open_market_link',
+      this.assistedBrowser.isInteractiveEnabled() ? 'running' : 'success',
+      this.assistedBrowser.isInteractiveEnabled()
+        ? 'Chrome will open automatically on admin device'
+        : 'Open link in browser via Open link button',
+    );
     onStep?.('start_session', 'success', 'Started SHEIN import session in V2');
-    onStep?.('try_extraction', 'running', this.assistedBrowser.isInteractiveEnabled() ? 'Waiting for Chrome and reading page after any CAPTCHA' : 'Attempting to read page from server without opening Chrome in Docker');
+    onStep?.(
+      'try_extraction',
+      'running',
+      this.assistedBrowser.isInteractiveEnabled()
+        ? 'Waiting for Chrome and reading page after any CAPTCHA'
+        : 'Attempting to read page from server without opening Chrome in Docker',
+    );
 
     if (this.assistedBrowser.isInteractiveEnabled()) {
       try {
-        return await this.assistedBrowser.captureProductPreview(sourceUrl, marketplace, (legacyStepId, status, message) => {
-          const mappedStepId = this.mapLegacyAssistedStep(legacyStepId, status);
-          onStep?.(mappedStepId, status, message);
-        });
+        return await this.assistedBrowser.captureProductPreview(
+          sourceUrl,
+          marketplace,
+          (legacyStepId, status, message) => {
+            const mappedStepId = this.mapLegacyAssistedStep(legacyStepId, status);
+            onStep?.(mappedStepId, status, message);
+          },
+        );
       } catch {
-        onStep?.('try_extraction', 'warning', 'Could not open automatic Chrome, manual path will continue without stopping import');
+        onStep?.(
+          'try_extraction',
+          'warning',
+          'Could not open automatic Chrome, manual path will continue without stopping import',
+        );
       }
     }
 
@@ -540,7 +843,11 @@ export class SheinService {
       onStep?.('try_extraction', 'running', 'Page loaded and extracting data');
     } catch (error) {
       firstError = error;
-      onStep?.('try_extraction', 'warning', 'Could not load enough data from SHEIN, manual review will open');
+      onStep?.(
+        'try_extraction',
+        'warning',
+        'Could not load enough data from SHEIN, manual review will open',
+      );
     }
 
     if (page) {
@@ -551,16 +858,31 @@ export class SheinService {
         return preview;
       } catch (error) {
         firstError = error;
-        onStep?.('try_extraction', 'warning', 'SHEIN did not return enough data, manual review will open');
+        onStep?.(
+          'try_extraction',
+          'warning',
+          'SHEIN did not return enough data, manual review will open',
+        );
       }
     }
 
     if (this.fetchService.shouldUseBrowserFallback()) {
       try {
-        onStep?.('try_extraction', 'running', `Trying headless Chromium for a short time only ${Math.round(this.fetchService.browserTimeoutMs() / 1000)} seconds`);
-        const browserPage = await this.fetchService.dumpProductPageWithBrowser(sourceUrl, marketplace);
+        onStep?.(
+          'try_extraction',
+          'running',
+          `Trying headless Chromium for a short time only ${Math.round(this.fetchService.browserTimeoutMs() / 1000)} seconds`,
+        );
+        const browserPage = await this.fetchService.dumpProductPageWithBrowser(
+          sourceUrl,
+          marketplace,
+        );
         if (browserPage) {
-          const preview = this.extractor.extract(browserPage.finalUrl || sourceUrl, browserPage.html, marketplace);
+          const preview = this.extractor.extract(
+            browserPage.finalUrl || sourceUrl,
+            browserPage.html,
+            marketplace,
+          );
           onStep?.('try_extraction', 'success', 'Data extracted via headless Chromium');
           onStep?.('show_preview', 'success', 'Preview ready for review');
           return preview;
@@ -571,14 +893,25 @@ export class SheinService {
     }
 
     onStep?.('manual_review', 'warning', MANUAL_REVIEW_MESSAGE);
-    throw firstError instanceof Error ? new Error(MANUAL_REVIEW_MESSAGE, { cause: firstError }) : new Error(MANUAL_REVIEW_MESSAGE);
+    throw firstError instanceof Error
+      ? new Error(MANUAL_REVIEW_MESSAGE, { cause: firstError })
+      : new Error(MANUAL_REVIEW_MESSAGE);
   }
 
-  private async buildPreview(importId: string, rawPayload: unknown | undefined, onStep?: (stepId: string, status: SheinImportStep['status'], message?: string) => void) {
+  private async buildPreview(
+    importId: string,
+    rawPayload: unknown | undefined,
+    onStep?: (stepId: string, status: SheinImportStep['status'], message?: string) => void,
+  ) {
     const record = await this.prisma.sheinImport.findUniqueOrThrow({ where: { id: importId } });
     const marketplace = await this.marketplaceSettings.getSettings();
-    this.logger.log(`SHEIN extraction started importId=${importId} country=${marketplace.countryCode} currency=${marketplace.currencyCode} lang=${marketplace.language}`);
-    await this.prisma.sheinImport.update({ where: { id: importId }, data: { status: SheinImportStatus.EXTRACTING, completedAt: null } });
+    this.logger.log(
+      `SHEIN extraction started importId=${importId} country=${marketplace.countryCode} currency=${marketplace.currencyCode} lang=${marketplace.language}`,
+    );
+    await this.prisma.sheinImport.update({
+      where: { id: importId },
+      data: { status: SheinImportStatus.EXTRACTING, completedAt: null },
+    });
 
     try {
       const preview = rawPayload
@@ -586,7 +919,9 @@ export class SheinService {
         : await this.extractV1StylePreview(record.sourceUrl, marketplace, onStep);
 
       if (preview.images.length < 2) {
-        this.logger.warn(`SHEIN extraction manual review importId=${importId} reason=${MISSING_PRODUCT_IMAGES_MESSAGE}`);
+        this.logger.warn(
+          `SHEIN extraction manual review importId=${importId} reason=${MISSING_PRODUCT_IMAGES_MESSAGE}`,
+        );
         onStep?.('manual_review', 'warning', MISSING_PRODUCT_IMAGES_MESSAGE);
         return this.prisma.sheinImport.update({
           where: { id: importId },
@@ -603,7 +938,9 @@ export class SheinService {
         });
       }
 
-      this.logger.log(`SHEIN extraction succeeded importId=${importId} images=${preview.images.length} variants=${preview.variants.length}`);
+      this.logger.log(
+        `SHEIN extraction succeeded importId=${importId} images=${preview.images.length} variants=${preview.variants.length}`,
+      );
       return this.prisma.sheinImport.update({
         where: { id: importId },
         data: {
@@ -618,7 +955,9 @@ export class SheinService {
         include: this.include,
       });
     } catch (error) {
-      const friendlyMessage = this.friendlyExtractionMessage(error instanceof Error ? error.message : '');
+      const friendlyMessage = this.friendlyExtractionMessage(
+        error instanceof Error ? error.message : '',
+      );
       this.logger.warn(`SHEIN extraction fallback importId=${importId} reason=${friendlyMessage}`);
       onStep?.('manual_review', 'warning', friendlyMessage);
       return this.prisma.sheinImport.update({
@@ -646,7 +985,11 @@ export class SheinService {
     if (!payload.nameAr.trim()) {
       throw new BadRequestException('Product name is required before approval');
     }
-    if (!payload.priceAmount.trim() || !Number.isFinite(Number(payload.priceAmount)) || Number(payload.priceAmount) <= 0) {
+    if (
+      !payload.priceAmount.trim() ||
+      !Number.isFinite(Number(payload.priceAmount)) ||
+      Number(payload.priceAmount) <= 0
+    ) {
       throw new BadRequestException('Price is required before approval');
     }
     if (payload.currency !== FIXED_SHEIN_CURRENCY) {
@@ -663,29 +1006,46 @@ export class SheinService {
 
   private isStrictPreviewReady(preview: SheinImportPreview): boolean {
     return Boolean(
-      preview.nameAr?.trim()
-      && preview.priceAmount?.trim()
-      && Number.isFinite(Number(preview.priceAmount))
-      && Number(preview.priceAmount) > 0
-      && preview.images.length >= 2,
+      preview.nameAr?.trim() &&
+      preview.priceAmount?.trim() &&
+      Number.isFinite(Number(preview.priceAmount)) &&
+      Number(preview.priceAmount) > 0 &&
+      preview.images.length >= 2,
     );
   }
 
-  private withExtraction<T extends { status: SheinImportStatus; sourceUrl: string; previewPayload?: unknown; errorMessage?: string | null; errorCode?: string | null }>(
-    record: T,
-    job?: SheinAssistJob,
-  ): T & { extraction: SheinImportExtractionResponse } {
+  private withExtraction<
+    T extends {
+      status: SheinImportStatus;
+      sourceUrl: string;
+      previewPayload?: unknown;
+      errorMessage?: string | null;
+      errorCode?: string | null;
+    },
+  >(record: T, job?: SheinAssistJob): T & { extraction: SheinImportExtractionResponse } {
     return { ...record, extraction: this.toExtractionResponse(record, job) };
   }
 
   private toExtractionResponse(
-    record: { status: SheinImportStatus; sourceUrl: string; previewPayload?: unknown; errorMessage?: string | null; errorCode?: string | null },
+    record: {
+      status: SheinImportStatus;
+      sourceUrl: string;
+      previewPayload?: unknown;
+      errorMessage?: string | null;
+      errorCode?: string | null;
+    },
     job?: SheinAssistJob,
   ): SheinImportExtractionResponse {
-    if (job?.status === 'verification' || job?.steps.some((step) => step.status === 'verification')) {
+    if (
+      job?.status === 'verification' ||
+      job?.steps.some((step) => step.status === 'verification')
+    ) {
       return {
         status: 'captcha_required',
-        reason: job.progressMessage || job.messageEn || 'SHEIN requires verification. Complete CAPTCHA in the opened browser, then retry extraction.',
+        reason:
+          job.progressMessage ||
+          job.messageEn ||
+          'SHEIN requires verification. Complete CAPTCHA in the opened browser, then retry extraction.',
         product: null,
       };
     }
@@ -702,12 +1062,14 @@ export class SheinService {
     if (preview && preview.nameAr && preview.images.length > 0) {
       return {
         status: 'manual_review',
-        reason: record.errorMessage || 'Partial product data was extracted and needs manual review.',
+        reason:
+          record.errorMessage || 'Partial product data was extracted and needs manual review.',
         product: this.previewToExtractedProduct(preview, record.sourceUrl),
       };
     }
 
-    const reason = record.errorMessage || job?.lastError || job?.progressMessage || MANUAL_REVIEW_MESSAGE;
+    const reason =
+      record.errorMessage || job?.lastError || job?.progressMessage || MANUAL_REVIEW_MESSAGE;
     return {
       status: record.status === SheinImportStatus.FAILED ? 'failed' : 'manual_review',
       reason,
@@ -715,7 +1077,10 @@ export class SheinService {
     };
   }
 
-  private previewToExtractedProduct(preview: SheinImportPreview, sourceUrl: string): SheinImportExtractionResponse['product'] {
+  private previewToExtractedProduct(
+    preview: SheinImportPreview,
+    sourceUrl: string,
+  ): SheinImportExtractionResponse['product'] {
     return {
       title: preview.nameEn || preview.nameAr,
       price: Number(preview.priceAmount),
@@ -727,7 +1092,7 @@ export class SheinService {
         color: variant.color ?? null,
         size: variant.size ?? null,
         sku: variant.sku ?? null,
-        stock: Number.isFinite(variant.stockQuantity) ? variant.stockQuantity ?? null : null,
+        stock: Number.isFinite(variant.stockQuantity) ? (variant.stockQuantity ?? null) : null,
       })),
       sourceUrl,
       sourceProductId: preview.sku ?? this.sourceProductIdFromUrl(sourceUrl),
@@ -736,18 +1101,26 @@ export class SheinService {
   }
 
   private isPreview(value: unknown): value is SheinImportPreview {
-    return Boolean(value && typeof value === 'object' && 'nameAr' in value && 'priceAmount' in value && 'images' in value);
+    return Boolean(
+      value &&
+      typeof value === 'object' &&
+      'nameAr' in value &&
+      'priceAmount' in value &&
+      'images' in value,
+    );
   }
 
   private sourceProductIdFromUrl(sourceUrl: string): string | null {
     try {
       const url = new URL(sourceUrl);
-      return url.pathname.match(/-p-(\d+)/i)?.[1]
-        ?? url.searchParams.get('goods_id')
-        ?? url.searchParams.get('goodsId')
-        ?? url.searchParams.get('product_id')
-        ?? url.searchParams.get('url_from')?.match(/(?:GM)?(\d{6,})/i)?.[1]
-        ?? null;
+      return (
+        url.pathname.match(/-p-(\d+)/i)?.[1] ??
+        url.searchParams.get('goods_id') ??
+        url.searchParams.get('goodsId') ??
+        url.searchParams.get('product_id') ??
+        url.searchParams.get('url_from')?.match(/(?:GM)?(\d{6,})/i)?.[1] ??
+        null
+      );
     } catch {
       return null;
     }

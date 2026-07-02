@@ -1,7 +1,15 @@
 import { BadRequestException } from '@nestjs/common';
 import { SettingScope } from '@prisma/client';
 
-type SettingValueType = 'string' | 'number' | 'url' | 'phone' | 'currency' | 'sheinCountry' | 'sheinFixedCurrency' | 'sheinLanguage';
+type SettingValueType =
+  | 'string'
+  | 'number'
+  | 'url'
+  | 'phone'
+  | 'currency'
+  | 'sheinCountry'
+  | 'sheinFixedCurrency'
+  | 'sheinLanguage';
 
 type SettingDefinition = {
   key: string;
@@ -14,21 +22,121 @@ type SettingDefinition = {
 };
 
 const definitions: SettingDefinition[] = [
-  { key: 'store.name', scope: SettingScope.PUBLIC, type: 'string', label: 'Store name', required: true },
-  { key: 'store.whatsapp', scope: SettingScope.PUBLIC, type: 'phone', label: 'WhatsApp number', required: false },
-  { key: 'store.phone', scope: SettingScope.PUBLIC, type: 'phone', label: 'Phone number', required: false },
-  { key: 'store.instagram', scope: SettingScope.PUBLIC, type: 'url', label: 'Instagram URL', required: false },
-  { key: 'store.currency', scope: SettingScope.PUBLIC, type: 'currency', label: 'Currency', required: true },
-  { key: 'payment.depositMinPercent', scope: SettingScope.PUBLIC, type: 'number', label: 'Minimum deposit percent', required: true, min: 50, max: 70 },
-  { key: 'payment.depositDefaultPercent', scope: SettingScope.PUBLIC, type: 'number', label: 'Default deposit percent', required: true, min: 50, max: 70 },
-  { key: 'payment.vodafoneFeePercent', scope: SettingScope.PUBLIC, type: 'number', label: 'Vodafone Cash fee percent', required: true, min: 0, max: 20 },
-  { key: 'payment.vodafoneCash', scope: SettingScope.PUBLIC, type: 'phone', label: 'Vodafone Cash', required: true },
-  { key: 'payment.instapay', scope: SettingScope.PUBLIC, type: 'string', label: 'Instapay', required: true },
-  { key: 'shipping.estimatedDays', scope: SettingScope.PUBLIC, type: 'number', label: 'Estimated shipping days', required: true, min: 1, max: 120 },
-  { key: 'shein.import.country', scope: SettingScope.ADMIN, type: 'sheinCountry', label: 'SHEIN import country', required: false },
-  { key: 'shein.import.currency', scope: SettingScope.ADMIN, type: 'sheinFixedCurrency', label: 'SHEIN import currency', required: false },
-  { key: 'shein.import.language', scope: SettingScope.ADMIN, type: 'sheinLanguage', label: 'SHEIN import language', required: false },
-  { key: 'shein.import.sarExchangeRate', scope: SettingScope.ADMIN, type: 'number', label: 'SHEIN SAR exchange rate', required: true, min: 1, max: 1000 },
+  {
+    key: 'store.name',
+    scope: SettingScope.PUBLIC,
+    type: 'string',
+    label: 'Store name',
+    required: true,
+  },
+  {
+    key: 'store.whatsapp',
+    scope: SettingScope.PUBLIC,
+    type: 'phone',
+    label: 'WhatsApp number',
+    required: false,
+  },
+  {
+    key: 'store.phone',
+    scope: SettingScope.PUBLIC,
+    type: 'phone',
+    label: 'Phone number',
+    required: false,
+  },
+  {
+    key: 'store.instagram',
+    scope: SettingScope.PUBLIC,
+    type: 'url',
+    label: 'Instagram URL',
+    required: false,
+  },
+  {
+    key: 'store.currency',
+    scope: SettingScope.PUBLIC,
+    type: 'currency',
+    label: 'Currency',
+    required: true,
+  },
+  {
+    key: 'payment.depositMinPercent',
+    scope: SettingScope.PUBLIC,
+    type: 'number',
+    label: 'Minimum deposit percent',
+    required: true,
+    min: 50,
+    max: 70,
+  },
+  {
+    key: 'payment.depositDefaultPercent',
+    scope: SettingScope.PUBLIC,
+    type: 'number',
+    label: 'Default deposit percent',
+    required: true,
+    min: 50,
+    max: 70,
+  },
+  {
+    key: 'payment.vodafoneFeePercent',
+    scope: SettingScope.PUBLIC,
+    type: 'number',
+    label: 'Vodafone Cash fee percent',
+    required: true,
+    min: 0,
+    max: 20,
+  },
+  {
+    key: 'payment.vodafoneCash',
+    scope: SettingScope.PUBLIC,
+    type: 'phone',
+    label: 'Vodafone Cash',
+    required: true,
+  },
+  {
+    key: 'payment.instapay',
+    scope: SettingScope.PUBLIC,
+    type: 'string',
+    label: 'Instapay',
+    required: true,
+  },
+  {
+    key: 'shipping.estimatedDays',
+    scope: SettingScope.PUBLIC,
+    type: 'number',
+    label: 'Estimated shipping days',
+    required: true,
+    min: 1,
+    max: 120,
+  },
+  {
+    key: 'shein.import.country',
+    scope: SettingScope.ADMIN,
+    type: 'sheinCountry',
+    label: 'SHEIN import country',
+    required: false,
+  },
+  {
+    key: 'shein.import.currency',
+    scope: SettingScope.ADMIN,
+    type: 'sheinFixedCurrency',
+    label: 'SHEIN import currency',
+    required: false,
+  },
+  {
+    key: 'shein.import.language',
+    scope: SettingScope.ADMIN,
+    type: 'sheinLanguage',
+    label: 'SHEIN import language',
+    required: false,
+  },
+  {
+    key: 'shein.import.sarExchangeRate',
+    scope: SettingScope.ADMIN,
+    type: 'number',
+    label: 'SHEIN SAR exchange rate',
+    required: true,
+    min: 1,
+    max: 1000,
+  },
 ];
 
 const registry = new Map(definitions.map((definition) => [definition.key, definition]));
@@ -41,7 +149,11 @@ export function getSettingDefinition(key: string): SettingDefinition | undefined
   return registry.get(key);
 }
 
-export function validateSettingValue(key: string, value: unknown, scope: SettingScope | undefined): { value: string | number; scope: SettingScope } {
+export function validateSettingValue(
+  key: string,
+  value: unknown,
+  scope: SettingScope | undefined,
+): { value: string | number; scope: SettingScope } {
   const definition = registry.get(key);
   if (!definition) {
     throw new BadRequestException(`Unsupported setting key: ${key}`);
@@ -75,7 +187,11 @@ function normalizeValue(definition: SettingDefinition, value: unknown): string |
     if (definition.max !== undefined && parsed > definition.max) {
       throw new BadRequestException(`${definition.label} must be at most ${definition.max}`);
     }
-    if ((definition.key === 'payment.depositMinPercent' || definition.key === 'payment.depositDefaultPercent') && ![50, 60, 70].includes(parsed)) {
+    if (
+      (definition.key === 'payment.depositMinPercent' ||
+        definition.key === 'payment.depositDefaultPercent') &&
+      ![50, 60, 70].includes(parsed)
+    ) {
       throw new BadRequestException(`${definition.label} must be 50, 60, or 70`);
     }
     return parsed;

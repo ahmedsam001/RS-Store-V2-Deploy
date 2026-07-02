@@ -31,7 +31,11 @@ export const customerRoutes: RouteObject[] = [
   {
     path: ROUTES.sheinRequest,
     element: (
-      <RequireAuth roles={['CUSTOMER']} preserveReturnTo fallback={<Navigate to={PATHS.home} replace />}>
+      <RequireAuth
+        roles={['CUSTOMER']}
+        preserveReturnTo
+        fallback={<Navigate to={PATHS.home} replace />}
+      >
         {withRouteLoading(<SheinRequestPage />)}
       </RequireAuth>
     ),
@@ -39,7 +43,11 @@ export const customerRoutes: RouteObject[] = [
   {
     path: ROUTES.profile,
     element: (
-      <RequireAuth roles={['CUSTOMER']} preserveReturnTo fallback={<Navigate to={PATHS.home} replace />}>
+      <RequireAuth
+        roles={['CUSTOMER']}
+        preserveReturnTo
+        fallback={<Navigate to={PATHS.home} replace />}
+      >
         {withRouteLoading(<CustomerProfilePage />)}
       </RequireAuth>
     ),

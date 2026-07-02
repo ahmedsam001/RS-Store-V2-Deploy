@@ -47,19 +47,19 @@ export function CategoryNav({ activeSlug, categories }: CategoryNavProps) {
             </span>
             <span className="rs-category-tile-label">{category.name}</span>
           </CatalogLink>
-              {category.subCategories && category.subCategories.length > 0 ? (
-                <div className="rs-subcategory-list">
-                  {category.subCategories.map((sub) => (
-                    <CatalogLink
-                      key={sub.id}
-                      href={`${getCategoryUrl(category.slug)}?subCategorySlug=${encodeURIComponent(sub.slug)}`}
-                      className="rs-subcategory-chip"
-                    >
-                      {sub.name}
-                    </CatalogLink>
-                  ))}
-                </div>
-              ) : null}
+          {category.subCategories && category.subCategories.length > 0 ? (
+            <div className="rs-subcategory-list">
+              {category.subCategories.map((sub) => (
+                <CatalogLink
+                  key={sub.id}
+                  href={`${getCategoryUrl(category.slug)}?subCategorySlug=${encodeURIComponent(sub.slug)}`}
+                  className="rs-subcategory-chip"
+                >
+                  {sub.name}
+                </CatalogLink>
+              ))}
+            </div>
+          ) : null}
         </div>
       ))}
     </nav>

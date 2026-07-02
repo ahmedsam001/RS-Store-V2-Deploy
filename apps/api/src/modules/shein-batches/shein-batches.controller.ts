@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -44,7 +55,11 @@ export class SheinBatchesController {
   }
 
   @Patch(':id')
-  update(@Param() params: IdParamDto, @Body() dto: UpdateSheinBatchDto, @CurrentUser() user: AuthenticatedUser) {
+  update(
+    @Param() params: IdParamDto,
+    @Body() dto: UpdateSheinBatchDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinBatchesService.update(params.id, dto, user);
   }
 
@@ -54,25 +69,39 @@ export class SheinBatchesController {
   }
 
   @Post(':id/notifications/whatsapp/regenerate')
-  regenerateWhatsappNotifications(@Param() params: IdParamDto, @CurrentUser() user: AuthenticatedUser) {
+  regenerateWhatsappNotifications(
+    @Param() params: IdParamDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinBatchesService.regenerateWhatsappMessages(params.id, user);
   }
 
   @Patch(':id/status')
-  updateStatus(@Param() params: IdParamDto, @Body() dto: UpdateSheinBatchStatusDto, @CurrentUser() user: AuthenticatedUser) {
+  updateStatus(
+    @Param() params: IdParamDto,
+    @Body() dto: UpdateSheinBatchStatusDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinBatchesService.updateStatus(params.id, dto, user);
   }
 
   @Post(':id/items')
-  addItem(@Param() params: IdParamDto, @Body() dto: AddSheinBatchItemDto, @CurrentUser() user: AuthenticatedUser) {
+  addItem(
+    @Param() params: IdParamDto,
+    @Body() dto: AddSheinBatchItemDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinBatchesService.addItem(params.id, dto, user);
   }
 
   @Post(':id/items/bulk')
-  addItems(@Param() params: IdParamDto, @Body() dto: BulkAddSheinBatchItemsDto, @CurrentUser() user: AuthenticatedUser) {
+  addItems(
+    @Param() params: IdParamDto,
+    @Body() dto: BulkAddSheinBatchItemsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinBatchesService.addItems(params.id, dto, user);
   }
-
 
   @Patch(':id/items/:itemId/status')
   updateItemStatus(

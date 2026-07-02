@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
@@ -22,7 +27,10 @@ export class UsersService {
     updatedAt: true,
   } satisfies Prisma.UserSelect;
 
-  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async create(actor: AuthenticatedUser, dto: CreateUserDto) {
     this.assertCanAssignRole(actor, dto.role ?? UserRole.CUSTOMER);
@@ -106,7 +114,11 @@ export class UsersService {
       action: 'USER_UPDATED',
       entityType: 'USER',
       entityId: id,
-      metadata: { role: dto.role ?? null, status: dto.status ?? null, passwordChanged: Boolean(dto.password) },
+      metadata: {
+        role: dto.role ?? null,
+        status: dto.status ?? null,
+        passwordChanged: Boolean(dto.password),
+      },
     });
     return user;
   }
@@ -139,7 +151,10 @@ export class UsersService {
   }
 
   private async findExistingUser(id: string): Promise<{ id: string; role: UserRole }> {
-    const user = await this.prisma.user.findFirst({ where: { id, deletedAt: null }, select: { id: true, role: true } });
+    const user = await this.prisma.user.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, role: true },
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -154,7 +169,10 @@ export class UsersService {
     }
   }
 
-  private assertCanModifyTarget(actor: AuthenticatedUser, target: { id: string; role: UserRole }): void {
+  private assertCanModifyTarget(
+    actor: AuthenticatedUser,
+    target: { id: string; role: UserRole },
+  ): void {
     if (target.role === UserRole.OWNER && actor.role !== UserRole.OWNER) {
       throw new ForbiddenException('Only an owner can modify owner accounts');
     }

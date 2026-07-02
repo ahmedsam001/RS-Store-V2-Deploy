@@ -9,21 +9,38 @@ export const sheinApi = {
   getMarketplaceSettings: () => adminApi.sheinMarketplaceSettings(),
   getSettings: () => adminApi.settings(),
   getImport: (id: string) => adminApi.sheinImport(id),
-  startAssist: (input: { sourceUrl: string; rawPayload?: unknown }, options: SheinWriteOptions = {}) =>
-    adminApi.startSheinAssist(input, options),
+  startAssist: (
+    input: { sourceUrl: string; rawPayload?: unknown },
+    options: SheinWriteOptions = {},
+  ) => adminApi.startSheinAssist(input, options),
   getAssistJob: (jobId: string) => adminApi.sheinAssistJob(jobId),
-  continueAssist: (jobId: string, options: SheinWriteOptions = {}) => adminApi.continueSheinAssist(jobId, options),
-  createImport: (input: { sourceUrl: string; rawPayload?: unknown }, options: SheinWriteOptions = {}) =>
-    adminApi.createSheinImport(input, options),
-  reviewProduct: (id: string, editedPayload: SheinPreviewPayload, options: SheinWriteOptions = {}) =>
-    adminApi.reviewSheinProduct(id, editedPayload, options),
-  approveProduct: (id: string, editedPayload?: SheinPreviewPayload, options: SheinWriteOptions = {}) =>
-    adminApi.approveSheinProduct(id, editedPayload, options),
-  publishProduct: (id: string, editedPayload?: SheinPreviewPayload, options: SheinWriteOptions = {}) =>
-    adminApi.publishSheinProduct(id, editedPayload, options),
-  retryImport: (id: string, options: SheinWriteOptions = {}) => adminApi.retrySheinImport(id, options),
-  updateMarketplaceSettings: (input: { countryCode: string; language?: string }, options: SheinWriteOptions = {}) =>
-    adminApi.updateSheinMarketplaceSettings(input, options),
+  continueAssist: (jobId: string, options: SheinWriteOptions = {}) =>
+    adminApi.continueSheinAssist(jobId, options),
+  createImport: (
+    input: { sourceUrl: string; rawPayload?: unknown },
+    options: SheinWriteOptions = {},
+  ) => adminApi.createSheinImport(input, options),
+  reviewProduct: (
+    id: string,
+    editedPayload: SheinPreviewPayload,
+    options: SheinWriteOptions = {},
+  ) => adminApi.reviewSheinProduct(id, editedPayload, options),
+  approveProduct: (
+    id: string,
+    editedPayload?: SheinPreviewPayload,
+    options: SheinWriteOptions = {},
+  ) => adminApi.approveSheinProduct(id, editedPayload, options),
+  publishProduct: (
+    id: string,
+    editedPayload?: SheinPreviewPayload,
+    options: SheinWriteOptions = {},
+  ) => adminApi.publishSheinProduct(id, editedPayload, options),
+  retryImport: (id: string, options: SheinWriteOptions = {}) =>
+    adminApi.retrySheinImport(id, options),
+  updateMarketplaceSettings: (
+    input: { countryCode: string; language?: string },
+    options: SheinWriteOptions = {},
+  ) => adminApi.updateSheinMarketplaceSettings(input, options),
 };
 
 export function readSarExchangeRate(settings: AdminSetting[]): number {

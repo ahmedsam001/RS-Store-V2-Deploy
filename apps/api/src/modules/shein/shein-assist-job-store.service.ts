@@ -16,8 +16,14 @@ export class SheinAssistJobStore {
     private readonly redisService: RedisService,
     configService: ConfigService,
   ) {
-    this.ttlMs = this.parsePositiveMs(configService.get<string>('SHEIN_ASSIST_JOB_TTL_MS'), DEFAULT_ASSIST_JOB_TTL_MS);
-    this.staleMs = this.parsePositiveMs(configService.get<string>('SHEIN_ASSIST_STALE_MS'), DEFAULT_STALE_JOB_MS);
+    this.ttlMs = this.parsePositiveMs(
+      configService.get<string>('SHEIN_ASSIST_JOB_TTL_MS'),
+      DEFAULT_ASSIST_JOB_TTL_MS,
+    );
+    this.staleMs = this.parsePositiveMs(
+      configService.get<string>('SHEIN_ASSIST_STALE_MS'),
+      DEFAULT_STALE_JOB_MS,
+    );
   }
 
   ttlSeconds(): number {
@@ -34,7 +40,9 @@ export class SheinAssistJobStore {
 
   async save(job: SheinAssistJob): Promise<void> {
     await this.ensureConnected();
-    await this.redisService.getClient().set(this.key(job.id), JSON.stringify(job), 'EX', this.ttlSeconds());
+    await this.redisService
+      .getClient()
+      .set(this.key(job.id), JSON.stringify(job), 'EX', this.ttlSeconds());
   }
 
   async get(jobId: string): Promise<SheinAssistJob | null> {

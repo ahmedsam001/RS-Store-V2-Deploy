@@ -55,7 +55,9 @@ export function CatalogPage() {
           ]);
 
           if (!abortController.signal.aborted) {
-            setFeaturedSubCategories(subCategoryItems.filter((subcategory) => subcategory.productsCount > 0));
+            setFeaturedSubCategories(
+              subCategoryItems.filter((subcategory) => subcategory.productsCount > 0),
+            );
             setHomeFlashSales(flashSaleItems.filter((sale) => sale.products.length > 0));
             setProducts(productItems);
             setCategories([]);
@@ -98,9 +100,15 @@ export function CatalogPage() {
   }
 
   const pageTitle = activeCategory?.name ?? displayTitleFromSlug(categorySlug) ?? 'All Products';
-  const categorySubCategories = (activeCategory?.subCategories ?? []).filter((subcategory) => subcategory.productCount > 0);
-  const visibleSubCategories = categorySubCategories.length > 0 ? categorySubCategories : featuredSubCategories.filter((subcategory) => subcategory.productsCount > 0);
-  const visibleSubCategoryParentSlug = categorySubCategories.length > 0 ? activeCategory?.slug : undefined;
+  const categorySubCategories = (activeCategory?.subCategories ?? []).filter(
+    (subcategory) => subcategory.productCount > 0,
+  );
+  const visibleSubCategories =
+    categorySubCategories.length > 0
+      ? categorySubCategories
+      : featuredSubCategories.filter((subcategory) => subcategory.productsCount > 0);
+  const visibleSubCategoryParentSlug =
+    categorySubCategories.length > 0 ? activeCategory?.slug : undefined;
   const hasVisibleSubCategories = visibleSubCategories.length > 0;
 
   useDocumentMetadata({
@@ -123,7 +131,10 @@ export function CatalogPage() {
         <section className="rs-storefront-showcase-wrap" aria-label="Loading catalog">
           <div className="rs-container">
             <div className="rs-storefront-showcase-card">
-              <section className="rs-hero rs-storefront-compact-hero" aria-label="Loading catalog heading">
+              <section
+                className="rs-hero rs-storefront-compact-hero"
+                aria-label="Loading catalog heading"
+              >
                 <div className="rs-hero-branch-left" aria-hidden="true" />
                 <div className="rs-hero-branch-right" aria-hidden="true" />
                 <div className="rs-hero-logo-mark" aria-hidden="true" />
@@ -186,7 +197,10 @@ export function CatalogPage() {
                 ) : (
                   <SubcategoryCircleNav
                     subcategories={visibleSubCategories}
-                    activeSlug={query.subCategorySlug ?? (activeCategory?.parentCategorySlug ? activeCategory.slug : undefined)}
+                    activeSlug={
+                      query.subCategorySlug ??
+                      (activeCategory?.parentCategorySlug ? activeCategory.slug : undefined)
+                    }
                     parentCategorySlug={visibleSubCategoryParentSlug}
                   />
                 )}

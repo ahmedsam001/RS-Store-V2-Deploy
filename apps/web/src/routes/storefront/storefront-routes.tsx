@@ -7,30 +7,21 @@ import { StorefrontNavbar } from '@/features/catalog/components/StorefrontNavbar
 import { CustomerProfilePage } from '@/features/auth/pages/CustomerProfilePage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 
-const CatalogPage = lazyNamed(
-  () => import('@/features/catalog/pages/CatalogPage'),
-  'CatalogPage',
-);
+const CatalogPage = lazyNamed(() => import('@/features/catalog/pages/CatalogPage'), 'CatalogPage');
 
 const ProductDetailPage = lazyNamed(
   () => import('@/features/catalog/pages/ProductDetailPage'),
   'ProductDetailPage',
 );
 
-const CartPage = lazyNamed(
-  () => import('@/features/cart/pages/CartPage'),
-  'CartPage',
-);
+const CartPage = lazyNamed(() => import('@/features/cart/pages/CartPage'), 'CartPage');
 
 const CheckoutPage = lazyNamed(
   () => import('@/features/orders/pages/CheckoutPage'),
   'CheckoutPage',
 );
 
-const OrdersPage = lazyNamed(
-  () => import('@/features/orders/pages/OrdersPage'),
-  'OrdersPage',
-);
+const OrdersPage = lazyNamed(() => import('@/features/orders/pages/OrdersPage'), 'OrdersPage');
 
 const OrderDetailPage = lazyNamed(
   () => import('@/features/orders/pages/OrderDetailPage'),

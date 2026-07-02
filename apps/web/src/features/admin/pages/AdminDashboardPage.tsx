@@ -189,49 +189,50 @@ export function AdminDashboardPage() {
                 Clear and Quick Store Management
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
-                Track orders, payments, sales, and SHEIN imports from a single, organized interface optimized for mobile and desktop
+                Track orders, payments, sales, and SHEIN imports from a single, organized interface
+                optimized for mobile and desktop
               </p>
             </div>
-<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-               <Link
-                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-[#241611] transition hover:bg-white/90"
-                 to={PATHS.adminProducts}
-               >
-                 Add Product
-               </Link>
-               <Link
-                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/20 px-5 text-sm font-black text-white transition hover:bg-white/10"
-                 to={PATHS.adminOrders}
-               >
-                 Review Orders
-               </Link>
-               <Link
-                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/20 px-5 text-sm font-black text-white transition hover:bg-white/10"
-                 to={PATHS.adminShein}
-               >
-                 Import SHEIN
-               </Link>
-               <Link
-                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/20 px-5 text-sm font-black text-white transition hover:bg-white/10"
-                 to={PATHS.adminReports}
-               >
-                 View Reports
-               </Link>
-             </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Link
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-[#241611] transition hover:bg-white/90"
+                to={PATHS.adminProducts}
+              >
+                Add Product
+              </Link>
+              <Link
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/20 px-5 text-sm font-black text-white transition hover:bg-white/10"
+                to={PATHS.adminOrders}
+              >
+                Review Orders
+              </Link>
+              <Link
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/20 px-5 text-sm font-black text-white transition hover:bg-white/10"
+                to={PATHS.adminShein}
+              >
+                Import SHEIN
+              </Link>
+              <Link
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/20 px-5 text-sm font-black text-white transition hover:bg-white/10"
+                to={PATHS.adminReports}
+              >
+                View Reports
+              </Link>
+            </div>
           </div>
-<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-             <HeroStat icon={CheckCircle2} label="System Status" value={health.message} />
-             <HeroStat
-               icon={Bell}
-               label="Unread notifications"
-               value={`${data.unreadNotificationsCount} notification${data.unreadNotificationsCount > 1 ? 's' : ''}`}
-             />
-             <HeroStat
-               icon={FolderTree}
-               label="Active categories"
-               value={`${data.activeCategoriesCount} of ${data.categoriesCount}`}
-             />
-           </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <HeroStat icon={CheckCircle2} label="System Status" value={health.message} />
+            <HeroStat
+              icon={Bell}
+              label="Unread notifications"
+              value={`${data.unreadNotificationsCount} notification${data.unreadNotificationsCount > 1 ? 's' : ''}`}
+            />
+            <HeroStat
+              icon={FolderTree}
+              label="Active categories"
+              value={`${data.activeCategoriesCount} of ${data.categoriesCount}`}
+            />
+          </div>
         </div>
       </section>
 
@@ -254,7 +255,10 @@ export function AdminDashboardPage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
-        <AdminCard title="Daily Operations Center" description="Top priorities to review before anything else">
+        <AdminCard
+          title="Daily Operations Center"
+          description="Top priorities to review before anything else"
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             {operations.map((operation) => (
               <Operation key={operation.title} operation={operation} />
@@ -262,14 +266,14 @@ export function AdminDashboardPage() {
           </div>
         </AdminCard>
 
-<AdminCard
-           title="Notifications"
-           description="Admin notifications from orders and SHEIN imports"
-           contentClassName="max-h-[430px] overflow-auto space-y-3 premium-scrollbar"
-         >
-           {notifications.length === 0 ? (
-             <EmptyInline icon={Bell} title="No new notifications" />
-           ) : null}
+        <AdminCard
+          title="Notifications"
+          description="Admin notifications from orders and SHEIN imports"
+          contentClassName="max-h-[430px] overflow-auto space-y-3 premium-scrollbar"
+        >
+          {notifications.length === 0 ? (
+            <EmptyInline icon={Bell} title="No new notifications" />
+          ) : null}
           {notifications.map((item) => (
             <NotificationRow
               key={item.id}
@@ -281,51 +285,51 @@ export function AdminDashboardPage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
-<AdminCard
-           title="Recent Orders"
-           description="Quick tracking of orders and payment status"
-           actions={
-             <Link className="text-sm font-black text-[#c7831e]" to={PATHS.adminOrders}>
-               View All Orders
-             </Link>
-           }
-           contentClassName="space-y-3"
-         >
-           {data.recentOrders.length === 0 ? (
-             <EmptyInline icon={ShoppingBag} title="No orders yet" />
-           ) : null}
+        <AdminCard
+          title="Recent Orders"
+          description="Quick tracking of orders and payment status"
+          actions={
+            <Link className="text-sm font-black text-[#c7831e]" to={PATHS.adminOrders}>
+              View All Orders
+            </Link>
+          }
+          contentClassName="space-y-3"
+        >
+          {data.recentOrders.length === 0 ? (
+            <EmptyInline icon={ShoppingBag} title="No orders yet" />
+          ) : null}
           {data.recentOrders.map((order) => (
             <RecentOrderRow key={order.id} order={order} />
           ))}
         </AdminCard>
 
         <div className="grid gap-4">
-<AdminCard
-             title="SHEIN Import"
-             description="Recent import links"
-             actions={
-               <Link className="text-sm font-black text-[#c7831e]" to={PATHS.adminShein}>
-                 Open
-               </Link>
-             }
-             contentClassName="space-y-3"
-           >
-             {data.recentSheinImports.length === 0 ? (
-               <EmptyInline icon={Sparkles} title="No imports yet" />
-             ) : null}
+          <AdminCard
+            title="SHEIN Import"
+            description="Recent import links"
+            actions={
+              <Link className="text-sm font-black text-[#c7831e]" to={PATHS.adminShein}>
+                Open
+              </Link>
+            }
+            contentClassName="space-y-3"
+          >
+            {data.recentSheinImports.length === 0 ? (
+              <EmptyInline icon={Sparkles} title="No imports yet" />
+            ) : null}
             {data.recentSheinImports.map((item) => (
               <SheinImportRow key={item.id} item={item} />
             ))}
           </AdminCard>
 
-<AdminCard
-             title="Low Stock"
-             description="Priority stock adjustment needed"
-             contentClassName="space-y-3"
-           >
-             {data.lowStockVariants.length === 0 ? (
-               <EmptyInline icon={Boxes} title="No low stock variants" />
-             ) : null}
+          <AdminCard
+            title="Low Stock"
+            description="Priority stock adjustment needed"
+            contentClassName="space-y-3"
+          >
+            {data.lowStockVariants.length === 0 ? (
+              <EmptyInline icon={Boxes} title="No low stock variants" />
+            ) : null}
             {data.lowStockVariants.map((variant) => (
               <LowStockRow key={variant.id} variant={variant} />
             ))}
@@ -402,13 +406,13 @@ function NotificationRow({
           <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.messageAr}</p>
           <p className="mt-2 text-xs text-muted-foreground">{formatDate(item.createdAt)}</p>
         </div>
-{item.readAt ? (
-           <AdminStatusBadge tone="success">Read</AdminStatusBadge>
-         ) : (
-            <Button size="sm" variant="outline" type="button" onClick={() => void onRead()}>
-             Mark as Read
-           </Button>
-         )}
+        {item.readAt ? (
+          <AdminStatusBadge tone="success">Read</AdminStatusBadge>
+        ) : (
+          <Button size="sm" variant="outline" type="button" onClick={() => void onRead()}>
+            Mark as Read
+          </Button>
+        )}
       </div>
     </article>
   );

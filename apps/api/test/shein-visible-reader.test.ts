@@ -4,6 +4,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { JSDOM } from 'jsdom';
 import { SheinAssistedBrowserService } from '../src/modules/shein/shein-assisted-browser.service';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -76,21 +77,32 @@ class Cdp {
     });
   }
 
-  send(method: string, params: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+  send(
+    method: string,
+    params: Record<string, unknown> = {},
+    label?: string,
+  ): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
       const id = this.next++;
-      const timer = setTimeout(() => reject(new Error(`CDP timeout: ${method}`)), 10_000);
+      const timer = setTimeout(
+        () => reject(new Error(`CDP timeout${label ? ` during ${label}` : ''}: ${method}`)),
+        10_000,
+      );
       this.pending.set(id, { resolve, reject, timer });
       this.ws.send(JSON.stringify({ id, method, params }));
     });
   }
 
-  async eval(expression: string): Promise<Record<string, unknown>> {
-    const result = await this.send('Runtime.evaluate', {
-      expression,
-      awaitPromise: true,
-      returnByValue: true,
-    });
+  async eval(expression: string, label?: string): Promise<Record<string, unknown>> {
+    const result = await this.send(
+      'Runtime.evaluate',
+      {
+        expression,
+        awaitPromise: true,
+        returnByValue: true,
+      },
+      label,
+    );
     const exceptionDetails = result.exceptionDetails as
       | { text?: string; exception?: { description?: string } }
       | undefined;
@@ -112,79 +124,92 @@ function visibleReaderSource(): string {
     '../src/modules/shein/shein-assisted-browser.service.ts',
   );
   const source = fs.readFileSync(servicePath, 'utf8');
+  const typesPath = path.resolve(__dirname, '../src/modules/shein/shein.types.ts');
+  const typesSource = fs.readFileSync(typesPath, 'utf8');
+  const stockMatch = /export const DEFAULT_SHEIN_IMPORT_VARIANT_STOCK = (\d+)/.exec(typesSource);
+  const defaultStock = stockMatch?.[1] ?? '99';
   const start =
     source.indexOf('const VISIBLE_PAGE_READER = String.raw`') +
     'const VISIBLE_PAGE_READER = String.raw`'.length;
   const end = source.indexOf('`;\n\ntype AssistedBrowserHandle', start);
   if (start < 0 || end < 0) throw new Error('Could not locate VISIBLE_PAGE_READER');
-  return source.slice(start, end).trim();
+  return source
+    .slice(start, end)
+    .trim()
+    .replaceAll('${DEFAULT_SHEIN_IMPORT_VARIANT_STOCK}', defaultStock);
 }
 
-async function runVisibleReaderOnHtml(context: { skip: (message?: string) => void }, html: string): Promise<Record<string, unknown> | null> {
-  const executable = chromiumPath();
-  if (!executable) {
-    context.skip('Chromium is not installed in this environment');
-    return null;
-  }
-
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'rsstore-capture-browser-'));
-  const port = 12_000 + Math.floor(Math.random() * 3_000);
-  const chrome = spawn(
-    executable,
-    [
-      '--headless=new',
-      '--no-sandbox',
-      '--disable-gpu',
-      '--disable-dev-shm-usage',
-      `--remote-debugging-port=${port}`,
-      `--user-data-dir=${path.join(temp, 'profile')}`,
-      'about:blank',
-    ],
-    { stdio: ['ignore', 'pipe', 'pipe'] },
-  );
-  let cdp: Cdp | undefined;
+async function runVisibleReaderOnHtml(
+  _context: { skip: (message?: string) => void },
+  html: string,
+): Promise<Record<string, unknown> | null> {
+  const dom = new JSDOM(html, {
+    pretendToBeVisual: true,
+    runScripts: 'outside-only',
+    url: 'https://www.shein.com/mock-product-p-123456.html',
+  });
+  const { window } = dom;
 
   try {
-    await waitJson(`http://127.0.0.1:${port}/json/version`, chrome);
-    const target = (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, {
-      method: 'PUT',
-    }).then((response) => response.json())) as { webSocketDebuggerUrl: string };
-    cdp = new Cdp(target.webSocketDebuggerUrl);
-    await cdp.open();
-    await cdp.send('Page.enable');
-    await cdp.send('Runtime.enable');
-    const tree = (await cdp.send('Page.getFrameTree')) as {
-      frameTree: { frame: { id: string } };
+    Object.defineProperty(window.document, 'readyState', {
+      configurable: true,
+      get: () => 'complete',
+    });
+
+    Object.defineProperty(window.HTMLElement.prototype, 'innerText', {
+      configurable: true,
+      get() {
+        return this.textContent ?? '';
+      },
+      set(value: string) {
+        this.textContent = value;
+      },
+    });
+
+    window.HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect() {
+      const style = window.getComputedStyle(this);
+      const hidden =
+        style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        Number(style.opacity || 1) === 0;
+      const width = hidden
+        ? 0
+        : Number(this.getAttribute('width')) || (this.tagName === 'IFRAME' ? 300 : 120);
+      const height = hidden
+        ? 0
+        : Number(this.getAttribute('height')) || (this.tagName === 'IFRAME' ? 150 : 160);
+
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: height,
+        right: width,
+        width,
+        height,
+        toJSON() {
+          return this;
+        },
+      };
     };
-    await cdp.send('Page.setDocumentContent', { frameId: tree.frameTree.frame.id, html });
-    await sleep(300);
-    return cdp.eval(`(${visibleReaderSource()})({currencyCode:'SAR'})`);
+
+    const reader = window.eval(`(${visibleReaderSource()})`) as (options: {
+      currencyCode: string;
+      countryCode?: string;
+    }) => Record<string, unknown>;
+
+    return reader({ currencyCode: 'SAR' });
   } finally {
-    try {
-      cdp?.close();
-    } catch {
-      /* ignore */
-    }
-    try {
-      chrome.kill('SIGTERM');
-    } catch {
-      /* ignore */
-    }
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-      await sleep(120);
-      try {
-        fs.rmSync(temp, { recursive: true, force: true, maxRetries: 4, retryDelay: 100 });
-        break;
-      } catch {
-        // Ignore cleanup retry failures in test teardown.
-      }
-    }
+    window.close();
   }
 }
 
 describe('SHEIN visible Chrome reader', () => {
   it('returns verification for CAPTCHA html with social icons, never ready', async (context) => {
-    const result = await runVisibleReaderOnHtml(context, `<!doctype html><html><head>
+    const result = await runVisibleReaderOnHtml(
+      context,
+      `<!doctype html><html><head>
       <title>SHEIN Verification</title>
       <script src="https://example.com/cf-turnstile/challenge.js"></script>
       </head><body>
@@ -197,14 +222,17 @@ describe('SHEIN visible Chrome reader', () => {
         <img src="https://img.shein.com/images20240301/pi/12345/facebook-icon.jpg">
         <img src="https://img.shein.com/images20240301/pi/12345/visa-payment.jpg">
       </footer>
-      </body></html>`);
+      </body></html>`,
+    );
     if (!result) return;
 
     assert.equal(result.state, 'verification');
   });
 
   it('does not return ready for pages with only payment and social images', async (context) => {
-    const result = await runVisibleReaderOnHtml(context, `<!doctype html><html><body>
+    const result = await runVisibleReaderOnHtml(
+      context,
+      `<!doctype html><html><body>
       <h1>SHEIN</h1>
       <footer class="footer social payment">
         <img alt="visa" width="160" height="100" src="https://img.shein.com/images20240301/pi/12345/visa-payment.jpg">
@@ -212,14 +240,17 @@ describe('SHEIN visible Chrome reader', () => {
         <img alt="facebook" width="160" height="100" src="https://img.shein.com/images20240301/pi/12345/facebook-icon.jpg">
         <img alt="instagram" width="160" height="100" src="https://img.shein.com/images20240301/pi/12345/instagram-logo.jpg">
       </footer>
-      </body></html>`);
+      </body></html>`,
+    );
     if (!result) return;
 
     assert.notEqual(result.state, 'ready');
   });
 
   it('returns ready for product title price and two valid SHEIN product images', async (context) => {
-    const result = (await runVisibleReaderOnHtml(context, `<!doctype html><html><body>
+    const result = (await runVisibleReaderOnHtml(
+      context,
+      `<!doctype html><html><body>
       <section class="product-intro">
         <h1 class="product-intro__head-name">Premium Girls Dress</h1>
         <div class="product-intro__head-price"><span class="sale-price">SR88.50</span></div>
@@ -229,10 +260,11 @@ describe('SHEIN visible Chrome reader', () => {
         </div>
         <button>Add to Bag</button>
       </section>
-      </body></html>`)) as {
-        state?: string;
-        product?: { priceAmount?: string; images?: string[] };
-      } | null;
+      </body></html>`,
+    )) as {
+      state?: string;
+      product?: { priceAmount?: string; images?: string[] };
+    } | null;
     if (!result) return;
 
     assert.equal(result.state, 'ready');
@@ -241,7 +273,9 @@ describe('SHEIN visible Chrome reader', () => {
   });
 
   it('returns ready after CAPTCHA is solved even if old challenge scripts remain on the product page', async (context) => {
-    const result = (await runVisibleReaderOnHtml(context, `<!doctype html><html><head>
+    const result = (await runVisibleReaderOnHtml(
+      context,
+      `<!doctype html><html><head>
       <title>Premium Girls Dress | SHEIN</title>
       <script src="https://example.com/recaptcha/challenge.js"></script>
       <script src="https://example.com/cf-turnstile/api.js"></script>
@@ -255,10 +289,11 @@ describe('SHEIN visible Chrome reader', () => {
         </div>
         <button>Add to Bag</button>
       </section>
-      </body></html>`)) as {
-        state?: string;
-        product?: { images?: string[] };
-      } | null;
+      </body></html>`,
+    )) as {
+      state?: string;
+      product?: { images?: string[] };
+    } | null;
     if (!result) return;
 
     assert.equal(result.state, 'ready');
@@ -266,7 +301,9 @@ describe('SHEIN visible Chrome reader', () => {
   });
 
   it('returns ready for a full product page with hidden security artifacts', async (context) => {
-    const result = (await runVisibleReaderOnHtml(context, `<!doctype html><html><head>
+    const result = (await runVisibleReaderOnHtml(
+      context,
+      `<!doctype html><html><head>
       <title>SHEIN verification cache</title>
       </head><body>
       <div style="display:none" class="security verification robot challenge">
@@ -285,10 +322,11 @@ describe('SHEIN visible Chrome reader', () => {
         <button>Add to Cart</button>
       </section>
       <script src="https://example.com/security/challenge.js"></script>
-      </body></html>`)) as {
-        state?: string;
-        product?: { priceAmount?: string; images?: string[] };
-      } | null;
+      </body></html>`,
+    )) as {
+      state?: string;
+      product?: { priceAmount?: string; images?: string[] };
+    } | null;
     if (!result) return;
 
     assert.equal(result.state, 'ready');
@@ -316,7 +354,7 @@ describe('SHEIN visible Chrome reader', () => {
         `--user-data-dir=${path.join(temp, 'profile')}`,
         'about:blank',
       ],
-      { stdio: ['ignore', 'pipe', 'pipe'] },
+      { stdio: 'ignore' },
     );
     let cdp: Cdp | undefined;
 
@@ -397,17 +435,24 @@ describe('SHEIN visible Chrome reader', () => {
 
 describe('SHEIN assisted browser session state handling', () => {
   function createServiceHarness() {
-    const service = new SheinAssistedBrowserService({} as never, {} as never, {
-      normalize: () => ({
-        slug: 'test-product',
-        nameAr: 'Ready Product',
-        priceAmount: '88',
-        currency: 'SAR',
-        country: 'KW',
-        images: [{ url: 'https://img.ltwebstatic.com/v4/j/pi/a/readyA.jpg' }, { url: 'https://img.ltwebstatic.com/v4/j/pi/a/readyB.jpg' }],
-        variants: [],
-      }),
-    } as never);
+    const service = new SheinAssistedBrowserService(
+      {} as never,
+      {} as never,
+      {
+        normalize: () => ({
+          slug: 'test-product',
+          nameAr: 'Ready Product',
+          priceAmount: '88',
+          currency: 'SAR',
+          country: 'KW',
+          images: [
+            { url: 'https://img.ltwebstatic.com/v4/j/pi/a/readyA.jpg' },
+            { url: 'https://img.ltwebstatic.com/v4/j/pi/a/readyB.jpg' },
+          ],
+          variants: [],
+        }),
+      } as never,
+    );
     const serviceAny = service as unknown as {
       sessions: Map<string, unknown>;
       findBestSheinTarget: () => Promise<unknown>;

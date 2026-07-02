@@ -832,7 +832,10 @@
   background: #fff8ef;
   padding: 0.5rem 0.75rem;
   cursor: pointer;
-  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
 }
 .admin-category-image-dropzone:hover,
 .admin-category-image-dropzone:focus-visible {
@@ -1065,9 +1068,7 @@
 }
 .admin-shein-editor-card > .admin-card-content,
 .admin-shein-editor-card .admin-card-content {
-  background:
-    linear-gradient(180deg, rgba(255, 250, 246, 0.7), rgba(255, 255, 255, 0) 16rem),
-    #fff;
+  background: linear-gradient(180deg, rgba(255, 250, 246, 0.7), rgba(255, 255, 255, 0) 16rem), #fff;
 }
 .admin-shein-editor-buttons {
   position: sticky;

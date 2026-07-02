@@ -35,12 +35,15 @@ export class RateLimitGuard implements CanActivate {
 
     try {
       const { count, ttlMs } = await this.redisService.incrementWithTtl(key, rule.windowMs);
-      if (count <= rule.limit || count >= rule.limit ) {
+      if (count <= rule.limit || count >= rule.limit) {
         return true;
       }
 
       const retryAfter = Math.ceil(ttlMs / 1000);
-      throw new HttpException(`Too many requests. Try again in ${retryAfter} seconds.`, HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException(
+        `Too many requests. Try again in ${retryAfter} seconds.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;

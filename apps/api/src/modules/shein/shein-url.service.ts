@@ -28,7 +28,10 @@ export class SheinUrlService {
     return `${url.hostname}${url.pathname}${url.search}`.toLowerCase();
   }
 
-  applyV1MarketToSheinUrl(sourceUrl: string, market: { countryCode: string; currencyCode: string; language: string }): URL {
+  applyV1MarketToSheinUrl(
+    sourceUrl: string,
+    market: { countryCode: string; currencyCode: string; language: string },
+  ): URL {
     const url = this.parseSheinUrl(sourceUrl);
     url.hash = '';
     url.searchParams.set('currency', market.currencyCode.toUpperCase());
@@ -129,12 +132,17 @@ export class SheinUrlService {
 
     const queryOnly = raw.replace(/^\?+/, '').replace(/^&+/, '');
     if (this.looksLikeSheinShareQuery(queryOnly)) {
-      return new URL(`/h5/sharejump/appjump?${queryOnly}`, 'https://api-shein.shein.com').toString();
+      return new URL(
+        `/h5/sharejump/appjump?${queryOnly}`,
+        'https://api-shein.shein.com',
+      ).toString();
     }
 
     if (raw.startsWith('/')) return new URL(raw, 'https://www.shein.com').toString();
-    if (/^appjump(?:[/?#]|$)/i.test(raw)) return new URL(`/${raw.replace(/^\/+/, '')}`, 'https://www.shein.com').toString();
-    if (/^h5\/sharejump\/appjump(?:[/?#]|$)/i.test(raw)) return new URL(`/${raw.replace(/^\/+/, '')}`, 'https://api-shein.shein.com').toString();
+    if (/^appjump(?:[/?#]|$)/i.test(raw))
+      return new URL(`/${raw.replace(/^\/+/, '')}`, 'https://www.shein.com').toString();
+    if (/^h5\/sharejump\/appjump(?:[/?#]|$)/i.test(raw))
+      return new URL(`/${raw.replace(/^\/+/, '')}`, 'https://api-shein.shein.com').toString();
     if (/^(?:[a-z0-9-]+\.)?shein\.[a-z.]{2,}(?:[/:?#]|$)/i.test(raw)) return `https://${raw}`;
     throw new BadRequestException('Enter an official SHEIN product or share link');
   }
@@ -143,12 +151,17 @@ export class SheinUrlService {
     if (!value || value.length > 3000 || /\s/.test(value)) {
       return false;
     }
-    return /(?:^|&)(?:link|shc|url_from|src_identifier|goods_id|goodsId|product_id|mallCode|skucode|skuCode|cat_id|currency|country|localcountry|lang)=/i.test(value);
+    return /(?:^|&)(?:link|shc|url_from|src_identifier|goods_id|goodsId|product_id|mallCode|skucode|skuCode|cat_id|currency|country|localcountry|lang)=/i.test(
+      value,
+    );
   }
 
   private productIdFromUrl(url: URL): string | undefined {
     const fromPath = url.pathname.match(/-p-(\d+)/i)?.[1];
-    const fromQuery = url.searchParams.get('goods_id') || url.searchParams.get('goodsId') || url.searchParams.get('product_id');
+    const fromQuery =
+      url.searchParams.get('goods_id') ||
+      url.searchParams.get('goodsId') ||
+      url.searchParams.get('product_id');
     const fromShare = url.searchParams.get('url_from') || url.searchParams.get('src_identifier');
     const fromShareDigits = fromShare?.match(/(?:GM)?(\d{6,})/i)?.[1];
     return fromPath || fromQuery || fromShareDigits || undefined;
@@ -168,7 +181,10 @@ export class SheinUrlService {
       return false;
     }
 
-    const accepted = normalized === 'shein.com' || normalized.endsWith('.shein.com') || /^([a-z0-9-]+\.)?shein\.[a-z.]{2,}$/i.test(normalized);
+    const accepted =
+      normalized === 'shein.com' ||
+      normalized.endsWith('.shein.com') ||
+      /^([a-z0-9-]+\.)?shein\.[a-z.]{2,}$/i.test(normalized);
     return accepted;
   }
 

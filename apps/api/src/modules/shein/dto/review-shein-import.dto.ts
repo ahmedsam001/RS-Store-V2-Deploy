@@ -107,7 +107,11 @@ export class SheinReviewedVariantDto {
   color?: string;
 
   @IsOptional()
-  @Transform(({ value }) => (value === undefined || value === null || value === '' ? undefined : String(value).replace(/,/g, '').trim()))
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === ''
+      ? undefined
+      : String(value).replace(/,/g, '').trim(),
+  )
   @IsNumberString({ no_symbols: false })
   @MaxLength(30)
   priceAmount?: string;
@@ -143,17 +147,31 @@ export class SheinReviewedPayloadDto {
   @MaxLength(80)
   sku?: string;
 
-  @Transform(({ value }) => String(value ?? '').replace(/,/g, '').trim())
+  @Transform(({ value }) =>
+    String(value ?? '')
+      .replace(/,/g, '')
+      .trim(),
+  )
   @IsNumberString({ no_symbols: false })
   @MaxLength(30)
   priceAmount!: string;
 
-  @Transform(({ value }) => String(value ?? '').trim().toUpperCase())
+  @Transform(({ value }) =>
+    String(value ?? '')
+      .trim()
+      .toUpperCase(),
+  )
   @IsIn([FIXED_SHEIN_CURRENCY], { message: 'SHEIN import currency must be SAR' })
   currency!: typeof FIXED_SHEIN_CURRENCY;
 
-  @Transform(({ value }) => String(value ?? '').trim().toUpperCase())
-  @IsIn(SUPPORTED_SHEIN_COUNTRY_CODES, { message: 'Selected country is not supported for SHEIN import' })
+  @Transform(({ value }) =>
+    String(value ?? '')
+      .trim()
+      .toUpperCase(),
+  )
+  @IsIn(SUPPORTED_SHEIN_COUNTRY_CODES, {
+    message: 'Selected country is not supported for SHEIN import',
+  })
   country!: string;
 
   @IsOptional()
@@ -161,7 +179,11 @@ export class SheinReviewedPayloadDto {
   categoryId?: string;
 
   @IsOptional()
-  @Transform(({ value }) => String(value ?? '').trim().toLowerCase())
+  @Transform(({ value }) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase(),
+  )
   @IsString()
   @MaxLength(180)
   categorySlug?: string;
@@ -177,27 +199,37 @@ export class SheinReviewedPayloadDto {
   subCategory?: string;
 
   @IsOptional()
-  @Transform(({ value }) => (value === undefined || value === null || value === '' ? undefined : Number(value)))
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === '' ? undefined : Number(value),
+  )
   @IsNumber()
   @Min(1)
   @Max(1000)
   exchangeRate?: number;
 
   @IsOptional()
-  @Transform(({ value }) => (value === undefined || value === null || value === '' ? undefined : String(value).replace(/,/g, '').trim()))
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === ''
+      ? undefined
+      : String(value).replace(/,/g, '').trim(),
+  )
   @IsNumberString({ no_symbols: false })
   @MaxLength(30)
   storePriceAmount?: string;
 
   @IsOptional()
-  @Transform(({ value }) => (value === undefined || value === null || value === '' ? 0 : Number(value)))
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === '' ? 0 : Number(value),
+  )
   @IsNumber()
   @Min(0)
   @Max(100)
   discount?: number;
 
   @IsOptional()
-  @Transform(({ value }) => (value === undefined || value === null || value === '' ? 0 : Number(value)))
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === '' ? 0 : Number(value),
+  )
   @IsNumber()
   @Min(0)
   @Max(5)

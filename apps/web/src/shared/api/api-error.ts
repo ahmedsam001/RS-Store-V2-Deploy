@@ -135,9 +135,9 @@ export function extractErrorMessage(
     return message.trim();
   }
 
-if (Array.isArray(message) && message.every((item) => typeof item === 'string')) {
-      return message.join(', ');
-    }
+  if (Array.isArray(message) && message.every((item) => typeof item === 'string')) {
+    return message.join(', ');
+  }
 
   if (typeof payload.error === 'string' && payload.error.trim()) {
     return payload.error.trim();
@@ -173,7 +173,8 @@ export function extractRequestId(payload: unknown, headers?: Headers): string | 
 }
 
 function statusMessage(status: number, fallbackMessage: string, code?: string): string {
-  if (code === 'NETWORK_ERROR') return 'Unable to connect to server. Please check your internet connection.';
+  if (code === 'NETWORK_ERROR')
+    return 'Unable to connect to server. Please check your internet connection.';
   if (code === 'REQUEST_ABORTED') return 'Request was cancelled';
   if (code === 'REQUEST_TIMEOUT') return 'Request timed out. Please try again.';
 

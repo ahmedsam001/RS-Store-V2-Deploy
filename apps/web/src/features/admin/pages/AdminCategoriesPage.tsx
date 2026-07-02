@@ -78,19 +78,21 @@ export function AdminCategoriesPage() {
         title="Add New Category"
         description="Any active category saved here will appear in the main menu and categories page for customers"
       >
-        <form className="admin-form-grid" onSubmit={(e) => {
-          e.preventDefault();
-          const form = e.currentTarget;
-          const input = readCategoryForm(form);
-          void run(
-            () => adminApi.createCategory(input, { csrfToken }),
-            'Category added',
-          ).then((didSave) => {
-            if (!didSave) return;
-            form.reset();
-            setNewCategoryImageKey((key) => key + 1);
-          });
-        }}>
+        <form
+          className="admin-form-grid"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const input = readCategoryForm(form);
+            void run(() => adminApi.createCategory(input, { csrfToken }), 'Category added').then(
+              (didSave) => {
+                if (!didSave) return;
+                form.reset();
+                setNewCategoryImageKey((key) => key + 1);
+              },
+            );
+          }}
+        >
           <Input name="nameAr" placeholder="Category name" required />
           <Input name="nameEn" placeholder="English name" />
           <Input name="slug" dir="ltr" placeholder="category-slug" required />
@@ -114,17 +116,19 @@ export function AdminCategoriesPage() {
         description={`${items.length} categories saved in database`}
         contentClassName="grid gap-3"
       >
-{items.length === 0 ? <AdminEmpty message="No categories found" /> : null}
-          {items.map((category) => (
-            <CategoryWithSubcategories
-              key={category.id}
-              category={category}
-              isExpanded={expandedCategoryId === category.id}
-              onToggleExpand={() => setExpandedCategoryId(expandedCategoryId === category.id ? null : category.id)}
-              csrfToken={csrfToken}
-              onRun={run}
-            />
-          ))}
+        {items.length === 0 ? <AdminEmpty message="No categories found" /> : null}
+        {items.map((category) => (
+          <CategoryWithSubcategories
+            key={category.id}
+            category={category}
+            isExpanded={expandedCategoryId === category.id}
+            onToggleExpand={() =>
+              setExpandedCategoryId(expandedCategoryId === category.id ? null : category.id)
+            }
+            csrfToken={csrfToken}
+            onRun={run}
+          />
+        ))}
       </AdminCard>
     </div>
   );
@@ -152,11 +156,26 @@ function CategoryWithSubcategories({
   return (
     <div>
       <div className="rounded-xl border bg-card">
-        <div className="flex items-center justify-between p-3" role="button" onClick={onToggleExpand} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onToggleExpand()}>
+        <div
+          className="flex items-center justify-between p-3"
+          role="button"
+          onClick={onToggleExpand}
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && onToggleExpand()}
+        >
           <div className="flex-1 cursor-pointer">
             <div className="flex items-center gap-2">
-              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              <ImageWithFallback src={category.image} alt="" className="h-9 w-9 rounded-lg object-cover" fallbackVariant="category" />
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              <ImageWithFallback
+                src={category.image}
+                alt=""
+                className="h-9 w-9 rounded-lg object-cover"
+                fallbackVariant="category"
+              />
               <span className="font-extrabold">{category.nameAr}</span>
               <AdminStatusBadge tone={category.isActive ? 'success' : 'neutral'}>
                 {category.isActive ? 'Active' : 'Hidden'}
@@ -174,7 +193,12 @@ function CategoryWithSubcategories({
               onClick={(e) => {
                 e.stopPropagation();
                 void onRun(
-                  () => adminApi.updateCategory(category.id, { isActive: !category.isActive }, { csrfToken }),
+                  () =>
+                    adminApi.updateCategory(
+                      category.id,
+                      { isActive: !category.isActive },
+                      { csrfToken },
+                    ),
                   category.isActive ? 'Category hidden' : 'Category activated',
                 );
               }}
@@ -187,8 +211,15 @@ function CategoryWithSubcategories({
               variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm('Delete category? Products will be hidden from store until moved to another category'))
-                  void onRun(() => adminApi.deleteCategory(category.id, { csrfToken }), 'Category deleted');
+                if (
+                  confirm(
+                    'Delete category? Products will be hidden from store until moved to another category',
+                  )
+                )
+                  void onRun(
+                    () => adminApi.deleteCategory(category.id, { csrfToken }),
+                    'Category deleted',
+                  );
               }}
             >
               Delete
@@ -208,49 +239,56 @@ function CategoryWithSubcategories({
           </div>
         </div>
 
-{showAddForm ? (
-           <div className="border-t p-3">
-             <form
-               className="grid gap-3"
-               onSubmit={(e) => {
-                 e.preventDefault();
-                 const form = e.currentTarget;
-                 const input = readSubcategoryForm(form);
-                 void onRun(
-                   () => adminApi.createSubcategory(category.id, input, { csrfToken }),
-                   'Subcategory added',
-                 ).then((didSave) => {
-                   if (!didSave) return;
-                   form.reset();
-                   setShowAddForm(false);
-                 });
-               }}
-             >
-               <div className="admin-form-grid">
-                 <Input name="nameAr" placeholder="Subcategory name" required />
-                 <Input name="nameEn" placeholder="English name" />
-                 <Input name="slug" dir="ltr" placeholder="subcategory-slug" required />
-                 <Input name="sortOrder" type="number" placeholder="Sort order" />
-                 <AdminSingleImageUploader
-                   name="image"
-                   label="Subcategory image"
-                   csrfToken={csrfToken}
-                   onUploadingChange={setIsAddingSubcategoryUploading}
-                 />
-                 <Select name="isActive" defaultValue="true">
-                   <option value="true">Active</option>
-                   <option value="false">Hidden</option>
-                 </Select>
-               </div>
-               <div className="flex gap-2">
-                 <Button type="submit" size="sm" disabled={isAddingSubcategoryUploading}>Add Subcategory</Button>
-                 <Button type="button" size="sm" variant="outline" onClick={() => setShowAddForm(false)}>
-                   Cancel
-                 </Button>
-               </div>
-             </form>
-           </div>
-         ) : null}
+        {showAddForm ? (
+          <div className="border-t p-3">
+            <form
+              className="grid gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const input = readSubcategoryForm(form);
+                void onRun(
+                  () => adminApi.createSubcategory(category.id, input, { csrfToken }),
+                  'Subcategory added',
+                ).then((didSave) => {
+                  if (!didSave) return;
+                  form.reset();
+                  setShowAddForm(false);
+                });
+              }}
+            >
+              <div className="admin-form-grid">
+                <Input name="nameAr" placeholder="Subcategory name" required />
+                <Input name="nameEn" placeholder="English name" />
+                <Input name="slug" dir="ltr" placeholder="subcategory-slug" required />
+                <Input name="sortOrder" type="number" placeholder="Sort order" />
+                <AdminSingleImageUploader
+                  name="image"
+                  label="Subcategory image"
+                  csrfToken={csrfToken}
+                  onUploadingChange={setIsAddingSubcategoryUploading}
+                />
+                <Select name="isActive" defaultValue="true">
+                  <option value="true">Active</option>
+                  <option value="false">Hidden</option>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" disabled={isAddingSubcategoryUploading}>
+                  Add Subcategory
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddForm(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        ) : null}
 
         {isExpanded ? (
           <div className="border-t p-3">
@@ -328,7 +366,9 @@ function SubcategoryRow({
         </Select>
       </div>
       <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={isUploading}>Save</Button>
+        <Button type="submit" size="sm" disabled={isUploading}>
+          Save
+        </Button>
         <Button type="button" size="sm" variant="outline" onClick={onCancelEdit}>
           Cancel
         </Button>
@@ -338,7 +378,12 @@ function SubcategoryRow({
     <div className="flex items-center justify-between rounded-lg border bg-muted/10 p-3">
       <div>
         <div className="flex items-center gap-2">
-          <ImageWithFallback src={subcategory.image} alt="" className="h-8 w-8 rounded-lg object-cover" fallbackVariant="subcategory" />
+          <ImageWithFallback
+            src={subcategory.image}
+            alt=""
+            className="h-8 w-8 rounded-lg object-cover"
+            fallbackVariant="subcategory"
+          />
           <span className="font-bold">{subcategory.nameAr}</span>
           <AdminStatusBadge tone={subcategory.isActive ? 'success' : 'neutral'}>
             {subcategory.isActive ? 'Active' : 'Hidden'}
@@ -358,7 +403,12 @@ function SubcategoryRow({
           variant="outline"
           onClick={() => {
             void onRun(
-              () => adminApi.updateSubcategory(subcategory.id, { isActive: !subcategory.isActive }, { csrfToken }),
+              () =>
+                adminApi.updateSubcategory(
+                  subcategory.id,
+                  { isActive: !subcategory.isActive },
+                  { csrfToken },
+                ),
               subcategory.isActive ? 'Subcategory hidden' : 'Subcategory activated',
             );
           }}
@@ -371,7 +421,10 @@ function SubcategoryRow({
           variant="outline"
           onClick={() => {
             if (confirm('Delete subcategory?'))
-              void onRun(() => adminApi.deleteSubcategory(subcategory.id, { csrfToken }), 'Subcategory deleted');
+              void onRun(
+                () => adminApi.deleteSubcategory(subcategory.id, { csrfToken }),
+                'Subcategory deleted',
+              );
           }}
         >
           Delete

@@ -54,7 +54,11 @@ export type SheinImportPreview = {
   variants: SheinImportVariant[];
 };
 
-export type SheinImportExtractionStatus = 'success' | 'manual_review' | 'captcha_required' | 'failed';
+export type SheinImportExtractionStatus =
+  | 'success'
+  | 'manual_review'
+  | 'captcha_required'
+  | 'failed';
 
 export type SheinExtractedProduct = {
   title: string;
@@ -90,7 +94,13 @@ export type SheinPublishOptions = {
   editedPayload?: SheinImportPreview | unknown;
 };
 
-export type SheinImportStepStatus = 'pending' | 'running' | 'verification' | 'success' | 'warning' | 'error';
+export type SheinImportStepStatus =
+  | 'pending'
+  | 'running'
+  | 'verification'
+  | 'success'
+  | 'warning'
+  | 'error';
 
 export type SheinImportStep = {
   id: string;
@@ -101,7 +111,15 @@ export type SheinImportStep = {
   at?: string;
 };
 
-export type SheinAssistJobStatus = 'queued' | 'running' | 'verification' | 'ready' | 'manual' | 'failed' | 'expired' | 'cancelled';
+export type SheinAssistJobStatus =
+  | 'queued'
+  | 'running'
+  | 'verification'
+  | 'ready'
+  | 'manual'
+  | 'failed'
+  | 'expired'
+  | 'cancelled';
 
 export type SheinAssistJob = {
   id: string;

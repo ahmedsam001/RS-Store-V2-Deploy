@@ -1,6 +1,9 @@
 import type { PaymentProofStatus } from '@prisma/client';
 import { IsIn, IsString, MaxLength, ValidateIf } from 'class-validator';
-import { PAYMENT_PROOF_STATUS_REJECTED, REVIEWABLE_PAYMENT_PROOF_STATUSES } from '../payment-proof-status.constants';
+import {
+  PAYMENT_PROOF_STATUS_REJECTED,
+  REVIEWABLE_PAYMENT_PROOF_STATUSES,
+} from '../payment-proof-status.constants';
 
 export class ReviewPaymentProofDto {
   @IsIn(REVIEWABLE_PAYMENT_PROOF_STATUSES)

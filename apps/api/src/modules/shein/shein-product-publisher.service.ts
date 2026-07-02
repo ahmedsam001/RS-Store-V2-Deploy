@@ -168,7 +168,11 @@ export class SheinProductPublisherService {
           sku: await this.resolveUniqueProductSku(tx, normalizedPayload.sku),
           variants: await this.resolveVariantSkus(tx, normalizedPayload.variants),
         };
-        const subCategory = await this.resolveSubCategory(tx, safePayload.categoryId, safePayload.subCategory);
+        const subCategory = await this.resolveSubCategory(
+          tx,
+          safePayload.categoryId,
+          safePayload.subCategory,
+        );
         const product = await tx.product.create({
           data: this.mapProductCreate(
             safePayload,
@@ -247,10 +251,12 @@ export class SheinProductPublisherService {
   }
 
   private compactErrorMessage(message: string): string {
-    return message
-      .split('\n')
-      .map((line) => line.trim())
-      .find((line) => line && !line.startsWith('Invalid `')) ?? '';
+    return (
+      message
+        .split('\n')
+        .map((line) => line.trim())
+        .find((line) => line && !line.startsWith('Invalid `')) ?? ''
+    );
   }
 
   private errorMessage(error: unknown): string {
@@ -322,7 +328,9 @@ export class SheinProductPublisherService {
       select: { slug: true },
     });
     if (!category) {
-      throw new BadRequestException('Product must be linked to an active main category from the database');
+      throw new BadRequestException(
+        'Product must be linked to an active main category from the database',
+      );
     }
 
     const selectedMainCategory = normalizeSheinMainCategory(payload.categorySlug);
@@ -339,7 +347,9 @@ export class SheinProductPublisherService {
     subCategory: ResolvedSheinSubCategory,
     sourceSheinUrl: string,
   ): Prisma.ProductCreateInput {
-    const hasOriginalPrice = payload.originalPriceAmount && Number(payload.originalPriceAmount) > Number(payload.priceAmount);
+    const hasOriginalPrice =
+      payload.originalPriceAmount &&
+      Number(payload.originalPriceAmount) > Number(payload.priceAmount);
     const shouldApplyProductDiscount = hasOriginalPrice && (payload.discount ?? 0) > 0;
 
     return {
@@ -353,7 +363,7 @@ export class SheinProductPublisherService {
       sourceSheinUrl,
       subCategory: subCategory.name ?? payload.subCategory,
       priceAmount: moneyStringToMinorUnits(payload.storePriceAmount, 'priceAmount'),
-      discountPercent: shouldApplyProductDiscount ? payload.discount ?? 0 : 0,
+      discountPercent: shouldApplyProductDiscount ? (payload.discount ?? 0) : 0,
       rating: payload.rating ?? 0,
       currency: pricingSettings.storeCurrency,
       status: publishStatus,
@@ -425,7 +435,8 @@ export class SheinProductPublisherService {
       where: { id: categoryId, deletedAt: null, isActive: true, parentId: null },
       select: { slug: true },
     });
-    const baseSlug = `${parent.slug}-${this.toSlug(normalizedName) || Date.now().toString(36)}`.slice(0, 180);
+    const baseSlug =
+      `${parent.slug}-${this.toSlug(normalizedName) || Date.now().toString(36)}`.slice(0, 180);
     const slug = await this.resolveUniqueCategorySlug(tx, baseSlug);
     const created = await tx.category.create({
       data: {
@@ -442,10 +453,16 @@ export class SheinProductPublisherService {
     return { id: created.id, name: created.nameAr };
   }
 
-  private async resolveUniqueCategorySlug(tx: Prisma.TransactionClient, baseSlug: string): Promise<string> {
+  private async resolveUniqueCategorySlug(
+    tx: Prisma.TransactionClient,
+    baseSlug: string,
+  ): Promise<string> {
     for (let index = 0; index < 50; index += 1) {
       const candidate = index === 0 ? baseSlug : `${baseSlug}-${index + 1}`.slice(0, 180);
-      const existing = await tx.category.findUnique({ where: { slug: candidate }, select: { id: true } });
+      const existing = await tx.category.findUnique({
+        where: { slug: candidate },
+        select: { id: true },
+      });
       if (!existing) {
         return candidate;
       }
@@ -570,7 +587,9 @@ export class SheinProductPublisherService {
       !Number.isFinite(exchangeRate) ||
       exchangeRate <= 0
     ) {
-      throw new BadRequestException('Unable to calculate store price from SHEIN price and exchange rate');
+      throw new BadRequestException(
+        'Unable to calculate store price from SHEIN price and exchange rate',
+      );
     }
     const calculated = price * exchangeRate;
     return calculated.toFixed(2).replace(/\.00$/, '');

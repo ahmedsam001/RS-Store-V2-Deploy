@@ -4,5 +4,9 @@ import { PrismaModule } from '../../infrastructure/database/prisma/prisma.module
 import { SeoController } from './seo.controller';
 import { SeoService } from './seo.service';
 
-@Module({ imports: [ConfigModule, PrismaModule], controllers: [SeoController], providers: [SeoService] })
+@Module({
+  imports: [ConfigModule, PrismaModule],
+  controllers: [SeoController],
+  providers: [SeoService],
+})
 export class SeoModule {}

@@ -113,9 +113,9 @@ export class AuthSessionService {
 
     return Boolean(
       headerToken &&
-        cookieToken &&
-        headerToken === cookieToken &&
-        sha256(headerToken) === csrfTokenHash,
+      cookieToken &&
+      headerToken === cookieToken &&
+      sha256(headerToken) === csrfTokenHash,
     );
   }
 
@@ -141,11 +141,26 @@ export class AuthSessionService {
 
   clearAuthCookies(response: Response): void {
     const secure = this.configService.getOrThrow<boolean>('COOKIE_SECURE');
-    response.clearCookie(this.sessionCookieName, { path: '/', httpOnly: true, sameSite: 'lax', secure });
-    response.clearCookie(this.csrfCookieName, { path: '/', httpOnly: false, sameSite: 'strict', secure });
+    response.clearCookie(this.sessionCookieName, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure,
+    });
+    response.clearCookie(this.csrfCookieName, {
+      path: '/',
+      httpOnly: false,
+      sameSite: 'strict',
+      secure,
+    });
   }
 
-  private setAuthCookies(response: Response, sessionToken: string, csrfToken: string, maxAgeSeconds: number): void {
+  private setAuthCookies(
+    response: Response,
+    sessionToken: string,
+    csrfToken: string,
+    maxAgeSeconds: number,
+  ): void {
     const secure = this.configService.getOrThrow<boolean>('COOKIE_SECURE');
     response.cookie(this.sessionCookieName, sessionToken, {
       httpOnly: true,
@@ -162,7 +177,6 @@ export class AuthSessionService {
       maxAge: maxAgeSeconds * 1000,
     });
   }
-
 
   private async touchSessionActivity(sessionId: string, lastSeenAt: Date | null): Promise<void> {
     const now = new Date();

@@ -42,7 +42,13 @@ export class CartService {
     const context = await this.resolveAndMerge(request, response);
     const payload = await this.runCartWrite(async (tx) => {
       const cart = await this.getOrCreateCart(context, tx);
-      await this.assertCartQuantityAvailable(tx, cart.id, dto.productId, dto.productVariantId, dto.quantity);
+      await this.assertCartQuantityAvailable(
+        tx,
+        cart.id,
+        dto.productId,
+        dto.productVariantId,
+        dto.quantity,
+      );
       await this.addOrIncrementItem(tx, cart.id, dto);
       return this.getCartPayload(cart.id, tx);
     });
@@ -50,7 +56,12 @@ export class CartService {
     return mapCart(payload, this.pricingService);
   }
 
-  async updateItem(request: Request, response: Response, itemId: string, dto: UpdateCartItemDto): Promise<CartResponse> {
+  async updateItem(
+    request: Request,
+    response: Response,
+    itemId: string,
+    dto: UpdateCartItemDto,
+  ): Promise<CartResponse> {
     const context = await this.resolveAndMerge(request, response);
     const payload = await this.runCartWrite(async (tx) => {
       const cart = await this.getOrCreateCart(context, tx);
@@ -103,7 +114,10 @@ export class CartService {
     return context;
   }
 
-  private async getOrCreateCart(context: ShopperContext, client: PrismaClientLike): Promise<{ id: string }> {
+  private async getOrCreateCart(
+    context: ShopperContext,
+    client: PrismaClientLike,
+  ): Promise<{ id: string }> {
     const owner = this.cartOwner(context);
     const existing = await client.cart.findFirst({ where: owner, select: { id: true } });
 
@@ -134,7 +148,11 @@ export class CartService {
           where: {
             product: visibleProductWhere,
             productVariantId: { not: null },
-            productVariant: { isActive: true, status: ProductVariantStatus.ACTIVE, deletedAt: null },
+            productVariant: {
+              isActive: true,
+              status: ProductVariantStatus.ACTIVE,
+              deletedAt: null,
+            },
           },
           include: cartItemInclude,
           orderBy: [{ createdAt: 'asc' }],
@@ -143,7 +161,11 @@ export class CartService {
     });
   }
 
-  private async addOrIncrementItem(client: Prisma.TransactionClient, cartId: string, dto: AddCartItemDto): Promise<void> {
+  private async addOrIncrementItem(
+    client: Prisma.TransactionClient,
+    cartId: string,
+    dto: AddCartItemDto,
+  ): Promise<void> {
     const existing = await client.cartItem.findFirst({
       where: this.cartItemIdentity(cartId, dto.productId, dto.productVariantId),
     });
@@ -188,7 +210,13 @@ export class CartService {
     }
 
     const variant = await client.productVariant.findFirst({
-      where: { id: productVariantId, productId, isActive: true, status: ProductVariantStatus.ACTIVE, deletedAt: null },
+      where: {
+        id: productVariantId,
+        productId,
+        isActive: true,
+        status: ProductVariantStatus.ACTIVE,
+        deletedAt: null,
+      },
       select: { id: true, stockQuantity: true, reservedQuantity: true },
     });
 
@@ -230,8 +258,14 @@ export class CartService {
     return item;
   }
 
-  private cartItemIdentity(cartId: string, productId: string, productVariantId?: string): Prisma.CartItemWhereInput {
-    return productVariantId ? { cartId, productId, productVariantId } : { cartId, productId, productVariantId: null };
+  private cartItemIdentity(
+    cartId: string,
+    productId: string,
+    productVariantId?: string,
+  ): Prisma.CartItemWhereInput {
+    return productVariantId
+      ? { cartId, productId, productVariantId }
+      : { cartId, productId, productVariantId: null };
   }
 
   private async mergeGuestCart(userId: string, guestKey: string): Promise<void> {
@@ -268,7 +302,13 @@ export class CartService {
       return;
     }
 
-    await this.assertCartQuantityAvailable(client, cartId, item.productId, item.productVariantId, item.quantity);
+    await this.assertCartQuantityAvailable(
+      client,
+      cartId,
+      item.productId,
+      item.productVariantId,
+      item.quantity,
+    );
 
     const existing = await client.cartItem.findFirst({
       where: this.cartItemIdentity(cartId, item.productId, item.productVariantId),
@@ -292,10 +332,14 @@ export class CartService {
     });
   }
 
-  private async runCartWrite<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  private async runCartWrite<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
     for (let attempt = 0; attempt <= maxWriteRetries; attempt += 1) {
       try {
-        return await this.prisma.$transaction(operation, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
       } catch (error) {
         if (attempt === maxWriteRetries || !this.isRetryablePrismaError(error)) {
           throw error;
@@ -307,6 +351,9 @@ export class CartService {
   }
 
   private isRetryablePrismaError(error: unknown): boolean {
-    return error instanceof Prisma.PrismaClientKnownRequestError && ['P2002', 'P2034'].includes(error.code);
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      ['P2002', 'P2034'].includes(error.code)
+    );
   }
 }

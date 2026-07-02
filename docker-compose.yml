@@ -9,11 +9,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,11 +23,11 @@ services:
     container_name: rs-store-v2-redis
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,9 +37,9 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     container_name: rs-store-v2-migrate
-    restart: "no"
+    restart: 'no'
     env_file: .env
-    command: ["npm", "run", "db:deploy", "-w", "@rs-store/api"]
+    command: ['npm', 'run', 'db:deploy', '-w', '@rs-store/api']
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,9 +52,13 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "127.0.0.1:${PORT:-3000}:3000"
+      - '127.0.0.1:${PORT:-3000}:3000'
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://localhost:3000/api/v1/health'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -76,7 +80,7 @@ services:
     container_name: rs-store-v2-web
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - '5173:80'
     depends_on:
       - api
 

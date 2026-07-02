@@ -7,7 +7,10 @@ export function toEnglishDigits(value: string | number | null | undefined): stri
 
   return String(value)
     .replace(/[٠-٩]/g, (digit) => ENGLISH_DIGITS[ARABIC_INDIC_DIGITS.indexOf(digit)] ?? digit)
-    .replace(/[۰-۹]/g, (digit) => ENGLISH_DIGITS[EASTERN_ARABIC_INDIC_DIGITS.indexOf(digit)] ?? digit);
+    .replace(
+      /[۰-۹]/g,
+      (digit) => ENGLISH_DIGITS[EASTERN_ARABIC_INDIC_DIGITS.indexOf(digit)] ?? digit,
+    );
 }
 
 export function formatOrderMoney(amount: string | number, currency: string): string {
@@ -74,8 +77,5 @@ function parseOrderAmount(amount: string): number {
 }
 
 function normalizeNumericString(value: string | number | null | undefined): string {
-  return toEnglishDigits(value)
-    .trim()
-    .replace(/[٬,]/g, '')
-    .replace(/٫/g, '.');
+  return toEnglishDigits(value).trim().replace(/[٬,]/g, '').replace(/٫/g, '.');
 }

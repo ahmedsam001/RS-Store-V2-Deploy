@@ -1,13 +1,20 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { adminApi, AdminCategory, AdminCreateProductInput, AdminImage, AdminProduct } from '@/features/admin/api/admin-api';
 import {
-  AdminCard,
-  AdminPageHeader,
-} from '@/features/admin/components/AdminDesign';
+  adminApi,
+  AdminCategory,
+  AdminCreateProductInput,
+  AdminImage,
+  AdminProduct,
+} from '@/features/admin/api/admin-api';
+import { AdminCard, AdminPageHeader } from '@/features/admin/components/AdminDesign';
 import { AdminLoading } from '@/features/admin/components/AdminState';
-import { AdminFeedback, AdminNoticeState, toNotice } from '@/features/admin/components/AdminFeedback';
+import {
+  AdminFeedback,
+  AdminNoticeState,
+  toNotice,
+} from '@/features/admin/components/AdminFeedback';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 import { AdminProductsList } from '@/features/admin/products/AdminProductsList';
 import { ProductForm } from '@/features/admin/products/ProductForm';
@@ -100,7 +107,9 @@ export function AdminProductsPage() {
               sku: editingProduct.sku ?? undefined,
               status: editingProduct.status,
               categoryId: editingProduct.categoryId ?? undefined,
-              discount: parseOptionalNumber(editingProduct.discount ?? editingProduct.discountPercent),
+              discount: parseOptionalNumber(
+                editingProduct.discount ?? editingProduct.discountPercent,
+              ),
               rating: parseOptionalNumber(editingProduct.rating),
               currency: editingProduct.currency,
               isInStock: editingProduct.isInStock,
@@ -148,7 +157,13 @@ export function AdminProductsPage() {
   );
 }
 
-function ProductImageManager({ product, onRefresh }: { product: AdminProduct; onRefresh: () => Promise<void> }) {
+function ProductImageManager({
+  product,
+  onRefresh,
+}: {
+  product: AdminProduct;
+  onRefresh: () => Promise<void>;
+}) {
   const { csrfToken } = useAuth();
   const [notice, setNotice] = useState<AdminNoticeState>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -169,7 +184,9 @@ function ProductImageManager({ product, onRefresh }: { product: AdminProduct; on
   }
 
   async function uploadFiles(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith('image/'));
+    const files = Array.from(event.target.files ?? []).filter((file) =>
+      file.type.startsWith('image/'),
+    );
     event.target.value = '';
     if (!files.length) return;
 
@@ -177,11 +194,15 @@ function ProductImageManager({ product, onRefresh }: { product: AdminProduct; on
       const hasExistingImages = images.length > 0;
       for (const [index, file] of files.entries()) {
         const uploaded = await adminApi.uploadImage(file, 'rs-store/products', { csrfToken });
-        await adminApi.addProductImage(product.id, {
-          ...uploaded,
-          altTextAr: product.nameAr,
-          isPrimary: !hasExistingImages && index === 0,
-        }, { csrfToken });
+        await adminApi.addProductImage(
+          product.id,
+          {
+            ...uploaded,
+            altTextAr: product.nameAr,
+            isPrimary: !hasExistingImages && index === 0,
+          },
+          { csrfToken },
+        );
       }
     }, 'Product images updated');
   }
@@ -191,11 +212,20 @@ function ProductImageManager({ product, onRefresh }: { product: AdminProduct; on
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-extrabold">Product images</h3>
-          <p className="text-sm text-muted-foreground">Images saved here are used directly on the customer store</p>
+          <p className="text-sm text-muted-foreground">
+            Images saved here are used directly on the customer store
+          </p>
         </div>
         <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold">
           Upload images
-          <input type="file" accept="image/*" multiple className="sr-only" onChange={uploadFiles} disabled={isBusy} />
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            onChange={uploadFiles}
+            disabled={isBusy}
+          />
         </label>
       </div>
 
@@ -205,7 +235,8 @@ function ProductImageManager({ product, onRefresh }: { product: AdminProduct; on
 
       {images.length === 0 ? (
         <p className="mt-4 rounded-xl bg-muted p-3 text-sm font-semibold text-muted-foreground">
-          No product images yet. Upload at least one image so the product appears correctly in the storefront.
+          No product images yet. Upload at least one image so the product appears correctly in the
+          storefront.
         </p>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -214,8 +245,18 @@ function ProductImageManager({ product, onRefresh }: { product: AdminProduct; on
               key={image.id}
               image={image}
               disabled={isBusy}
-              onSetPrimary={() => run(() => adminApi.setPrimaryImage(product.id, image.id, { csrfToken }), 'Primary image updated')}
-              onDelete={() => run(() => adminApi.deleteProductImage(image.id, { csrfToken }), 'Product image deleted')}
+              onSetPrimary={() =>
+                run(
+                  () => adminApi.setPrimaryImage(product.id, image.id, { csrfToken }),
+                  'Primary image updated',
+                )
+              }
+              onDelete={() =>
+                run(
+                  () => adminApi.deleteProductImage(image.id, { csrfToken }),
+                  'Product image deleted',
+                )
+              }
             />
           ))}
         </div>
@@ -238,13 +279,26 @@ function ProductImageCard({
   return (
     <div className="rounded-xl border bg-background p-2">
       <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-muted">
-        <ImageWithFallback src={image.secureUrl} alt={image.altTextAr ?? 'Product image'} className="h-full w-full object-cover" fallbackVariant="product" />
+        <ImageWithFallback
+          src={image.secureUrl}
+          alt={image.altTextAr ?? 'Product image'}
+          className="h-full w-full object-cover"
+          fallbackVariant="product"
+        />
         {image.isPrimary ? (
-          <span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-1 text-xs font-black">Primary</span>
+          <span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-1 text-xs font-black">
+            Primary
+          </span>
         ) : null}
       </div>
       <div className="mt-2 grid gap-2">
-        <Button type="button" size="sm" variant="outline" onClick={onSetPrimary} disabled={disabled || image.isPrimary}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onSetPrimary}
+          disabled={disabled || image.isPrimary}
+        >
           Set primary
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={onDelete} disabled={disabled}>
@@ -267,8 +321,11 @@ function parseOptionalNumber(value: string | number | null | undefined): number 
   return Number.isFinite(numeric) ? numeric : undefined;
 }
 
-
-function getProductAvailableStock(product: { variants?: Array<{ stockQuantity: number }> }): number | undefined {
+function getProductAvailableStock(product: {
+  variants?: Array<{ stockQuantity: number }>;
+}): number | undefined {
   if (!product.variants?.length) return undefined;
-  return Math.max(...product.variants.map((variant) => Math.max(0, Number(variant.stockQuantity) || 0)));
+  return Math.max(
+    ...product.variants.map((variant) => Math.max(0, Number(variant.stockQuantity) || 0)),
+  );
 }

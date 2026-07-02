@@ -1,5 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { DEFAULT_SHEIN_IMPORT_VARIANT_STOCK, SheinImportPreview, SheinImportVariant } from './shein.types';
+import {
+  DEFAULT_SHEIN_IMPORT_VARIANT_STOCK,
+  SheinImportPreview,
+  SheinImportVariant,
+} from './shein.types';
 import { SheinUrlService } from './shein-url.service';
 import { normalizeSheinMainCategory } from './shein-category-config';
 import { SHEIN_MAX_PRODUCT_IMAGES, normalizeSheinImageEntries } from './shein-image-filter';
@@ -20,38 +24,70 @@ export type SheinPreviewNormalizeOptions = {
 export class SheinPreviewNormalizer {
   constructor(private readonly urlService: SheinUrlService) {}
 
-  normalize(value: unknown, sourceUrl?: string, options: SheinPreviewNormalizeOptions = {}): SheinImportPreview {
+  normalize(
+    value: unknown,
+    sourceUrl?: string,
+    options: SheinPreviewNormalizeOptions = {},
+  ): SheinImportPreview {
     if (!this.isRecord(value)) {
       throw new BadRequestException('SHEIN import payload must be an object');
     }
 
-    const nameAr = this.requiredString(value.nameAr ?? value.name ?? value.title, 'nameAr').slice(0, 220);
+    const nameAr = this.requiredString(value.nameAr ?? value.name ?? value.title, 'nameAr').slice(
+      0,
+      220,
+    );
     const priceAmount = this.requiredMoneyString(value.priceAmount ?? value.price, 'priceAmount');
     const slugSource = this.optionalString(value.slug) ?? this.optionalString(value.sku) ?? nameAr;
     const marketplaceCountry = options.marketplace?.countryCode ?? DEFAULT_SHEIN_COUNTRY;
-    const country = normalizeSheinCountry(value.country ?? value.selectedCountry ?? marketplaceCountry, marketplaceCountry);
-    const currency = this.normalizeCurrency(value.currency ?? options.marketplace?.currencyCode ?? FIXED_SHEIN_CURRENCY);
-    const actualDetectedCurrency = this.optionalString(value.actualDetectedCurrency)?.toUpperCase().slice(0, 10);
+    const country = normalizeSheinCountry(
+      value.country ?? value.selectedCountry ?? marketplaceCountry,
+      marketplaceCountry,
+    );
+    const currency = this.normalizeCurrency(
+      value.currency ?? options.marketplace?.currencyCode ?? FIXED_SHEIN_CURRENCY,
+    );
+    const actualDetectedCurrency = this.optionalString(value.actualDetectedCurrency)
+      ?.toUpperCase()
+      .slice(0, 10);
     if (actualDetectedCurrency && actualDetectedCurrency !== FIXED_SHEIN_CURRENCY) {
-      throw new BadRequestException('Detected price does not match selected currency. Reopen link with correct settings.');
+      throw new BadRequestException(
+        'Detected price does not match selected currency. Reopen link with correct settings.',
+      );
     }
-    const actualDetectedCountry = this.optionalString(value.actualDetectedCountry)?.toUpperCase().slice(0, 20);
+    const actualDetectedCountry = this.optionalString(value.actualDetectedCountry)
+      ?.toUpperCase()
+      .slice(0, 20);
     const warnings = this.normalizeOptions(value.warnings, 10, 220);
     if (actualDetectedCountry && actualDetectedCountry !== country) {
       warnings.push('Product opened on a different country than specified in import settings');
     }
     const variants = this.normalizeVariants(value.variants);
-    const sizes = this.normalizeOptions(value.sizes, 40, 60, variants.map((variant) => variant.size));
-    const colors = this.normalizeOptions(value.colors, 40, 80, variants.map((variant) => variant.color));
+    const sizes = this.normalizeOptions(
+      value.sizes,
+      40,
+      60,
+      variants.map((variant) => variant.size),
+    );
+    const colors = this.normalizeOptions(
+      value.colors,
+      40,
+      80,
+      variants.map((variant) => variant.color),
+    );
     const categorySlug = normalizeSheinMainCategory(value.categorySlug ?? value.categoryName);
     const rating = this.optionalNumber(value.rating);
     const discount = this.optionalNumber(value.discount);
     const exchangeRate = this.optionalNumber(value.exchangeRate);
     const storePriceAmount = this.optionalMoneyString(value.storePriceAmount);
-    const originalPriceAmount = this.optionalMoneyString(value.originalPriceAmount ?? value.originalPrice);
+    const originalPriceAmount = this.optionalMoneyString(
+      value.originalPriceAmount ?? value.originalPrice,
+    );
 
     return {
-      slug: sourceUrl ? this.urlService.productSlugFromUrl(sourceUrl, slugSource) : this.urlService.toSlug(slugSource),
+      slug: sourceUrl
+        ? this.urlService.productSlugFromUrl(sourceUrl, slugSource)
+        : this.urlService.toSlug(slugSource),
       nameAr,
       priceAmount,
       nameEn: this.optionalString(value.nameEn)?.slice(0, 220),
@@ -80,7 +116,11 @@ export class SheinPreviewNormalizer {
     };
   }
 
-  private normalizeImages(value: unknown, sourceUrl: string | undefined, strictImages: boolean): SheinImportPreview['images'] {
+  private normalizeImages(
+    value: unknown,
+    sourceUrl: string | undefined,
+    strictImages: boolean,
+  ): SheinImportPreview['images'] {
     const images = normalizeSheinImageEntries(value, { sourceUrl, strict: strictImages });
     if (images.length > SHEIN_MAX_PRODUCT_IMAGES) {
       return images.slice(0, SHEIN_MAX_PRODUCT_IMAGES);
@@ -100,7 +140,10 @@ export class SheinPreviewNormalizer {
         const stock = this.optionalNumber(variant.stockQuantity ?? variant.stock);
         return {
           sku: this.optionalString(variant.sku)?.slice(0, 80),
-          nameAr: this.requiredString(variant.nameAr ?? variant.name ?? variant.size ?? variant.color, 'variant.nameAr').slice(0, 160),
+          nameAr: this.requiredString(
+            variant.nameAr ?? variant.name ?? variant.size ?? variant.color,
+            'variant.nameAr',
+          ).slice(0, 160),
           nameEn: this.optionalString(variant.nameEn)?.slice(0, 160),
           size: this.optionalString(variant.size)?.slice(0, 60),
           color: this.optionalString(variant.color)?.slice(0, 80),
@@ -113,7 +156,12 @@ export class SheinPreviewNormalizer {
       });
   }
 
-  private normalizeOptions(value: unknown, maxItems: number, maxLength: number, fallback: Array<string | undefined> = []): string[] {
+  private normalizeOptions(
+    value: unknown,
+    maxItems: number,
+    maxLength: number,
+    fallback: Array<string | undefined> = [],
+  ): string[] {
     const source = Array.isArray(value) ? value : fallback;
     const result: string[] = [];
     const seen = new Set<string>();
@@ -138,7 +186,10 @@ export class SheinPreviewNormalizer {
   }
 
   private requiredMoneyString(value: unknown, field: string): string {
-    const text = typeof value === 'number' && Number.isFinite(value) ? String(value) : this.requiredString(value, field);
+    const text =
+      typeof value === 'number' && Number.isFinite(value)
+        ? String(value)
+        : this.requiredString(value, field);
     const normalized = text.replace(/,/g, '').trim();
     const numeric = Number(normalized);
     if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -153,7 +204,12 @@ export class SheinPreviewNormalizer {
 
   private optionalMoneyString(value: unknown): string | undefined {
     if (value === undefined || value === null || value === '') return undefined;
-    const text = typeof value === 'number' && Number.isFinite(value) ? String(value) : typeof value === 'string' ? value.replace(/,/g, '').trim() : '';
+    const text =
+      typeof value === 'number' && Number.isFinite(value)
+        ? String(value)
+        : typeof value === 'string'
+          ? value.replace(/,/g, '').trim()
+          : '';
     if (!text) return undefined;
     const numeric = Number(text);
     if (!Number.isFinite(numeric) || numeric <= 0) {

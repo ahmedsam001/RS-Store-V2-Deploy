@@ -78,10 +78,21 @@ describe('AddToCartPanel', () => {
   });
 
   it('does not allow adding products without a purchasable variant', async () => {
-    renderWithRouter(<AddToCartPanel product={createDetailProduct({ variantCount: 0, availableColors: [], availableSizes: [], variants: [] })} />);
+    renderWithRouter(
+      <AddToCartPanel
+        product={createDetailProduct({
+          variantCount: 0,
+          availableColors: [],
+          availableSizes: [],
+          variants: [],
+        })}
+      />,
+    );
 
     expect(screen.getByRole('button', { name: /Unavailable/ })).toBeDisabled();
-    expect(screen.getByRole('alert').textContent).toContain('not configured with purchasable stock');
+    expect(screen.getByRole('alert').textContent).toContain(
+      'not configured with purchasable stock',
+    );
     expect(hookState.value.addToCart).not.toHaveBeenCalled();
   });
 
@@ -152,6 +163,8 @@ describe('AddToCartPanel', () => {
 
     renderWithRouter(<AddToCartPanel product={createDetailProduct()} />);
 
-    expect(screen.getByRole('alert').textContent).toContain('Requested quantity is not available right now');
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Requested quantity is not available right now',
+    );
   });
 });

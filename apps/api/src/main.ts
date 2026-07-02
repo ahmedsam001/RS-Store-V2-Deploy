@@ -6,7 +6,10 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { logStructured } from './common/logging/structured-logger';
 import { requestIdMiddleware } from './common/middleware/request-id.middleware';
-import { parseAllowedOrigins, securityHeadersMiddleware } from './common/middleware/security-headers.middleware';
+import {
+  parseAllowedOrigins,
+  securityHeadersMiddleware,
+} from './common/middleware/security-headers.middleware';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -36,10 +39,15 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
   const port = configService.getOrThrow<number>('PORT');
   await app.listen(port);
-  logStructured('info', 'application_started', { port, environment: configService.get<string>('NODE_ENV') ?? 'development' });
+  logStructured('info', 'application_started', {
+    port,
+    environment: configService.get<string>('NODE_ENV') ?? 'development',
+  });
 }
 
 bootstrap().catch((error: unknown) => {
-  logStructured('error', 'application_start_failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+  logStructured('error', 'application_start_failed', {
+    error: error instanceof Error ? error.message : 'Unknown error',
+  });
   process.exit(1);
 });

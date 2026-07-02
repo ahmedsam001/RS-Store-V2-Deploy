@@ -23,10 +23,7 @@ export function AdminShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const initials = useMemo(() => buildInitials(user?.name ?? 'RS'), [user?.name]);
-  const pageTitle = useMemo(
-    () => resolvePageTitle(location.pathname),
-    [location.pathname],
-  );
+  const pageTitle = useMemo(() => resolvePageTitle(location.pathname), [location.pathname]);
 
   useDocumentMetadata({
     title: 'Admin Dashboard | RS Store',
@@ -170,16 +167,8 @@ function AdminSidebar({
         </div>
 
         <div className="premium-scrollbar mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto pe-1">
-          <SidebarGroup
-            compact={compact}
-            title="Overview"
-            links={ADMIN_MANAGEMENT_LINKS}
-          />
-          <SidebarGroup
-            compact={compact}
-            title="Operations"
-            links={ADMIN_OPERATIONS_LINKS}
-          />
+          <SidebarGroup compact={compact} title="Overview" links={ADMIN_MANAGEMENT_LINKS} />
+          <SidebarGroup compact={compact} title="Operations" links={ADMIN_OPERATIONS_LINKS} />
         </div>
 
         <div className="mt-4 space-y-3">
@@ -243,13 +232,7 @@ function SidebarGroup({
   );
 }
 
-function SidebarLink({
-  link,
-  compact,
-}: {
-  link: AdminNavLink;
-  compact: boolean;
-}) {
+function SidebarLink({ link, compact }: { link: AdminNavLink; compact: boolean }) {
   const Icon = link.icon;
   return (
     <NavLink
@@ -267,9 +250,7 @@ function SidebarLink({
       }
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      {!compact ? (
-        <span className="min-w-0 flex-1 truncate">{link.labelEn}</span>
-      ) : null}
+      {!compact ? <span className="min-w-0 flex-1 truncate">{link.labelEn}</span> : null}
       {!compact && link.badge ? (
         <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-black text-emerald-100">
           {link.badge}
@@ -311,11 +292,7 @@ function MobileDrawer({
 }) {
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <button
-        className="absolute inset-0 bg-black/55"
-        aria-label="Close menu"
-        onClick={onClose}
-      />
+      <button className="absolute inset-0 bg-black/55" aria-label="Close menu" onClick={onClose} />
       <aside className="admin-sidebar relative flex h-full w-[min(88vw,360px)] flex-col p-4 text-white shadow-2xl">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -376,13 +353,7 @@ function MobileDrawer({
   );
 }
 
-function MobileDrawerLink({
-  link,
-  onClose,
-}: {
-  link: AdminNavLink;
-  onClose: () => void;
-}) {
+function MobileDrawerLink({ link, onClose }: { link: AdminNavLink; onClose: () => void }) {
   const Icon = link.icon;
   return (
     <NavLink

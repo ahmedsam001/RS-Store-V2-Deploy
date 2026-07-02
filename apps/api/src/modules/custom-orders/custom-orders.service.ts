@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   CustomOrderStatus,
   InventoryStatus,
@@ -69,7 +74,8 @@ export class CustomOrdersService {
 
       return created;
     } catch (error) {
-      if (uploaded) await this.uploadsService.deleteImage(uploaded.cloudinaryPublicId).catch(() => undefined);
+      if (uploaded)
+        await this.uploadsService.deleteImage(uploaded.cloudinaryPublicId).catch(() => undefined);
       throw error;
     }
   }
@@ -113,14 +119,20 @@ export class CustomOrdersService {
     return { items, meta: buildPaginationMeta(query, total) };
   }
 
-  async review(actor: AuthenticatedUser, id: string, dto: ReviewCustomOrderDto, file?: UploadedImageFile) {
+  async review(
+    actor: AuthenticatedUser,
+    id: string,
+    dto: ReviewCustomOrderDto,
+    file?: UploadedImageFile,
+  ) {
     if (dto.status !== CustomOrderStatus.ACCEPTED && dto.status !== CustomOrderStatus.REJECTED) {
       throw new BadRequestException('Custom order can only be accepted or rejected');
     }
 
     const current = await this.prisma.customOrderRequest.findUnique({ where: { id } });
     if (!current) throw new NotFoundException('Custom order request not found');
-    if (current.convertedOrderId) throw new ConflictException('Converted custom orders cannot be edited');
+    if (current.convertedOrderId)
+      throw new ConflictException('Converted custom orders cannot be edited');
 
     const uploaded = file
       ? await this.uploadsService.uploadImage(file, { folder: CUSTOM_ORDER_IMAGE_FOLDER })
@@ -140,7 +152,11 @@ export class CustomOrdersService {
             action: 'CUSTOM_ORDER_REVIEWED',
             entityType: 'CUSTOM_ORDER',
             entityId: id,
-            metadata: { from: current.status, to: dto.status, adminTitle: data.adminTitle ?? current.adminTitle },
+            metadata: {
+              from: current.status,
+              to: dto.status,
+              adminTitle: data.adminTitle ?? current.adminTitle,
+            },
           },
         });
         return record;
@@ -152,7 +168,8 @@ export class CustomOrdersService {
 
       return updated;
     } catch (error) {
-      if (uploaded) await this.uploadsService.deleteImage(uploaded.cloudinaryPublicId).catch(() => undefined);
+      if (uploaded)
+        await this.uploadsService.deleteImage(uploaded.cloudinaryPublicId).catch(() => undefined);
       throw error;
     }
   }
@@ -163,88 +180,96 @@ export class CustomOrdersService {
       include: { user: true, convertedOrder: { include: customOrderOrderInclude } },
     });
     if (!request) throw new NotFoundException('Custom order request not found');
-    if (request.status !== CustomOrderStatus.ACCEPTED) throw new BadRequestException('Custom order is not accepted yet');
+    if (request.status !== CustomOrderStatus.ACCEPTED)
+      throw new BadRequestException('Custom order is not accepted yet');
     if (request.convertedOrder) return request.convertedOrder;
     if (!request.adminTitle || request.adminTotalAmount === null) {
       throw new BadRequestException('Custom order is missing final product details');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const locked = await tx.customOrderRequest.findUnique({ where: { id } });
-      if (!locked || locked.userId !== user.id) throw new NotFoundException('Custom order request not found');
-      if (locked.convertedOrderId) {
-        return tx.order.findUniqueOrThrow({ where: { id: locked.convertedOrderId }, include: customOrderOrderInclude });
-      }
+    return this.prisma.$transaction(
+      async (tx) => {
+        const locked = await tx.customOrderRequest.findUnique({ where: { id } });
+        if (!locked || locked.userId !== user.id)
+          throw new NotFoundException('Custom order request not found');
+        if (locked.convertedOrderId) {
+          return tx.order.findUniqueOrThrow({
+            where: { id: locked.convertedOrderId },
+            include: customOrderOrderInclude,
+          });
+        }
 
-      const title = locked.adminTitle;
-      if (!title) throw new BadRequestException('Custom order is missing final product title');
-      const orderNumber = await this.createOrderNumber(tx);
-      const total = locked.adminTotalAmount ?? 0;
-      const depositPercent = 50;
-      const depositAmount = Math.ceil((total * depositPercent) / 100);
-      const remainingAmount = Math.max(total - depositAmount, 0);
-      const order = await tx.order.create({
-        data: {
-          userId: user.id,
-          orderNumber,
-          status: OrderStatus.PENDING,
-          paymentStatus: OrderPaymentStatus.DEPOSIT_PENDING,
-          currency: 'EGP',
-          subtotalAmount: total,
-          discountAmount: 0,
-          totalAmount: total,
-          depositPercent,
-          depositAmount,
-          remainingAmount,
-          depositPaymentMethod: PaymentMethod.INSTAPAY,
-          depositPaymentFeeAmount: 0,
-          finalAmountDue: remainingAmount,
-          inventoryStatus: InventoryStatus.NONE,
-          customerNameSnapshot: request.user.name,
-          customerPhoneSnapshot: request.user.phone ?? 'Not provided',
-          customerEmailSnapshot: request.user.email,
-          shippingAddressSnapshot: request.user.address ?? 'Custom order checkout',
-          notes: locked.adminNote,
-          items: {
-            create: {
-              productId: null,
-              productVariantId: null,
-              productNameSnapshot: title,
-              productSkuSnapshot: `CUSTOM-${locked.id.slice(0, 8).toUpperCase()}`,
-              productVariantNameSnapshot: null,
-              productVariantSkuSnapshot: null,
-              productVariantSizeSnapshot: locked.requestedSize,
-              productVariantColorSnapshot: locked.requestedColor,
-              quantity: locked.quantity,
-              unitPriceAmount: Math.floor(total / locked.quantity),
-              lineTotalAmount: total,
+        const title = locked.adminTitle;
+        if (!title) throw new BadRequestException('Custom order is missing final product title');
+        const orderNumber = await this.createOrderNumber(tx);
+        const total = locked.adminTotalAmount ?? 0;
+        const depositPercent = 50;
+        const depositAmount = Math.ceil((total * depositPercent) / 100);
+        const remainingAmount = Math.max(total - depositAmount, 0);
+        const order = await tx.order.create({
+          data: {
+            userId: user.id,
+            orderNumber,
+            status: OrderStatus.PENDING,
+            paymentStatus: OrderPaymentStatus.DEPOSIT_PENDING,
+            currency: 'EGP',
+            subtotalAmount: total,
+            discountAmount: 0,
+            totalAmount: total,
+            depositPercent,
+            depositAmount,
+            remainingAmount,
+            depositPaymentMethod: PaymentMethod.INSTAPAY,
+            depositPaymentFeeAmount: 0,
+            finalAmountDue: remainingAmount,
+            inventoryStatus: InventoryStatus.NONE,
+            customerNameSnapshot: request.user.name,
+            customerPhoneSnapshot: request.user.phone ?? 'Not provided',
+            customerEmailSnapshot: request.user.email,
+            shippingAddressSnapshot: request.user.address ?? 'Custom order checkout',
+            notes: locked.adminNote,
+            items: {
+              create: {
+                productId: null,
+                productVariantId: null,
+                productNameSnapshot: title,
+                productSkuSnapshot: `CUSTOM-${locked.id.slice(0, 8).toUpperCase()}`,
+                productVariantNameSnapshot: null,
+                productVariantSkuSnapshot: null,
+                productVariantSizeSnapshot: locked.requestedSize,
+                productVariantColorSnapshot: locked.requestedColor,
+                quantity: locked.quantity,
+                unitPriceAmount: Math.floor(total / locked.quantity),
+                lineTotalAmount: total,
+              },
             },
           },
-        },
-        include: customOrderOrderInclude,
-      });
+          include: customOrderOrderInclude,
+        });
 
-      await tx.customOrderRequest.update({ where: { id }, data: { convertedOrderId: order.id } });
-      await tx.auditLog.create({
-        data: {
-          actorUserId: user.id,
-          action: 'CUSTOM_ORDER_CONVERTED_TO_ORDER',
-          entityType: 'CUSTOM_ORDER',
-          entityId: id,
-          metadata: { orderId: order.id, orderNumber },
-        },
-      });
-      await tx.auditLog.create({
-        data: {
-          actorUserId: user.id,
-          action: 'ORDER_CREATED_FROM_CUSTOM_ORDER',
-          entityType: 'ORDER',
-          entityId: order.id,
-          metadata: { customOrderId: id, orderNumber },
-        },
-      });
-      return order;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        await tx.customOrderRequest.update({ where: { id }, data: { convertedOrderId: order.id } });
+        await tx.auditLog.create({
+          data: {
+            actorUserId: user.id,
+            action: 'CUSTOM_ORDER_CONVERTED_TO_ORDER',
+            entityType: 'CUSTOM_ORDER',
+            entityId: id,
+            metadata: { orderId: order.id, orderNumber },
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorUserId: user.id,
+            action: 'ORDER_CREATED_FROM_CUSTOM_ORDER',
+            entityType: 'ORDER',
+            entityId: order.id,
+            metadata: { customOrderId: id, orderNumber },
+          },
+        });
+        return order;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   private buildReviewData(

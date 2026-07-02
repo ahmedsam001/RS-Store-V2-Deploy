@@ -68,7 +68,7 @@ export function StorefrontNavbar() {
       </div>
 
       {/* Main Header */}
-      <header className="bg-white border-b border-[#F5E6E0] shadow-sm">
+      <header className="sticky top-0 z-40 bg-white border-b border-[#F5E6E0] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Desktop / Tablet: logo left | nav center | icons right */}
           <div className="hidden lg:flex items-center gap-4">
@@ -100,60 +100,60 @@ export function StorefrontNavbar() {
                 ))}
               </div>
             </nav>
-<div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3">
-               {isAdmin ? (
-                 <div className="relative">
-                   <button
-                     className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                     type="button"
-                     onClick={() => setAccountOpen((open) => !open)}
-                     aria-label="Admin account"
-                     aria-expanded={accountOpen}
-                   >
-                     <UserRound className="h-5 w-5 sm:h-6 sm:w-6" />
-                   </button>
-                   {accountOpen && (
-                     <AdminMenu
-                       user={user}
-                       onLogout={() => {
-                         closeMenus();
-                         void logout();
-                       }}
-                       onNavigate={closeMenus}
-                     />
-                   )}
-                 </div>
-               ) : isCustomer ? (
-                 <div className="relative">
-                   <button
-                     className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                     type="button"
-                     onClick={() => setAccountOpen((open) => !open)}
-                     aria-label="My account"
-                     aria-expanded={accountOpen}
-                   >
-                     <UserRound className="h-5 w-5 sm:h-6 sm:w-6" />
-                   </button>
-                   {accountOpen && (
-                     <ProfileMenu
-                       user={user}
-                       onLogout={() => {
-                         closeMenus();
-                         void logout();
-                       }}
-                       onNavigate={closeMenus}
-                     />
-                   )}
-                 </div>
-               ) : (
-                 <CatalogLink
-                   href={buildCustomerAuthPath(PATHS.login, PATHS.profile)}
-                   className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                   aria-label="Login"
-                 >
-                   <UserRound className="h-5 w-5 sm:h-6 sm:w-6" />
-                 </CatalogLink>
-               )}
+            <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3">
+              {isAdmin ? (
+                <div className="relative">
+                  <button
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
+                    type="button"
+                    onClick={() => setAccountOpen((open) => !open)}
+                    aria-label="Admin account"
+                    aria-expanded={accountOpen}
+                  >
+                    <UserRound className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
+                  {accountOpen && (
+                    <AdminMenu
+                      user={user}
+                      onLogout={() => {
+                        closeMenus();
+                        void logout();
+                      }}
+                      onNavigate={closeMenus}
+                    />
+                  )}
+                </div>
+              ) : isCustomer ? (
+                <div className="relative">
+                  <button
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
+                    type="button"
+                    onClick={() => setAccountOpen((open) => !open)}
+                    aria-label="My account"
+                    aria-expanded={accountOpen}
+                  >
+                    <UserRound className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
+                  {accountOpen && (
+                    <ProfileMenu
+                      user={user}
+                      onLogout={() => {
+                        closeMenus();
+                        void logout();
+                      }}
+                      onNavigate={closeMenus}
+                    />
+                  )}
+                </div>
+              ) : (
+                <CatalogLink
+                  href={buildCustomerAuthPath(PATHS.login, PATHS.profile)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
+                  aria-label="Login"
+                >
+                  <UserRound className="h-5 w-5 sm:h-6 sm:w-6" />
+                </CatalogLink>
+              )}
               <CatalogLink
                 href={PATHS.cart}
                 className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
@@ -171,68 +171,68 @@ export function StorefrontNavbar() {
 
           {/* Mobile: logo left | icons right | divider | nav centered */}
           <div className="flex flex-col gap-0 lg:hidden">
-<div className="flex items-center justify-between py-2">
-               <CatalogLink
-                 href={PATHS.home}
-                 className="inline-flex items-center"
-                 aria-label="RS Store home"
-               >
-                 <img src={logoUrl} alt={storeName} className="h-10 w-auto" />
-               </CatalogLink>
-               <div className="flex items-center gap-1.5">
-                 {isAdmin ? (
-                   <div className="relative">
-                     <button
-                       className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                       type="button"
-                       onClick={() => setAccountOpen((open) => !open)}
-                       aria-label="Admin account"
-                       aria-expanded={accountOpen}
-                     >
-                       <UserRound className="h-5 w-5" />
-                     </button>
-                     {accountOpen && (
-                       <AdminMenu
-                         user={user}
-                         onLogout={() => {
-                           closeMenus();
-                           void logout();
-                         }}
-                         onNavigate={closeMenus}
-                       />
-                     )}
-                   </div>
-                 ) : isCustomer ? (
-                   <div className="relative">
-                     <button
-                       className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                       type="button"
-                       onClick={() => setAccountOpen((open) => !open)}
-                       aria-label="My account"
-                       aria-expanded={accountOpen}
-                     >
-                       <UserRound className="h-5 w-5" />
-                     </button>
-                     {accountOpen && (
-                       <ProfileMenu
-                         user={user}
-                         onLogout={() => {
-                           closeMenus();
-                           void logout();
-                         }}
-                         onNavigate={closeMenus}
-                       />
-                     )}
-                   </div>
-                 ) : (
-                   <CatalogLink
-                     href={buildCustomerAuthPath(PATHS.login, PATHS.profile)}
-                     className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                     aria-label="Login"
-                   >
-                     <UserRound className="h-5 w-5" />
-                   </CatalogLink>
-                 )}
+            <div className="flex items-center justify-between py-2">
+              <CatalogLink
+                href={PATHS.home}
+                className="inline-flex items-center"
+                aria-label="RS Store home"
+              >
+                <img src={logoUrl} alt={storeName} className="h-10 w-auto" />
+              </CatalogLink>
+              <div className="flex items-center gap-1.5">
+                {isAdmin ? (
+                  <div className="relative">
+                    <button
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
+                      type="button"
+                      onClick={() => setAccountOpen((open) => !open)}
+                      aria-label="Admin account"
+                      aria-expanded={accountOpen}
+                    >
+                      <UserRound className="h-5 w-5" />
+                    </button>
+                    {accountOpen && (
+                      <AdminMenu
+                        user={user}
+                        onLogout={() => {
+                          closeMenus();
+                          void logout();
+                        }}
+                        onNavigate={closeMenus}
+                      />
+                    )}
+                  </div>
+                ) : isCustomer ? (
+                  <div className="relative">
+                    <button
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
+                      type="button"
+                      onClick={() => setAccountOpen((open) => !open)}
+                      aria-label="My account"
+                      aria-expanded={accountOpen}
+                    >
+                      <UserRound className="h-5 w-5" />
+                    </button>
+                    {accountOpen && (
+                      <ProfileMenu
+                        user={user}
+                        onLogout={() => {
+                          closeMenus();
+                          void logout();
+                        }}
+                        onNavigate={closeMenus}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <CatalogLink
+                    href={buildCustomerAuthPath(PATHS.login, PATHS.profile)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
+                    aria-label="Login"
+                  >
+                    <UserRound className="h-5 w-5" />
+                  </CatalogLink>
+                )}
                 <CatalogLink
                   href={PATHS.cart}
                   className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
@@ -363,7 +363,9 @@ function StorefrontFooter({
               <MessageCircle aria-hidden="true" /> Contact us on WhatsApp
             </a>
           ) : null}
-          <p className="rs-footer-help">Ask about sizing, custom SHEIN links, deposits, or order status.</p>
+          <p className="rs-footer-help">
+            Ask about sizing, custom SHEIN links, deposits, or order status.
+          </p>
           <div className="rs-footer-actions">
             {/* {phoneHref ? (
               <a className="rs-footer-action" href={phoneHref}>
@@ -371,12 +373,7 @@ function StorefrontFooter({
               </a>
             ) : null} */}
             {instagram ? (
-              <a
-                className="rs-footer-action"
-                href={instagram}
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a className="rs-footer-action" href={instagram} target="_blank" rel="noreferrer">
                 <Instagram aria-hidden="true" /> Instagram
               </a>
             ) : null}

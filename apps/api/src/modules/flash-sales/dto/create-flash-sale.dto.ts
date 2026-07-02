@@ -1,6 +1,15 @@
 import { FlashSaleStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsArray, IsDate, IsDecimal, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsDate,
+  IsDecimal,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateFlashSaleDto {
   @IsString()

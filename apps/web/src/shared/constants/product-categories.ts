@@ -72,7 +72,10 @@ export function hasStaticSubCategories(mainCategorySlug?: string | null): boolea
   return getSubCategories(mainCategorySlug).length > 0;
 }
 
-export function isValidStoreSubCategory(mainCategorySlug: string | undefined, subCategory: string | undefined) {
+export function isValidStoreSubCategory(
+  mainCategorySlug: string | undefined,
+  subCategory: string | undefined,
+) {
   if (!mainCategorySlug || !subCategory) return false;
   return getSubCategories(mainCategorySlug).some(
     (item) => item.toLowerCase() === subCategory.trim().toLowerCase(),

@@ -28,11 +28,13 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   useEffect(() => {
     const container = thumbnailContainerRef.current;
     if (!container || !selectedImage?.id) return;
-    const selectedThumb = container.querySelector(`[data-thumb-id="${selectedImage.id}"]`) as HTMLElement;
+    const selectedThumb = container.querySelector(
+      `[data-thumb-id="${selectedImage.id}"]`,
+    ) as HTMLElement;
     if (selectedThumb) {
       const containerRect = container.getBoundingClientRect();
       const thumbRect = selectedThumb.getBoundingClientRect();
-      const scrollLeft = selectedThumb.offsetLeft - (containerRect.width / 2) + (thumbRect.width / 2);
+      const scrollLeft = selectedThumb.offsetLeft - containerRect.width / 2 + thumbRect.width / 2;
       container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
     }
   }, [selectedImage?.id]);
@@ -40,8 +42,13 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') return;
-      
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'BUTTON'
+      )
+        return;
+
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
         goToPrevious();
@@ -75,32 +82,38 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
     setIsDragging(true);
   }, []);
 
-  const handleTouchMove = useCallback((event: React.TouchEvent) => {
-    if (!isDragging || event.touches.length !== 1) return;
-    const touch = event.touches[0];
-    const deltaX = touch.clientX - startXRef.current;
-    const deltaY = touch.clientY - startYRef.current;
-    
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
-      event.preventDefault();
-    }
-  }, [isDragging]);
+  const handleTouchMove = useCallback(
+    (event: React.TouchEvent) => {
+      if (!isDragging || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - startXRef.current;
+      const deltaY = touch.clientY - startYRef.current;
 
-  const handleTouchEnd = useCallback((event: React.TouchEvent) => {
-    if (!isDragging) return;
-    const touch = event.changedTouches[0];
-    const deltaX = touch.clientX - startXRef.current;
-    const deltaY = touch.clientY - startYRef.current;
-    
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-      if (deltaX > 0) {
-        goToPrevious();
-      } else {
-        goToNext();
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+        event.preventDefault();
       }
-    }
-    setIsDragging(false);
-  }, [isDragging, goToPrevious, goToNext]);
+    },
+    [isDragging],
+  );
+
+  const handleTouchEnd = useCallback(
+    (event: React.TouchEvent) => {
+      if (!isDragging) return;
+      const touch = event.changedTouches[0];
+      const deltaX = touch.clientX - startXRef.current;
+      const deltaY = touch.clientY - startYRef.current;
+
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        if (deltaX > 0) {
+          goToPrevious();
+        } else {
+          goToNext();
+        }
+      }
+      setIsDragging(false);
+    },
+    [isDragging, goToPrevious, goToNext],
+  );
 
   const handleMouseDown = useCallback((event: React.MouseEvent) => {
     startXRef.current = event.clientX;
@@ -108,25 +121,31 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
     setIsDragging(true);
   }, []);
 
-  const handleMouseMove = useCallback((event: React.MouseEvent) => {
-    if (!isDragging) return;
-    event.preventDefault();
-  }, [isDragging]);
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent) => {
+      if (!isDragging) return;
+      event.preventDefault();
+    },
+    [isDragging],
+  );
 
-  const handleMouseUp = useCallback((event: React.MouseEvent) => {
-    if (!isDragging) return;
-    const deltaX = event.clientX - startXRef.current;
-    const deltaY = event.clientY - startYRef.current;
-    
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-      if (deltaX > 0) {
-        goToPrevious();
-      } else {
-        goToNext();
+  const handleMouseUp = useCallback(
+    (event: React.MouseEvent) => {
+      if (!isDragging) return;
+      const deltaX = event.clientX - startXRef.current;
+      const deltaY = event.clientY - startYRef.current;
+
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        if (deltaX > 0) {
+          goToPrevious();
+        } else {
+          goToNext();
+        }
       }
-    }
-    setIsDragging(false);
-  }, [isDragging, goToPrevious, goToNext]);
+      setIsDragging(false);
+    },
+    [isDragging, goToPrevious, goToNext],
+  );
 
   if (images.length === 0) {
     return (
@@ -163,29 +182,29 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
           height={1200}
           loading="eager"
         />
-        
-{images.length > 1 ? (
-           <>
-             <button
-               type="button"
-               onClick={goToPrevious}
-               className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background focus:outline-none focus:ring-2 focus:ring-rs-gold"
-               aria-label="Previous image"
-             >
-               <ChevronLeft className="h-5 w-5 text-rs-ink" aria-hidden="true" />
-             </button>
-             <button
-               type="button"
-               onClick={goToNext}
-               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background focus:outline-none focus:ring-2 focus:ring-rs-gold"
-               aria-label="Next image"
-             >
-               <ChevronRight className="h-5 w-5 text-rs-ink" aria-hidden="true" />
-             </button>
-           </>
-         ) : null}
+
+        {images.length > 1 ? (
+          <>
+            <button
+              type="button"
+              onClick={goToPrevious}
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background focus:outline-none focus:ring-2 focus:ring-rs-gold"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="h-5 w-5 text-rs-ink" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={goToNext}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background focus:outline-none focus:ring-2 focus:ring-rs-gold"
+              aria-label="Next image"
+            >
+              <ChevronRight className="h-5 w-5 text-rs-ink" aria-hidden="true" />
+            </button>
+          </>
+        ) : null}
       </div>
-      
+
       {images.length > 1 ? (
         <div
           ref={thumbnailContainerRef}
@@ -200,7 +219,10 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 key={image.id}
                 type="button"
                 data-thumb-id={image.id}
-                onClick={() => { setActiveImage(image); setActiveIndex(index); }}
+                onClick={() => {
+                  setActiveImage(image);
+                  setActiveIndex(index);
+                }}
                 className={`shrink-0 rounded-lg sm:rounded-xl border p-0.5 sm:p-1 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-rs-gold ${isSelected ? 'border-rs-gold bg-card shadow-sm' : 'border-rs-peach-light bg-card hover:border-rs-gold-light'}`}
                 aria-label={`View image ${index + 1} of ${productName}`}
                 aria-pressed={isSelected}

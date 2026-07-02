@@ -64,7 +64,12 @@ export class CsrfGuard implements CanActivate {
   }
 
   private isExplicitlyGuestStateWrite(path: string): boolean {
-    return path.endsWith('/cart') || path.includes('/cart/') || path.endsWith('/wishlist') || path.includes('/wishlist/');
+    return (
+      path.endsWith('/cart') ||
+      path.includes('/cart/') ||
+      path.endsWith('/wishlist') ||
+      path.includes('/wishlist/')
+    );
   }
 
   private hasAllowedOrigin(request: AuthenticatedRequest): boolean {
@@ -73,7 +78,9 @@ export class CsrfGuard implements CanActivate {
       return true;
     }
 
-    const allowedOrigins = parseAllowedOrigins(this.configService.getOrThrow<string>('FRONTEND_ORIGIN'));
+    const allowedOrigins = parseAllowedOrigins(
+      this.configService.getOrThrow<string>('FRONTEND_ORIGIN'),
+    );
     if (allowedOrigins.includes(origin)) {
       return true;
     }

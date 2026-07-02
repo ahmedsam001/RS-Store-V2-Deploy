@@ -89,11 +89,17 @@ export function OrdersPage() {
         />
       </div>
     );
-  if (error) return (
-    <div className="rs-page-stack">
-      <CatalogState title="Failed to load orders" message={error} ctaLabel="Try Again" ctaHref={PATHS.orders} />
-    </div>
-  );
+  if (error)
+    return (
+      <div className="rs-page-stack">
+        <CatalogState
+          title="Failed to load orders"
+          message={error}
+          ctaLabel="Try Again"
+          ctaHref={PATHS.orders}
+        />
+      </div>
+    );
   if (orders.length === 0)
     return (
       <div className="rs-page-stack">

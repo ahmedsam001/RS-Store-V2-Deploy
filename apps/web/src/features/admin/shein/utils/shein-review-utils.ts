@@ -1,4 +1,10 @@
-import { AdminCategory, AdminSheinImport, AdminSheinMarketplaceSettings, SheinImportStep, SheinPreviewPayload } from '@/features/admin/api/admin-api';
+import {
+  AdminCategory,
+  AdminSheinImport,
+  AdminSheinMarketplaceSettings,
+  SheinImportStep,
+  SheinPreviewPayload,
+} from '@/features/admin/api/admin-api';
 import { findStoreCategory, getSubCategories } from '@/shared/constants/product-categories';
 
 const MANUAL_REVIEW_MESSAGE =
@@ -40,7 +46,10 @@ export function formatStepStatus(status: string): string {
   return STEP_STATUS_LABELS[status] ?? status;
 }
 
-export function calculateStorePrice(sarPrice: string | number | undefined, exchangeRate: number): string {
+export function calculateStorePrice(
+  sarPrice: string | number | undefined,
+  exchangeRate: number,
+): string {
   const parsedPrice = Number(
     String(sarPrice ?? '')
       .replace(/,/g, '')
@@ -162,7 +171,10 @@ export function productImageKey(value: string): string {
   }
 }
 
-export function findSelectedAdminCategory(payload: SheinPreviewPayload, categories: AdminCategory[]) {
+export function findSelectedAdminCategory(
+  payload: SheinPreviewPayload,
+  categories: AdminCategory[],
+) {
   if (!payload.categoryId) return undefined;
   return categories.find((category) => category.id === payload.categoryId);
 }
@@ -207,7 +219,12 @@ export function resolveMainCategorySlug(
 
 export function normalizeEditorPayload(
   payload: SheinPreviewPayload,
-  marketplace: AdminSheinMarketplaceSettings = { countryCode: DEFAULT_SHEIN_MARKETPLACE_COUNTRY, currencyCode: 'SAR', language: 'en', countries: [] },
+  marketplace: AdminSheinMarketplaceSettings = {
+    countryCode: DEFAULT_SHEIN_MARKETPLACE_COUNTRY,
+    currencyCode: 'SAR',
+    language: 'en',
+    countries: [],
+  },
   sarExchangeRate = DEFAULT_SAR_EXCHANGE_RATE,
   categories: AdminCategory[] = [],
 ): SheinPreviewPayload {
@@ -263,7 +280,12 @@ export function normalizeEditorPayload(
 
 export function emptyPayload(
   sourceUrl = '',
-  marketplace: AdminSheinMarketplaceSettings = { countryCode: DEFAULT_SHEIN_MARKETPLACE_COUNTRY, currencyCode: 'SAR', language: 'en', countries: [] },
+  marketplace: AdminSheinMarketplaceSettings = {
+    countryCode: DEFAULT_SHEIN_MARKETPLACE_COUNTRY,
+    currencyCode: 'SAR',
+    language: 'en',
+    countries: [],
+  },
 ): SheinPreviewPayload {
   return {
     slug: manualSlugFromUrl(sourceUrl),
@@ -294,7 +316,12 @@ export function prepareReviewedPayload(
 ): SheinPreviewPayload {
   const normalized = normalizeEditorPayload(
     payload,
-    { countryCode: DEFAULT_SHEIN_MARKETPLACE_COUNTRY, currencyCode: 'SAR', language: 'en', countries: [] },
+    {
+      countryCode: DEFAULT_SHEIN_MARKETPLACE_COUNTRY,
+      currencyCode: 'SAR',
+      language: 'en',
+      countries: [],
+    },
     sarExchangeRate,
     categories,
   );
@@ -394,7 +421,12 @@ function normalizeSheinVariantStock(stockQuantity: number | undefined): number {
 
 export function buildSheinAdminOpenUrl(
   value: string,
-  marketplace: AdminSheinMarketplaceSettings = { countryCode: DEFAULT_SHEIN_MARKETPLACE_COUNTRY, currencyCode: 'SAR', language: 'en', countries: [] },
+  marketplace: AdminSheinMarketplaceSettings = {
+    countryCode: DEFAULT_SHEIN_MARKETPLACE_COUNTRY,
+    currencyCode: 'SAR',
+    language: 'en',
+    countries: [],
+  },
 ): string {
   const url = new URL(normalizeSheinAdminInput(value));
   url.searchParams.set('country', marketplace.countryCode);
@@ -414,14 +446,12 @@ export function normalizeSheinAdminInput(value: string): string {
     return new URL(`/h5/sharejump/appjump?${queryOnly}`, 'https://api-shein.shein.com').toString();
   }
 
-  if (raw.startsWith('/'))
-    return new URL(raw, 'https://www.shein.com').toString();
+  if (raw.startsWith('/')) return new URL(raw, 'https://www.shein.com').toString();
   if (/^appjump(?:[/?#]|$)/i.test(raw))
     return new URL(`/${raw.replace(/^\/+/, '')}`, 'https://www.shein.com').toString();
   if (/^h5\/sharejump\/appjump(?:[/?#]|$)/i.test(raw))
     return new URL(`/${raw.replace(/^\/+/, '')}`, 'https://api-shein.shein.com').toString();
-  if (/^(?:[a-z0-9-]+\.)?shein\.[a-z.]{2,}(?:[/:?#]|$)/i.test(raw))
-    return `https://${raw}`;
+  if (/^(?:[a-z0-9-]+\.)?shein\.[a-z.]{2,}(?:[/:?#]|$)/i.test(raw)) return `https://${raw}`;
   return raw;
 }
 
@@ -436,7 +466,10 @@ export function looksLikeSheinShareQuery(value: string): boolean {
   );
 }
 
-export function countryLabel(marketplace: AdminSheinMarketplaceSettings, code: string | undefined): string {
+export function countryLabel(
+  marketplace: AdminSheinMarketplaceSettings,
+  code: string | undefined,
+): string {
   const countryCode = code || marketplace.countryCode;
   const country = marketplace.countries?.find((item) => item.code === countryCode);
   return country ? `${country.nameEn} ${country.code}` : countryCode;
@@ -448,14 +481,28 @@ export function buildReviewChecklist(payload: SheinPreviewPayload, calculatedSto
     { label: 'Sub Category', done: Boolean(payload.subCategory) },
     { label: 'Description', done: Boolean((payload.description ?? '').trim()) },
     { label: 'Images', done: Boolean((payload.images ?? []).length) },
-    { label: 'Price', done: Boolean(calculateStorePrice(payload.priceAmount, 1) && calculatedStorePrice) },
+    {
+      label: 'Price',
+      done: Boolean(calculateStorePrice(payload.priceAmount, 1) && calculatedStorePrice),
+    },
     { label: 'Available Sizes', done: Boolean((payload.sizes ?? []).length) },
   ];
 }
 
 export function sheinCycleStepIndex(status: string): number {
   if (['PENDING', 'EXTRACTING'].includes(status)) return 0;
-  if (['PREVIEW_READY', 'FAILED', 'MANUAL_REVIEW', 'REVIEWING', 'REVIEWED', 'APPROVED', 'PRODUCT_CREATED'].includes(status)) return 1;
+  if (
+    [
+      'PREVIEW_READY',
+      'FAILED',
+      'MANUAL_REVIEW',
+      'REVIEWING',
+      'REVIEWED',
+      'APPROVED',
+      'PRODUCT_CREATED',
+    ].includes(status)
+  )
+    return 1;
   if (['PROCESSING', 'PUBLISHED', 'SUCCEEDED'].includes(status)) return 2;
   return 0;
 }
@@ -463,10 +510,13 @@ export function sheinCycleStepIndex(status: string): number {
 export function shouldShowManualNotice(item: AdminSheinImport): boolean {
   const hasUsableProductData = Boolean(
     (item.previewPayload || item.editedPayload) &&
-      (item.previewPayload?.nameAr || item.editedPayload?.nameAr) &&
-      ((item.previewPayload?.images.length ?? 0) > 0 || (item.editedPayload?.images.length ?? 0) > 0),
+    (item.previewPayload?.nameAr || item.editedPayload?.nameAr) &&
+    ((item.previewPayload?.images.length ?? 0) > 0 || (item.editedPayload?.images.length ?? 0) > 0),
   );
-  return !hasUsableProductData && (item.status === 'MANUAL_REVIEW' || Boolean(item.errorCode?.includes('PREVIEW_EXTRACTION')));
+  return (
+    !hasUsableProductData &&
+    (item.status === 'MANUAL_REVIEW' || Boolean(item.errorCode?.includes('PREVIEW_EXTRACTION')))
+  );
 }
 
 export function sanitizeSheinAdminMessage(message: string): string {

@@ -44,8 +44,9 @@ export function EditableOptionList({
     } else {
       nextValues = values.map((v, i) => (i === editingIndex ? trimmedValue : v));
     }
-    const uniqueValues = Array.from(new Set(nextValues.map((v) => v.toLowerCase())))
-      .map((key) => nextValues.find((v) => v.toLowerCase() === key) ?? key);
+    const uniqueValues = Array.from(new Set(nextValues.map((v) => v.toLowerCase()))).map(
+      (key) => nextValues.find((v) => v.toLowerCase() === key) ?? key,
+    );
     onChange(uniqueValues);
     cancelEdit();
   }
@@ -127,10 +128,20 @@ export function EditableOptionList({
               </>
             ) : (
               <>
-                <Button type="button" variant="outline" onClick={() => startEdit(index)} disabled={disabled}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => startEdit(index)}
+                  disabled={disabled}
+                >
                   Edit
                 </Button>
-                <Button type="button" variant="outline" onClick={() => remove(index)} disabled={disabled}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => remove(index)}
+                  disabled={disabled}
+                >
                   Delete
                 </Button>
               </>

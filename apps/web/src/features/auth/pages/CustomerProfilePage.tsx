@@ -1,15 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  User,
-  PackageSearch,
-  LogOut,
-  Phone,
-  MapPin,
-  Shield,
-  ShoppingCart,
-  X,
-} from 'lucide-react';
+import { User, PackageSearch, LogOut, Phone, MapPin, Shield, ShoppingCart, X } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/shared/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
@@ -113,7 +104,9 @@ export function CustomerProfilePage() {
               <h1 className="mt-1 text-xl font-extrabold text-foreground sm:text-2xl">
                 {displayName}
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">{formatPhoneDisplay(user.phone) ?? 'Not set'}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {formatPhoneDisplay(user.phone) ?? 'Not set'}
+              </p>
             </div>
           </div>
         </div>
@@ -163,7 +156,9 @@ export function CustomerProfilePage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Full Name</label>
+                <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+                  Full Name
+                </label>
                 <Input
                   placeholder="Enter your full name"
                   value={editForm.name}
@@ -172,7 +167,9 @@ export function CustomerProfilePage() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Phone</label>
+                <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+                  Phone
+                </label>
                 <Input
                   placeholder="01xxxxxxxxx"
                   value={editForm.phone}
@@ -182,7 +179,9 @@ export function CustomerProfilePage() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">Address</label>
+                <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+                  Address
+                </label>
                 <Input
                   placeholder="Enter your address"
                   value={editForm.address}
@@ -191,10 +190,20 @@ export function CustomerProfilePage() {
                 />
               </div>
               <div className="flex gap-2 pt-2">
-                <Button variant="secondary" onClick={handleCancel} disabled={isSaving} className="flex-1">
+                <Button
+                  variant="secondary"
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                  className="flex-1"
+                >
                   Cancel
                 </Button>
-                <Button variant="default" onClick={handleSave} disabled={isSaving} className="flex-1">
+                <Button
+                  variant="default"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="flex-1"
+                >
                   {isSaving ? 'Saving...' : 'Save'}
                 </Button>
               </div>
@@ -213,7 +222,11 @@ export function CustomerProfilePage() {
           </CardHeader>
           <CardContent className="space-y-3 bg-card p-4 sm:p-5">
             <InfoRow icon={User} label="Full Name" value={user.name ?? 'Not set'} />
-            <InfoRow icon={Phone} label="Phone" value={formatPhoneDisplay(user.phone) ?? 'Not set'} />
+            <InfoRow
+              icon={Phone}
+              label="Phone"
+              value={formatPhoneDisplay(user.phone) ?? 'Not set'}
+            />
             <InfoRow icon={MapPin} label="Address" value={user.address ?? 'Not set'} />
           </CardContent>
         </Card>
@@ -313,13 +326,22 @@ function InfoRow({
   );
 }
 
-function displayProfileName(user: { name?: string | null; email?: string | null; phone?: string | null }): string {
+function displayProfileName(user: {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}): string {
   const name = user.name?.trim();
   if (name) return name;
   return user.email?.trim() || user.phone?.trim() || 'Customer';
 }
 
-function profileInitials(user: { id: string; name?: string | null; email?: string | null; phone?: string | null }): string {
+function profileInitials(user: {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}): string {
   const source = displayProfileName(user);
   const parts = source
     .split(/[\s@._+-]+/)

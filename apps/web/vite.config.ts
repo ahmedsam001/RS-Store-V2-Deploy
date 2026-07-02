@@ -31,7 +31,10 @@ export default defineConfig({
             return 'react-vendor';
           }
 
-          if (id.includes('/node_modules/react-router-dom/') || id.includes('/node_modules/@remix-run/')) {
+          if (
+            id.includes('/node_modules/react-router-dom/') ||
+            id.includes('/node_modules/@remix-run/')
+          ) {
             return 'router-vendor';
           }
 

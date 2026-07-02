@@ -26,7 +26,10 @@ export class SheinController {
   }
 
   @Patch('marketplace-settings')
-  updateMarketplaceSettings(@Body() dto: UpdateSheinMarketplaceSettingsDto, @CurrentUser() user: AuthenticatedUser) {
+  updateMarketplaceSettings(
+    @Body() dto: UpdateSheinMarketplaceSettingsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinService.updateMarketplaceSettings(dto, user);
   }
 
@@ -61,28 +64,52 @@ export class SheinController {
   }
 
   @Patch('imports/:id')
-  update(@Param() params: IdParamDto, @Body() dto: UpdateSheinImportDto, @CurrentUser() user: AuthenticatedUser) {
+  update(
+    @Param() params: IdParamDto,
+    @Body() dto: UpdateSheinImportDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinService.update(params.id, dto, user);
   }
 
   @Post('imports/:id/review')
-  markReviewing(@Param() params: IdParamDto, @Body() dto: ReviewSheinImportDto, @CurrentUser() user: AuthenticatedUser) {
+  markReviewing(
+    @Param() params: IdParamDto,
+    @Body() dto: ReviewSheinImportDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinService.markReviewing(params.id, dto, user);
   }
 
   @Post('imports/:id/approve')
-  approve(@Param() params: IdParamDto, @Body() dto: ApproveSheinImportDto, @CurrentUser() user: AuthenticatedUser) {
+  approve(
+    @Param() params: IdParamDto,
+    @Body() dto: ApproveSheinImportDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinService.approve(params.id, dto, user);
   }
 
   @Post('imports/:id/create-product')
-  createProduct(@Param() params: IdParamDto, @Body() dto: ApproveSheinImportDto, @CurrentUser() user: AuthenticatedUser) {
+  createProduct(
+    @Param() params: IdParamDto,
+    @Body() dto: ApproveSheinImportDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinService.createProduct(params.id, dto, user);
   }
 
   @Post('imports/:id/publish')
-  publish(@Param() params: IdParamDto, @Body() dto: ApproveSheinImportDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.sheinService.createProduct(params.id, { ...dto, publishStatus: ProductStatus.ACTIVE }, user);
+  publish(
+    @Param() params: IdParamDto,
+    @Body() dto: ApproveSheinImportDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.sheinService.createProduct(
+      params.id,
+      { ...dto, publishStatus: ProductStatus.ACTIVE },
+      user,
+    );
   }
 
   @Post('imports/:id/retry')

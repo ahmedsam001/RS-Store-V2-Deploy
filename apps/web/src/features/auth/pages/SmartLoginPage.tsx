@@ -41,7 +41,11 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
   const locationState = location.state as LocationState | null;
 
   const returnTo = useMemo(
-    () => sanitizeReturnTo(searchParams.get('redirect') ?? searchParams.get('returnTo') ?? locationState?.returnTo, PATHS.home),
+    () =>
+      sanitizeReturnTo(
+        searchParams.get('redirect') ?? searchParams.get('returnTo') ?? locationState?.returnTo,
+        PATHS.profile,
+      ),
     [locationState?.returnTo, searchParams],
   );
   const isCheckoutFlow = returnTo === PATHS.checkout || locationState?.reason === 'checkout';
@@ -78,7 +82,9 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
         navigate(returnTo, {
           replace: true,
           state: {
-            message: isCheckoutFlow ? 'Login successful. Complete your order now.' : 'Welcome back!',
+            message: isCheckoutFlow
+              ? 'Login successful. Complete your order now.'
+              : 'Welcome back!',
           },
         });
         return;
@@ -127,7 +133,9 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
       navigate(returnTo, {
         replace: true,
         state: {
-          message: isCheckoutFlow ? 'Account created successfully. Complete your order now.' : 'Account created successfully.',
+          message: isCheckoutFlow
+            ? 'Account created successfully. Complete your order now.'
+            : 'Account created successfully.',
         },
       });
     } catch (err) {
@@ -226,37 +234,43 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
 
           {step === 'register' ? (
             <>
-            <label className="block">
-              <span className="block text-sm font-extrabold text-rs-ink mb-1.5">Full Name</span>
-              <Input
-                name="name"
-                type="text"
-                placeholder="Your full name"
-                minLength={2}
-                required
-                autoComplete="name"
-                className="border-rs-peach hover:border-rs-gold-light focus:border-rs-gold focus:ring-rs-gold/20"
-              />
-            </label>
-            <label className="block">
-              <span className="block text-sm font-extrabold text-rs-ink mb-1.5">Delivery Address</span>
-              <textarea
-                name="address"
-                placeholder="Full address with area or city"
-                rows={3}
-                required
-                minLength={5}
-                autoComplete="street-address"
-                className="mt-0.5 w-full rounded-2xl border border-rs-peach bg-card px-4 py-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground hover:border-rs-gold-light focus:outline-none focus:border-rs-gold focus:ring-2 focus:ring-rs-gold/20"
-              />
-            </label>
+              <label className="block">
+                <span className="block text-sm font-extrabold text-rs-ink mb-1.5">Full Name</span>
+                <Input
+                  name="name"
+                  type="text"
+                  placeholder="Your full name"
+                  minLength={2}
+                  required
+                  autoComplete="name"
+                  className="border-rs-peach hover:border-rs-gold-light focus:border-rs-gold focus:ring-rs-gold/20"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-sm font-extrabold text-rs-ink mb-1.5">
+                  Delivery Address
+                </span>
+                <textarea
+                  name="address"
+                  placeholder="Full address with area or city"
+                  rows={3}
+                  required
+                  minLength={5}
+                  autoComplete="street-address"
+                  className="mt-0.5 w-full rounded-2xl border border-rs-peach bg-card px-4 py-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground hover:border-rs-gold-light focus:outline-none focus:border-rs-gold focus:ring-2 focus:ring-rs-gold/20"
+                />
+              </label>
             </>
           ) : null}
 
           {step !== 'phone' ? <RememberMe defaultChecked={isCheckoutFlow} /> : null}
           <AuthError message={error} />
 
-          <button className="rs-btn-primary w-full" type="submit" disabled={isSubmitting || !phoneValue.trim()}>
+          <button
+            className="rs-btn-primary w-full"
+            type="submit"
+            disabled={isSubmitting || !phoneValue.trim()}
+          >
             {step === 'admin-password' ? (
               <KeyRound className="h-4 w-4" aria-hidden="true" />
             ) : step === 'register' ? (
@@ -269,7 +283,10 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
         </form>
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-4 text-sm font-extrabold text-muted-foreground">
-          <CatalogLink href={PATHS.home} className="inline-flex items-center gap-1 transition hover:text-rs-gold">
+          <CatalogLink
+            href={PATHS.home}
+            className="inline-flex items-center gap-1 transition hover:text-rs-gold"
+          >
             Return to Store <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           </CatalogLink>
         </div>
@@ -283,7 +300,9 @@ function stepContent(step: AuthStep, isSubmitting: boolean) {
     return {
       kicker: 'Admin Panel',
       heading: 'Admin Login',
-      description: isSubmitting ? 'Checking admin credentials...' : 'Enter your password to access the dashboard',
+      description: isSubmitting
+        ? 'Checking admin credentials...'
+        : 'Enter your password to access the dashboard',
     };
   }
 
@@ -324,7 +343,10 @@ function submitLabel(step: AuthStep, isSubmitting: boolean): string {
 
 function AuthError({ message }: { message: string }) {
   return message ? (
-    <p className="rs-form-error rounded-xl border border-destructive/30 bg-destructive/5 p-3" role="alert">
+    <p
+      className="rs-form-error rounded-xl border border-destructive/30 bg-destructive/5 p-3"
+      role="alert"
+    >
       {message}
     </p>
   ) : null;
@@ -333,7 +355,9 @@ function AuthError({ message }: { message: string }) {
 function normalizeAuthError(error: unknown, context: 'admin' | 'customer' = 'customer'): string {
   const message = error instanceof Error ? error.message : '';
   if (/password|credentials|unauthorized/i.test(message)) {
-    return context === 'admin' ? 'Invalid admin credentials. Please try again.' : 'Unable to sign in. Please try again.';
+    return context === 'admin'
+      ? 'Invalid admin credentials. Please try again.'
+      : 'Unable to sign in. Please try again.';
   }
   if (/phone/i.test(message)) {
     return 'Please enter an Egyptian mobile number like 01xxxxxxxxx';

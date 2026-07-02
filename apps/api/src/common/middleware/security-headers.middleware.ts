@@ -14,7 +14,11 @@ const defaultPolicy = [
   'upgrade-insecure-requests',
 ].join('; ');
 
-export function securityHeadersMiddleware(_request: Request, response: Response, next: NextFunction): void {
+export function securityHeadersMiddleware(
+  _request: Request,
+  response: Response,
+  next: NextFunction,
+): void {
   response.setHeader('Content-Security-Policy', defaultPolicy);
   response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   response.setHeader('Cross-Origin-Resource-Policy', 'same-site');

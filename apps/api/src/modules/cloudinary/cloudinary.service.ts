@@ -15,14 +15,9 @@ export type CloudinaryUploadResult = {
 export class CloudinaryService {
   private readonly logger = new Logger(CloudinaryService.name);
 
-  constructor(
-    @Inject(CLOUDINARY) private readonly cloudinaryClient: typeof Cloudinary,
-  ) {}
+  constructor(@Inject(CLOUDINARY) private readonly cloudinaryClient: typeof Cloudinary) {}
 
-  async uploadImage(
-    file: Buffer,
-    folder: string,
-  ): Promise<CloudinaryUploadResult> {
+  async uploadImage(file: Buffer, folder: string): Promise<CloudinaryUploadResult> {
     try {
       const result: UploadApiResponse = await this.cloudinaryClient.uploader.upload(
         `data:image/*;base64,${file.toString('base64')}`,
@@ -51,16 +46,11 @@ export class CloudinaryService {
       });
 
       if (result.result !== 'ok' && result.result !== 'deleted') {
-        this.logger.warn(
-          `Unexpected delete result for ${publicId}: ${result.result}`,
-        );
+        this.logger.warn(`Unexpected delete result for ${publicId}: ${result.result}`);
       }
     } catch (error) {
       const uploadError = error as UploadApiErrorResponse;
-      this.logger.error(
-        `Failed to delete image ${publicId} from Cloudinary`,
-        uploadError.message,
-      );
+      this.logger.error(`Failed to delete image ${publicId} from Cloudinary`, uploadError.message);
       throw error;
     }
   }
@@ -71,11 +61,10 @@ export class CloudinaryService {
     folder: string,
   ): Promise<CloudinaryUploadResult> {
     try {
-      const uploadResult: UploadApiResponse =
-        await this.cloudinaryClient.uploader.upload(
-          `data:image/*;base64,${file.toString('base64')}`,
-          { folder, resource_type: 'image' },
-        );
+      const uploadResult: UploadApiResponse = await this.cloudinaryClient.uploader.upload(
+        `data:image/*;base64,${file.toString('base64')}`,
+        { folder, resource_type: 'image' },
+      );
 
       // Delete old image after successful upload
       await this.deleteImage(oldPublicId);

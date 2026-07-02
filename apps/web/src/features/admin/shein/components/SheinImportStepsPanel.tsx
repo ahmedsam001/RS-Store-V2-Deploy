@@ -2,9 +2,17 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { Button } from '@/shared/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
 import { SheinImportStepsPanelProps } from '@/features/admin/shein/types/shein.types';
-import { sanitizeSheinAdminMessage, defaultSteps, formatStepStatus } from '@/features/admin/shein/utils/shein-review-utils';
+import {
+  sanitizeSheinAdminMessage,
+  defaultSteps,
+  formatStepStatus,
+} from '@/features/admin/shein/utils/shein-review-utils';
 
-export function SheinImportStepsPanel({ job, isContinuing = false, onContinue }: SheinImportStepsPanelProps) {
+export function SheinImportStepsPanel({
+  job,
+  isContinuing = false,
+  onContinue,
+}: SheinImportStepsPanelProps) {
   const steps = job?.steps ?? defaultSteps();
   const assistedUrl = job?.assistedUrl ?? job?.preparedUrl;
   const isAutoMonitoring = job?.status === 'running' || job?.status === 'verification';
@@ -27,7 +35,8 @@ export function SheinImportStepsPanel({ job, isContinuing = false, onContinue }:
         </div>
         {isAutoMonitoring ? (
           <p className="rounded-2xl border border-[hsl(var(--border)/0.8)] bg-[hsl(var(--muted)/0.45)] px-3 py-2 text-sm leading-6 text-muted-foreground">
-            The browser tab is being monitored automatically. Solve CAPTCHA if it appears; once the product page loads, import will continue and the SHEIN tab will close by itself.
+            The browser tab is being monitored automatically. Solve CAPTCHA if it appears; once the
+            product page loads, import will continue and the SHEIN tab will close by itself.
           </p>
         ) : null}
         {needsCaptchaAction || canOpenSheinPage ? (
@@ -40,7 +49,13 @@ export function SheinImportStepsPanel({ job, isContinuing = false, onContinue }:
               </Button>
             ) : null}
             {needsCaptchaAction ? (
-              <Button type="button" size="sm" variant="outline" disabled={isContinuing} onClick={() => void onContinue?.()}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isContinuing}
+                onClick={() => void onContinue?.()}
+              >
                 {isContinuing ? 'Checking...' : 'Manual check now'}
               </Button>
             ) : null}

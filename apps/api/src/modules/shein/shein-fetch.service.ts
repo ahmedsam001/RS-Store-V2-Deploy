@@ -20,7 +20,10 @@ export class SheinFetchService {
     private readonly configService: ConfigService,
   ) {}
 
-  async fetchProductPage(sourceUrl: string, marketplace?: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): Promise<SheinFetchedPage> {
+  async fetchProductPage(
+    sourceUrl: string,
+    marketplace?: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): Promise<SheinFetchedPage> {
     const market = this.marketplaceOrEnv(marketplace);
     const candidates = this.v1StyleUrlCandidates(sourceUrl, market);
     let lastError: unknown;
@@ -38,7 +41,11 @@ export class SheinFetchService {
 
         this.urlService.assertAllowedFetchedUrl(response.url || url.toString());
         const contentType = response.headers.get('content-type') ?? '';
-        if (!contentType.includes('text/html') && !contentType.includes('application/xhtml') && !contentType.includes('text/plain')) {
+        if (
+          !contentType.includes('text/html') &&
+          !contentType.includes('application/xhtml') &&
+          !contentType.includes('text/plain')
+        ) {
           lastError = new BadRequestException('SHEIN URL did not return an HTML product page');
           continue;
         }
@@ -60,7 +67,10 @@ export class SheinFetchService {
     throw new ServiceUnavailableException('Unable to fetch SHEIN product page');
   }
 
-  async dumpProductPageWithBrowser(sourceUrl: string, marketplace?: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): Promise<SheinFetchedPage | null> {
+  async dumpProductPageWithBrowser(
+    sourceUrl: string,
+    marketplace?: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): Promise<SheinFetchedPage | null> {
     if (!this.shouldUseBrowserFallback()) {
       return null;
     }
@@ -97,13 +107,18 @@ export class SheinFetchService {
 
         try {
           const html = await new Promise<string>((resolve, reject) => {
-            execFile(executable, args, { timeout: this.browserTimeoutMs(), maxBuffer: 24 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
-              if (error && !stdout) {
-                reject(error);
-                return;
-              }
-              resolve(String(stdout || ''));
-            });
+            execFile(
+              executable,
+              args,
+              { timeout: this.browserTimeoutMs(), maxBuffer: 24 * 1024 * 1024, windowsHide: true },
+              (error, stdout) => {
+                if (error && !stdout) {
+                  reject(error);
+                  return;
+                }
+                resolve(String(stdout || ''));
+              },
+            );
           });
 
           if (html.trim().length > 500) {
@@ -124,9 +139,10 @@ export class SheinFetchService {
     }
   }
 
-
   shouldUseBrowserFallback(): boolean {
-    const mode = String(this.configService.get<string>('SHEIN_BROWSER_IMPORT') ?? 'off').trim().toLowerCase();
+    const mode = String(this.configService.get<string>('SHEIN_BROWSER_IMPORT') ?? 'off')
+      .trim()
+      .toLowerCase();
     return ['headless', 'dump'].includes(mode);
   }
 
@@ -138,15 +154,22 @@ export class SheinFetchService {
     return DEFAULT_BROWSER_TIMEOUT_MS;
   }
 
-  private v1StyleUrlCandidates(sourceUrl: string, market: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): URL[] {
+  private v1StyleUrlCandidates(
+    sourceUrl: string,
+    market: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): URL[] {
     const base = this.urlService.applyV1MarketToSheinUrl(sourceUrl, market);
-    const productCandidates = this.urlService.productUrlCandidatesFromShare(sourceUrl).map((url) =>
-      this.urlService.applyV1MarketToSheinUrl(url.toString(), market),
-    );
+    const productCandidates = this.urlService
+      .productUrlCandidatesFromShare(sourceUrl)
+      .map((url) => this.urlService.applyV1MarketToSheinUrl(url.toString(), market));
     return this.uniqueUrls([base, ...productCandidates]);
   }
 
-  private async fetchWithValidatedRedirects(initialUrl: URL, signal: AbortSignal, market: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): Promise<Response> {
+  private async fetchWithValidatedRedirects(
+    initialUrl: URL,
+    signal: AbortSignal,
+    market: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): Promise<Response> {
     let currentUrl = initialUrl;
 
     for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
@@ -158,7 +181,8 @@ export class SheinFetchService {
           accept: 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
           'accept-language': 'en-US,en;q=0.9,ar;q=0.7',
           cookie: this.v1StyleSheinCookie(market),
-          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36',
+          'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36',
         },
       });
 
@@ -172,36 +196,50 @@ export class SheinFetchService {
         throw new BadRequestException('SHEIN redirect did not include a destination');
       }
 
-      currentUrl = this.urlService.assertAllowedFetchedUrl(new URL(location, currentUrl).toString());
+      currentUrl = this.urlService.assertAllowedFetchedUrl(
+        new URL(location, currentUrl).toString(),
+      );
     }
 
     throw new BadRequestException('SHEIN page redirected too many times');
   }
 
-  private v1StyleSheinCookie(market: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): string {
+  private v1StyleSheinCookie(
+    market: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): string {
     return `currency=${market.currencyCode}; language=${market.language}; country=${market.countryCode}; localcountry=${market.countryCode}`;
   }
 
-  private marketplaceOrEnv(marketplace?: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'> {
-    return marketplace ?? {
-      countryCode: (this.configService.get<string>('SHEIN_IMPORT_COUNTRY_CODE') ?? 'KW').toUpperCase() as SheinMarketplaceSettings['countryCode'],
-      currencyCode: FIXED_SHEIN_CURRENCY,
-      language: this.configService.get<string>('SHEIN_IMPORT_LANGUAGE') ?? 'en',
-    };
+  private marketplaceOrEnv(
+    marketplace?: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'> {
+    return (
+      marketplace ?? {
+        countryCode: (
+          this.configService.get<string>('SHEIN_IMPORT_COUNTRY_CODE') ?? 'KW'
+        ).toUpperCase() as SheinMarketplaceSettings['countryCode'],
+        currencyCode: FIXED_SHEIN_CURRENCY,
+        language: this.configService.get<string>('SHEIN_IMPORT_LANGUAGE') ?? 'en',
+      }
+    );
   }
 
   private browserExecutableCandidates(): string[] {
     const configured = this.configService.get<string>('SHEIN_BROWSER_PATH');
-    return [...new Set([
-      configured,
-      '/usr/bin/chromium-browser',
-      '/usr/bin/chromium',
-      '/usr/bin/google-chrome',
-      '/usr/bin/google-chrome-stable',
-      'chromium-browser',
-      'chromium',
-      'google-chrome',
-    ].filter((value): value is string => Boolean(value)))];
+    return [
+      ...new Set(
+        [
+          configured,
+          '/usr/bin/chromium-browser',
+          '/usr/bin/chromium',
+          '/usr/bin/google-chrome',
+          '/usr/bin/google-chrome-stable',
+          'chromium-browser',
+          'chromium',
+          'google-chrome',
+        ].filter((value): value is string => Boolean(value)),
+      ),
+    ];
   }
 
   private uniqueUrls(urls: URL[]): URL[] {

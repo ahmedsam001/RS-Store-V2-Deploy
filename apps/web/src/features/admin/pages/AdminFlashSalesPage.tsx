@@ -60,9 +60,9 @@ export function AdminFlashSalesPage() {
   const groupedProducts = useMemo(() => {
     const query = productPickerSearch.trim().toLowerCase();
     const filtered = query
-      ? products.filter((p) =>
-          p.nameAr.toLowerCase().includes(query) ||
-          (p.sku?.toLowerCase() ?? '').includes(query),
+      ? products.filter(
+          (p) =>
+            p.nameAr.toLowerCase().includes(query) || (p.sku?.toLowerCase() ?? '').includes(query),
         )
       : products;
     const sorted = [...filtered].sort((a, b) => b.id.localeCompare(a.id));
@@ -76,7 +76,10 @@ export function AdminFlashSalesPage() {
     return Array.from(map.entries());
   }, [products, productPickerSearch]);
 
-  const attachedProductIds = useMemo(() => new Set(selected?.products?.map((entry) => entry.product.id) ?? []), [selected]);
+  const attachedProductIds = useMemo(
+    () => new Set(selected?.products?.map((entry) => entry.product.id) ?? []),
+    [selected],
+  );
 
   async function load(nextFilters = filters) {
     const [saleResponse, productResponse] = await Promise.all([
@@ -112,14 +115,17 @@ export function AdminFlashSalesPage() {
     const data = new FormData(form);
     await run(
       () =>
-        adminApi.createFlashSale({
-          titleAr: String(data.get('titleAr') ?? '').trim(),
-          titleEn: String(data.get('titleEn') ?? '').trim() || undefined,
-          discountPercent: String(data.get('discountPercent') ?? '').trim(),
-          startsAt: new Date(String(data.get('startsAt') ?? '')).toISOString(),
-          endsAt: new Date(String(data.get('endsAt') ?? '')).toISOString(),
-          status: String(data.get('status') ?? 'SCHEDULED'),
-        }, { csrfToken }),
+        adminApi.createFlashSale(
+          {
+            titleAr: String(data.get('titleAr') ?? '').trim(),
+            titleEn: String(data.get('titleEn') ?? '').trim() || undefined,
+            discountPercent: String(data.get('discountPercent') ?? '').trim(),
+            startsAt: new Date(String(data.get('startsAt') ?? '')).toISOString(),
+            endsAt: new Date(String(data.get('endsAt') ?? '')).toISOString(),
+            status: String(data.get('status') ?? 'SCHEDULED'),
+          },
+          { csrfToken },
+        ),
       'Flash sale created',
     );
     form.reset();
@@ -132,14 +138,18 @@ export function AdminFlashSalesPage() {
     const data = new FormData(event.currentTarget);
     await run(
       () =>
-        adminApi.updateFlashSale(selected.id, {
-          titleAr: String(data.get('titleAr') ?? '').trim(),
-          titleEn: String(data.get('titleEn') ?? '').trim() || null,
-          discountPercent: String(data.get('discountPercent') ?? '').trim(),
-          startsAt: new Date(String(data.get('startsAt') ?? '')).toISOString(),
-          endsAt: new Date(String(data.get('endsAt') ?? '')).toISOString(),
-          status: String(data.get('status') ?? selected.status),
-        }, { csrfToken }),
+        adminApi.updateFlashSale(
+          selected.id,
+          {
+            titleAr: String(data.get('titleAr') ?? '').trim(),
+            titleEn: String(data.get('titleEn') ?? '').trim() || null,
+            discountPercent: String(data.get('discountPercent') ?? '').trim(),
+            startsAt: new Date(String(data.get('startsAt') ?? '')).toISOString(),
+            endsAt: new Date(String(data.get('endsAt') ?? '')).toISOString(),
+            status: String(data.get('status') ?? selected.status),
+          },
+          { csrfToken },
+        ),
       'Flash sale updated',
     );
   }
@@ -182,7 +192,10 @@ export function AdminFlashSalesPage() {
           adminApi.addFlashSaleProduct(selected.id, productId, { csrfToken }),
         ),
       );
-      setNotice({ type: 'success', message: `${selectedProductIds.size} product(s) added to sale` });
+      setNotice({
+        type: 'success',
+        message: `${selectedProductIds.size} product(s) added to sale`,
+      });
       setSelectedProductIds(new Set());
       setProductPickerSearch('');
       await load();
@@ -202,7 +215,11 @@ export function AdminFlashSalesPage() {
         title="Flash Sales"
         description="Create flash sales linked to published products with discount and clear timing for customers"
         actions={
-          <Button variant="outline" type="button" onClick={() => load().catch((err) => setNotice(toNotice(err)))}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => load().catch((err) => setNotice(toNotice(err)))}
+          >
             Refresh
           </Button>
         }
@@ -220,7 +237,11 @@ export function AdminFlashSalesPage() {
       >
         <form className="grid gap-3" onSubmit={applyFilters}>
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto_auto] md:items-end">
-            <Input name="search" placeholder="Search sale product or SKU" defaultValue={filters.search} />
+            <Input
+              name="search"
+              placeholder="Search sale product or SKU"
+              defaultValue={filters.search}
+            />
             <Select name="status" defaultValue={filters.status}>
               <option value="">All statuses</option>
               <option value="SCHEDULED">Scheduled</option>
@@ -229,7 +250,11 @@ export function AdminFlashSalesPage() {
               <option value="EXPIRED">Expired</option>
               <option value="CANCELLED">Cancelled</option>
             </Select>
-            <Button type="button" variant="outline" onClick={() => setAdvancedFiltersOpen((open) => !open)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAdvancedFiltersOpen((open) => !open)}
+            >
               {advancedFiltersOpen ? 'Hide Dates' : 'Date Filters'}
             </Button>
             <Button type="submit">Search</Button>
@@ -250,7 +275,10 @@ export function AdminFlashSalesPage() {
       </AdminCard>
 
       {createOpen ? (
-        <AdminCard title="New Flash Sale" description="Step 1: create the sale. Step 2: choose products from the selected sale panel.">
+        <AdminCard
+          title="New Flash Sale"
+          description="Step 1: create the sale. Step 2: choose products from the selected sale panel."
+        >
           <form className="grid gap-4" onSubmit={handleCreate}>
             <AdminSoftPanel className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-1 text-sm font-bold text-[#241611]">
@@ -263,7 +291,13 @@ export function AdminFlashSalesPage() {
               </label>
               <label className="grid gap-1 text-sm font-bold text-[#241611]">
                 Discount percent
-                <Input name="discountPercent" inputMode="decimal" dir="ltr" placeholder="20" required />
+                <Input
+                  name="discountPercent"
+                  inputMode="decimal"
+                  dir="ltr"
+                  placeholder="20"
+                  required
+                />
               </label>
               <label className="grid gap-1 text-sm font-bold text-[#241611]">
                 Status
@@ -283,7 +317,9 @@ export function AdminFlashSalesPage() {
               </label>
             </AdminSoftPanel>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Create Flash Sale</Button>
             </div>
           </form>
@@ -311,7 +347,9 @@ export function AdminFlashSalesPage() {
               variant="outline"
               size="sm"
               disabled={!salePage.meta.hasPreviousPage}
-              onClick={() => goToPage(Math.max(1, filters.page - 1)).catch((err) => setNotice(toNotice(err)))}
+              onClick={() =>
+                goToPage(Math.max(1, filters.page - 1)).catch((err) => setNotice(toNotice(err)))
+              }
             >
               Previous
             </Button>
@@ -344,29 +382,84 @@ export function AdminFlashSalesPage() {
 
             <AdminSoftPanel className="space-y-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <Button size="sm" type="button" onClick={() => run(() => adminApi.updateFlashSale(selected.id, { status: 'ACTIVE' }, { csrfToken }), 'Sale activated')}>
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() =>
+                    run(
+                      () =>
+                        adminApi.updateFlashSale(selected.id, { status: 'ACTIVE' }, { csrfToken }),
+                      'Sale activated',
+                    )
+                  }
+                >
                   Activate
                 </Button>
-                <Button size="sm" variant="outline" type="button" onClick={() => run(() => adminApi.updateFlashSale(selected.id, { status: 'PAUSED' }, { csrfToken }), 'Sale paused')}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  onClick={() =>
+                    run(
+                      () =>
+                        adminApi.updateFlashSale(selected.id, { status: 'PAUSED' }, { csrfToken }),
+                      'Sale paused',
+                    )
+                  }
+                >
                   Pause
                 </Button>
-                <AdminConfirmButton size="sm" variant="outline" type="button" message="Delete sale completely?" onClick={() => run(() => adminApi.deleteFlashSale(selected.id, { csrfToken }), 'Sale deleted')}>
+                <AdminConfirmButton
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  message="Delete sale completely?"
+                  onClick={() =>
+                    run(() => adminApi.deleteFlashSale(selected.id, { csrfToken }), 'Sale deleted')
+                  }
+                >
                   Delete Sale
                 </AdminConfirmButton>
               </div>
               <p className="text-xs font-bold text-muted-foreground">
-                Flash Sale keeps priority over normal product discount. Linked products will show this sale price while the sale is active.
+                Flash Sale keeps priority over normal product discount. Linked products will show
+                this sale price while the sale is active.
               </p>
             </AdminSoftPanel>
 
             <details className="admin-disclosure">
               <summary>Edit sale settings</summary>
               <form className="admin-form-grid pt-3" onSubmit={handleUpdate} key={selected.id}>
-                <Input name="titleAr" placeholder="Sale name" defaultValue={selected.titleAr} required />
-                <Input name="titleEn" placeholder="English name optional" defaultValue={selected.titleEn ?? ''} />
-                <Input name="discountPercent" inputMode="decimal" dir="ltr" defaultValue={String(selected.discountPercent)} required />
-                <Input name="startsAt" type="datetime-local" defaultValue={toDateTimeLocal(selected.startsAt)} required />
-                <Input name="endsAt" type="datetime-local" defaultValue={toDateTimeLocal(selected.endsAt)} required />
+                <Input
+                  name="titleAr"
+                  placeholder="Sale name"
+                  defaultValue={selected.titleAr}
+                  required
+                />
+                <Input
+                  name="titleEn"
+                  placeholder="English name optional"
+                  defaultValue={selected.titleEn ?? ''}
+                />
+                <Input
+                  name="discountPercent"
+                  inputMode="decimal"
+                  dir="ltr"
+                  defaultValue={String(selected.discountPercent)}
+                  required
+                />
+                <Input
+                  name="startsAt"
+                  type="datetime-local"
+                  defaultValue={toDateTimeLocal(selected.startsAt)}
+                  required
+                />
+                <Input
+                  name="endsAt"
+                  type="datetime-local"
+                  defaultValue={toDateTimeLocal(selected.endsAt)}
+                  required
+                />
                 <Select name="status" defaultValue={selected.status}>
                   <option value="SCHEDULED">Scheduled</option>
                   <option value="ACTIVE">Active</option>
@@ -403,7 +496,8 @@ export function AdminFlashSalesPage() {
                         {group.items.map((product) => {
                           const isAttached = attachedProductIds.has(product.id);
                           const isChecked = selectedProductIds.has(product.id);
-                          const primaryImage = product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
+                          const primaryImage =
+                            product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
                           return (
                             <label
                               key={product.id}
@@ -427,12 +521,16 @@ export function AdminFlashSalesPage() {
                                 fallbackVariant="product"
                               />
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-black text-[#241611] truncate">{product.nameAr}</p>
+                                <p className="text-sm font-black text-[#241611] truncate">
+                                  {product.nameAr}
+                                </p>
                                 <p className="text-xs text-muted-foreground truncate" dir="ltr">
                                   {product.sku ?? '-'}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  <span className="line-through">{formatBaseProductPrice(product)}</span>{' '}
+                                  <span className="line-through">
+                                    {formatBaseProductPrice(product)}
+                                  </span>{' '}
                                   <span className="font-black text-[#ff3f6c]">
                                     {formatSalePrice(product, selected)}
                                   </span>
@@ -457,7 +555,9 @@ export function AdminFlashSalesPage() {
                   onClick={handleAddSelectedProducts}
                   disabled={isAddingProducts}
                 >
-                  {isAddingProducts ? 'Adding...' : `Add ${selectedProductIds.size} selected product(s) to sale`}
+                  {isAddingProducts
+                    ? 'Adding...'
+                    : `Add ${selectedProductIds.size} selected product(s) to sale`}
                 </Button>
               )}
             </div>
@@ -465,15 +565,35 @@ export function AdminFlashSalesPage() {
             <div className="grid gap-3">
               {selected.products?.length ? (
                 selected.products.map((entry) => (
-                  <div key={entry.product.id} className="admin-list-card grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div
+                    key={entry.product.id}
+                    className="admin-list-card grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                  >
                     <div className="min-w-0">
                       <strong className="text-[#241611]">{entry.product.nameAr}</strong>
                       <p className="text-sm text-muted-foreground">
-                        <span className="line-through">{formatBaseProductPrice(entry.product)}</span>{' '}
-                        <span className="font-black text-[#ff3f6c]">{formatSalePrice(entry.product, selected)}</span>
+                        <span className="line-through">
+                          {formatBaseProductPrice(entry.product)}
+                        </span>{' '}
+                        <span className="font-black text-[#ff3f6c]">
+                          {formatSalePrice(entry.product, selected)}
+                        </span>
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" type="button" onClick={() => run(() => adminApi.removeFlashSaleProduct(selected.id, entry.product.id, { csrfToken }), 'Product removed from sale')}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() =>
+                        run(
+                          () =>
+                            adminApi.removeFlashSaleProduct(selected.id, entry.product.id, {
+                              csrfToken,
+                            }),
+                          'Product removed from sale',
+                        )
+                      }
+                    >
                       Remove
                     </Button>
                   </div>
@@ -489,7 +609,15 @@ export function AdminFlashSalesPage() {
   );
 }
 
-function FlashSaleCard({ sale, selected, onSelect }: { sale: AdminFlashSale; selected: boolean; onSelect: () => void }) {
+function FlashSaleCard({
+  sale,
+  selected,
+  onSelect,
+}: {
+  sale: AdminFlashSale;
+  selected: boolean;
+  onSelect: () => void;
+}) {
   return (
     <AdminMobileDataCard
       title={sale.titleAr}
@@ -537,7 +665,9 @@ function toDateTimeLocal(value: string): string {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 function formatMoney(amount: string | number, currency: string): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(amount) / 100);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(
+    Number(amount) / 100,
+  );
 }
 function getDisplayAmount(product: AdminProduct): number {
   const variantAmounts = (product.variants ?? [])
@@ -549,6 +679,9 @@ function formatBaseProductPrice(product: AdminProduct): string {
   return formatMoney(getDisplayAmount(product), product.currency);
 }
 function formatSalePrice(product: AdminProduct, sale: AdminFlashSale): string {
-  const amount = Math.max(0, Math.floor((getDisplayAmount(product) * (100 - Number(sale.discountPercent))) / 100));
+  const amount = Math.max(
+    0,
+    Math.floor((getDisplayAmount(product) * (100 - Number(sale.discountPercent))) / 100),
+  );
   return formatMoney(amount, product.currency);
 }

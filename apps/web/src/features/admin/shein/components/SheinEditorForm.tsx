@@ -159,7 +159,9 @@ export function SheinEditorForm({
       <section className="space-y-3">
         <div className="admin-shein-section-title">
           <h3>Colors</h3>
-          <small>Colors extracted automatically and can be added, edited, deleted, or reordered</small>
+          <small>
+            Colors extracted automatically and can be added, edited, deleted, or reordered
+          </small>
         </div>
         <EditableOptionList
           values={payload.colors ?? []}
@@ -174,7 +176,9 @@ export function SheinEditorForm({
       <section className="space-y-3">
         <div className="admin-shein-section-title">
           <h3>Sizes</h3>
-          <small>Sizes extracted automatically and can be added, edited, deleted, or reordered</small>
+          <small>
+            Sizes extracted automatically and can be added, edited, deleted, or reordered
+          </small>
         </div>
         <EditableOptionList
           values={payload.sizes ?? []}

@@ -11,7 +11,10 @@ export class SheinCustomerController {
   constructor(private readonly sheinService: SheinService) {}
 
   @Post('requests')
-  createCustomerRequest(@Body() dto: CreateSheinRequestDto, @CurrentUser() user: AuthenticatedUser) {
+  createCustomerRequest(
+    @Body() dto: CreateSheinRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.sheinService.createCustomerRequest(dto, user);
   }
 }

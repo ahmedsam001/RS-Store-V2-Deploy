@@ -13,7 +13,7 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - shein_chrome_profile:/tmp/rsstore-v2-shein-browser-node
-    shm_size: "1gb"
+    shm_size: '1gb'
 
 volumes:
   shein_chrome_profile:

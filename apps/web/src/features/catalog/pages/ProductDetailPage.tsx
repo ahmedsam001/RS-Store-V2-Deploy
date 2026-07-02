@@ -25,7 +25,11 @@ export function ProductDetailPage() {
     if (!p.originalPrice && !p.sale) return false;
     const currentPrice = Number(p.price.amount);
     const originalPrice = p.originalPrice ? Number(p.originalPrice.amount) : currentPrice;
-    return originalPrice > currentPrice && Number.isFinite(currentPrice) && Number.isFinite(originalPrice);
+    return (
+      originalPrice > currentPrice &&
+      Number.isFinite(currentPrice) &&
+      Number.isFinite(originalPrice)
+    );
   }
 
   useEffect(() => {
@@ -141,7 +145,9 @@ export function ProductDetailPage() {
                     {formatPrice(product.originalPrice)}
                   </p>
                 ) : null}
-                <p className={`text-3xl font-black ${hasDiscount(product) ? 'rs-price-primary' : 'text-rs-ink'}`}>
+                <p
+                  className={`text-3xl font-black ${hasDiscount(product) ? 'rs-price-primary' : 'text-rs-ink'}`}
+                >
                   {formatPrice(product.price)}
                 </p>
                 {product.sale?.discountAmount ? (
@@ -157,7 +163,9 @@ export function ProductDetailPage() {
               </div>
 
               {product.description ? (
-                <p className="break-words text-sm leading-7 text-muted-foreground">{product.description}</p>
+                <p className="break-words text-sm leading-7 text-muted-foreground">
+                  {product.description}
+                </p>
               ) : null}
 
               {product.sourceSheinUrl ? (

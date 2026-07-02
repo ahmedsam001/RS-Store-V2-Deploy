@@ -1,4 +1,12 @@
-import { IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export const DEPOSIT_PERCENT_CHOICES = [50, 60, 70] as const;
 export const DEPOSIT_PAYMENT_METHODS = ['instapay', 'vodafone'] as const;

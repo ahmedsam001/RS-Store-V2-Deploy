@@ -92,7 +92,10 @@ export function AdminAuditLogsPage() {
         }
       />
       <AdminFeedback notice={notice} />
-      <AdminCard title="Activity Log Filters" description="Filter by text, entity, action, entity ID, or date range">
+      <AdminCard
+        title="Activity Log Filters"
+        description="Filter by text, entity, action, entity ID, or date range"
+      >
         <AdminFilterBar onSubmit={submit}>
           <Input
             value={filters.search}
@@ -139,7 +142,9 @@ export function AdminAuditLogsPage() {
             aria-label="Created to"
           />
           <Button type="submit">Search</Button>
-          <Button type="button" variant="outline" onClick={clearFilters}>Clear</Button>
+          <Button type="button" variant="outline" onClick={clearFilters}>
+            Clear
+          </Button>
         </AdminFilterBar>
       </AdminCard>
       <AdminCard
@@ -175,7 +180,9 @@ export function AdminAuditLogsPage() {
                     </td>
                     <td dir="ltr">{item.entityId ?? '-'}</td>
                     <td>{formatActor(item)}</td>
-                    <td className="max-w-xs truncate" dir="ltr">{formatMetadata(item.metadata)}</td>
+                    <td className="max-w-xs truncate" dir="ltr">
+                      {formatMetadata(item.metadata)}
+                    </td>
                     <td>{new Date(item.createdAt).toLocaleString('en-US')}</td>
                   </tr>
                 ))}
@@ -213,18 +220,23 @@ function buildAuditQuery(filters: AuditFilters) {
   if (filters.action.trim()) params.set('action', filters.action.trim());
   if (filters.entityType.trim()) params.set('entityType', filters.entityType.trim());
   if (filters.entityId.trim()) params.set('entityId', filters.entityId.trim());
-  if (filters.createdFrom) params.set('createdFrom', new Date(`${filters.createdFrom}T00:00:00`).toISOString());
-  if (filters.createdTo) params.set('createdTo', new Date(`${filters.createdTo}T23:59:59`).toISOString());
+  if (filters.createdFrom)
+    params.set('createdFrom', new Date(`${filters.createdFrom}T00:00:00`).toISOString());
+  if (filters.createdTo)
+    params.set('createdTo', new Date(`${filters.createdTo}T23:59:59`).toISOString());
   return `&${params.toString()}`;
 }
 
 function formatActor(item: AdminAuditLog): string {
   if (!item.actorUser) return '-';
-  return item.actorUser.email ? `${item.actorUser.name} (${item.actorUser.email})` : item.actorUser.name;
+  return item.actorUser.email
+    ? `${item.actorUser.name} (${item.actorUser.email})`
+    : item.actorUser.name;
 }
 
 function formatMetadata(metadata: unknown): string {
-  if (!metadata || (typeof metadata === 'object' && Object.keys(metadata as object).length === 0)) return '-';
+  if (!metadata || (typeof metadata === 'object' && Object.keys(metadata as object).length === 0))
+    return '-';
   try {
     return JSON.stringify(metadata);
   } catch {

@@ -11,10 +11,17 @@ export const wishlistItemInclude = {
   },
 } satisfies Prisma.WishlistItemInclude;
 
-export type WishlistPayload = Prisma.WishlistGetPayload<{ include: { items: { include: typeof wishlistItemInclude } } }>;
+export type WishlistPayload = Prisma.WishlistGetPayload<{
+  include: { items: { include: typeof wishlistItemInclude } };
+}>;
 
-export async function mapWishlist(wishlist: WishlistPayload, pricingService: ProductPricingService): Promise<WishlistResponse> {
-  const saleAdjustments = await pricingService.getActiveSaleAdjustments(wishlist.items.map((item) => item.productId));
+export async function mapWishlist(
+  wishlist: WishlistPayload,
+  pricingService: ProductPricingService,
+): Promise<WishlistResponse> {
+  const saleAdjustments = await pricingService.getActiveSaleAdjustments(
+    wishlist.items.map((item) => item.productId),
+  );
 
   return {
     id: wishlist.id,
@@ -26,7 +33,10 @@ export async function mapWishlist(wishlist: WishlistPayload, pricingService: Pro
         productDiscountPercent: Number(item.product.discountPercent ?? 0),
         currency: item.product.currency,
       };
-      const pricing = pricingService.resolveProductPricing(input, saleAdjustments.get(item.productId));
+      const pricing = pricingService.resolveProductPricing(
+        input,
+        saleAdjustments.get(item.productId),
+      );
       const currency = item.product.currency;
 
       return {
@@ -37,9 +47,12 @@ export async function mapWishlist(wishlist: WishlistPayload, pricingService: Pro
           name: item.product.nameAr,
           sku: item.product.sku,
           price: money(pricing.finalPriceAmount, currency),
-          originalPrice: pricing.priceSource !== 'NONE' ? money(pricing.basePriceAmount, currency) : null,
+          originalPrice:
+            pricing.priceSource !== 'NONE' ? money(pricing.basePriceAmount, currency) : null,
           sale: mapSale(currency, pricing),
-          primaryImage: image ? { id: image.id, url: image.secureUrl, altText: image.altTextAr ?? null } : null,
+          primaryImage: image
+            ? { id: image.id, url: image.secureUrl, altText: image.altTextAr ?? null }
+            : null,
         },
         createdAt: item.createdAt.toISOString(),
       };

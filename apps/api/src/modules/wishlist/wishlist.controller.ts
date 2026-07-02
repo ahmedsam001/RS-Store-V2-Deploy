@@ -14,17 +14,29 @@ export class WishlistController {
   }
 
   @Post('items')
-  addItem(@Req() request: Request, @Res({ passthrough: true }) response: Response, @Body() dto: AddWishlistItemDto) {
+  addItem(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+    @Body() dto: AddWishlistItemDto,
+  ) {
     return this.wishlistService.addItem(request, response, dto);
   }
 
   @Delete('items/:id')
-  removeItem(@Req() request: Request, @Res({ passthrough: true }) response: Response, @Param() params: IdParamDto) {
+  removeItem(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+    @Param() params: IdParamDto,
+  ) {
     return this.wishlistService.removeItem(request, response, params);
   }
 
   @Delete('products/:id')
-  removeProduct(@Req() request: Request, @Res({ passthrough: true }) response: Response, @Param() params: IdParamDto) {
+  removeProduct(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+    @Param() params: IdParamDto,
+  ) {
     return this.wishlistService.removeProduct(request, response, params);
   }
 }

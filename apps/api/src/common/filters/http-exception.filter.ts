@@ -1,10 +1,4 @@
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { logStructured } from '../logging/structured-logger';
 
@@ -25,7 +19,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const normalizedResponse = this.normalizeResponse(exceptionResponse, statusCode);
 
     if (statusCode >= 500) {
-      logStructured('error', 'http_exception', { requestId: request.requestId, statusCode, path: request.url, message: exception.message });
+      logStructured('error', 'http_exception', {
+        requestId: request.requestId,
+        statusCode,
+        path: request.url,
+        message: exception.message,
+      });
     }
 
     response.status(statusCode).json({

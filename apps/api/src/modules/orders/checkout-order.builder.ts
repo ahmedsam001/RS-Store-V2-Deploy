@@ -23,9 +23,15 @@ const visibleProductWhere = {
   category: { isActive: true, deletedAt: null },
 } satisfies Prisma.ProductWhereInput;
 
-export async function assertCheckoutItems(client: PrismaClientLike, items: CheckoutCartItem[]): Promise<void> {
+export async function assertCheckoutItems(
+  client: PrismaClientLike,
+  items: CheckoutCartItem[],
+): Promise<void> {
   for (const item of items) {
-    const product = await client.product.findFirst({ where: { id: item.productId, ...visibleProductWhere }, select: { id: true } });
+    const product = await client.product.findFirst({
+      where: { id: item.productId, ...visibleProductWhere },
+      select: { id: true },
+    });
     if (!product) {
       throw new BadRequestException('Cart contains an unavailable product');
     }

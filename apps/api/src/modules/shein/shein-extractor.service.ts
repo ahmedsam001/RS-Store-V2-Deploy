@@ -1,5 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { SHEIN_MAX_PRODUCT_IMAGES, isLikelyProductImage, normalizeImageUrl } from './shein-image-filter';
+import {
+  SHEIN_MAX_PRODUCT_IMAGES,
+  isLikelyProductImage,
+  normalizeImageUrl,
+} from './shein-image-filter';
 import { SheinPreviewNormalizer } from './shein-preview.normalizer';
 import { DEFAULT_SHEIN_IMPORT_VARIANT_STOCK, SheinImportPreview } from './shein.types';
 import { FIXED_SHEIN_CURRENCY, SheinMarketplaceSettings } from './shein-marketplace';
@@ -8,30 +12,66 @@ import { FIXED_SHEIN_CURRENCY, SheinMarketplaceSettings } from './shein-marketpl
 export class SheinExtractorService {
   constructor(private readonly normalizer: SheinPreviewNormalizer) {}
 
-  extract(sourceUrl: string, html: string, marketplace?: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>): SheinImportPreview {
+  extract(
+    sourceUrl: string,
+    html: string,
+    marketplace?: Pick<SheinMarketplaceSettings, 'countryCode' | 'currencyCode' | 'language'>,
+  ): SheinImportPreview {
     const jsonLdProducts = this.extractJsonLdProducts(html);
     const jsonLdProduct = jsonLdProducts[0];
     const fallback = this.extractMetaProduct(html);
     const htmlSignals = this.extractHtmlProductSignals(html, sourceUrl);
     const recursive = this.extractRecursiveSignals(html);
     const v1 = this.extractV1VisibleSignals(html, sourceUrl);
-    const sourcePrice = this.firstString(htmlSignals.price, v1.price, recursive.price, this.extractOfferPrice(jsonLdProduct?.offers), fallback.price);
-    const sourceCurrency = this.firstString(v1.currency, recursive.currency, this.extractOfferCurrency(jsonLdProduct?.offers), fallback.currency);
-    this.assertDetectedCurrencyMatches(sourceCurrency, marketplace?.currencyCode ?? FIXED_SHEIN_CURRENCY);
+    const sourcePrice = this.firstString(
+      htmlSignals.price,
+      v1.price,
+      recursive.price,
+      this.extractOfferPrice(jsonLdProduct?.offers),
+      fallback.price,
+    );
+    const sourceCurrency = this.firstString(
+      v1.currency,
+      recursive.currency,
+      this.extractOfferCurrency(jsonLdProduct?.offers),
+      fallback.currency,
+    );
+    this.assertDetectedCurrencyMatches(
+      sourceCurrency,
+      marketplace?.currencyCode ?? FIXED_SHEIN_CURRENCY,
+    );
 
     const extractedSizes = this.extractOptionList(recursive.variants, 'size');
     const extractedColors = this.extractOptionList(recursive.variants, 'color');
     const resolvedSizes = extractedSizes.length > 0 ? extractedSizes : recursive.sizes;
     const resolvedColors = extractedColors.length > 0 ? extractedColors : recursive.colors;
-    const resolvedVariants = recursive.variants.length > 0
-      ? recursive.variants.slice(0, 80)
-      : this.buildVariantsFromOptions(resolvedSizes, resolvedColors);
+    const resolvedVariants =
+      recursive.variants.length > 0
+        ? recursive.variants.slice(0, 80)
+        : this.buildVariantsFromOptions(resolvedSizes, resolvedColors);
 
     const candidate = {
       slug: recursive.sku ?? fallback.sku ?? v1.sku,
-      nameAr: this.firstString(htmlSignals.name, jsonLdProduct?.name, fallback.title, recursive.name, v1.name),
-      nameEn: this.firstString(htmlSignals.name, jsonLdProduct?.name, fallback.title, recursive.name, v1.name),
-      description: this.firstString(jsonLdProduct?.description, fallback.description, htmlSignals.description, recursive.description),
+      nameAr: this.firstString(
+        htmlSignals.name,
+        jsonLdProduct?.name,
+        fallback.title,
+        recursive.name,
+        v1.name,
+      ),
+      nameEn: this.firstString(
+        htmlSignals.name,
+        jsonLdProduct?.name,
+        fallback.title,
+        recursive.name,
+        v1.name,
+      ),
+      description: this.firstString(
+        jsonLdProduct?.description,
+        fallback.description,
+        htmlSignals.description,
+        recursive.description,
+      ),
       sku: this.firstString(jsonLdProduct?.sku, fallback.sku, recursive.sku, v1.sku),
       priceAmount: sourcePrice,
       originalPriceAmount: htmlSignals.originalPrice,
@@ -58,20 +98,44 @@ export class SheinExtractorService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Could not extract product data automatically. You can complete the data manually.');
+      throw new BadRequestException(
+        'Could not extract product data automatically. You can complete the data manually.',
+      );
     }
   }
 
-  private extractHtmlProductSignals(html: string, sourceUrl: string): { name?: string; description?: string; price?: string; originalPrice?: string; images: string[] } {
-    const decoded = this.decodeHtml(html).replace(/\\u002F/gi, '/').replace(/\\u0026/gi, '&').replace(/\\\//g, '/');
+  private extractHtmlProductSignals(
+    html: string,
+    sourceUrl: string,
+  ): {
+    name?: string;
+    description?: string;
+    price?: string;
+    originalPrice?: string;
+    images: string[];
+  } {
+    const decoded = this.decodeHtml(html)
+      .replace(/\\u002F/gi, '/')
+      .replace(/\\u0026/gi, '&')
+      .replace(/\\\//g, '/');
     const name = this.firstString(
-      /<h1[^>]*class=["'][^"']*product-intro__head-name[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i.exec(decoded)?.[1],
+      /<h1[^>]*class=["'][^"']*product-intro__head-name[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i.exec(
+        decoded,
+      )?.[1],
       /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(decoded)?.[1],
-    )?.replace(/<[^>]+>/g, ' ').replace(/\s*[|\-–]\s*SHEIN.*$/i, '').replace(/\s+/g, ' ').trim();
+    )
+      ?.replace(/<[^>]+>/g, ' ')
+      .replace(/\s*[|\-–]\s*SHEIN.*$/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     const description = this.firstString(
-      /<meta[^>]+(?:property|name)=["']description["'][^>]+content=["']([^"']+)["'][^>]*>/i.exec(decoded)?.[1],
-      /<meta[^>]+(?:property|name)=["']og:description["'][^>]+content=["']([^"']+)["'][^>]*>/i.exec(decoded)?.[1],
+      /<meta[^>]+(?:property|name)=["']description["'][^>]+content=["']([^"']+)["'][^>]*>/i.exec(
+        decoded,
+      )?.[1],
+      /<meta[^>]+(?:property|name)=["']og:description["'][^>]+content=["']([^"']+)["'][^>]*>/i.exec(
+        decoded,
+      )?.[1],
     );
     const prices = this.extractHtmlPrices(decoded);
 
@@ -84,25 +148,41 @@ export class SheinExtractorService {
     };
   }
 
-  private extractHtmlPrices(html: string): { price?: string; salePrice?: string; originalPrice?: string } {
+  private extractHtmlPrices(html: string): {
+    price?: string;
+    salePrice?: string;
+    originalPrice?: string;
+  } {
     const candidates: Array<{ value: string; weight: number; original: boolean }> = [];
     const explicitSale = this.moneyFromText(
-      /<[^>]+class=["'][^"']*(?:sale|special|current|final|discount|new)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i.exec(html)?.[1] ?? '',
+      /<[^>]+class=["'][^"']*(?:sale|special|current|final|discount|new)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i.exec(
+        html,
+      )?.[1] ?? '',
     );
     const explicitOriginal = this.moneyFromText(
-      /<(?:del|s|span|div)[^>]*(?:class=["'][^"']*(?:original|old|retail|was)[^"']*["']|style=["'][^"']*line-through[^"']*["'])[^>]*>([\s\S]*?)<\/(?:del|s|span|div)>/i.exec(html)?.[1] ?? '',
+      /<(?:del|s|span|div)[^>]*(?:class=["'][^"']*(?:original|old|retail|was)[^"']*["']|style=["'][^"']*line-through[^"']*["'])[^>]*>([\s\S]*?)<\/(?:del|s|span|div)>/i.exec(
+        html,
+      )?.[1] ?? '',
     );
-    const tagRegex = /<(?<tag>del|span|div|p|strong|em|b|i)[^>]*(?<attrs>\s(?:class|data-testid|aria-label|title|style)=["'][^"']*["'][^>]*)[^>]*>(?<body>[\s\S]*?)<\/\k<tag>>/gi;
+    const tagRegex =
+      /<(?<tag>del|span|div|p|strong|em|b|i)[^>]*(?<attrs>\s(?:class|data-testid|aria-label|title|style)=["'][^"']*["'][^>]*)[^>]*>(?<body>[\s\S]*?)<\/\k<tag>>/gi;
     let match: RegExpExecArray | null;
     while ((match = tagRegex.exec(html)) && candidates.length < 80) {
       const attrs = String(match.groups?.attrs ?? '');
       const body = String(match.groups?.body ?? '').replace(/<[^>]+>/g, ' ');
       const context = `${match.groups?.tag ?? ''} ${attrs} ${body}`.toLowerCase();
       if (!/price|amount|sale|retail|original|old|was|sr|sar/i.test(context)) continue;
-      if (/shipping|delivery|installment|tax|coupon|points?|free|returns|qty|quantity|add to cart|cart|size guide/.test(context)) continue;
+      if (
+        /shipping|delivery|installment|tax|coupon|points?|free|returns|qty|quantity|add to cart|cart|size guide/.test(
+          context,
+        )
+      )
+        continue;
       const value = this.moneyFromText(`${attrs} ${body}`);
       if (!value) continue;
-      const original = /<del\b|original|old|retail|was|line-through/.test(`<${match.groups?.tag ?? ''} ${context}`);
+      const original = /<del\b|original|old|retail|was|line-through/.test(
+        `<${match.groups?.tag ?? ''} ${context}`,
+      );
       let weight = 10;
       if (/product-intro__head-price|product-intro|head-price/.test(context)) weight += 50;
       if (/sale|special|current|final|now|discount|new/.test(context)) weight += 80;
@@ -114,7 +194,9 @@ export class SheinExtractorService {
     const current = candidates
       .filter((candidate) => !candidate.original)
       .sort((a, b) => b.weight - a.weight || Number(a.value) - Number(b.value))[0];
-    const any = [...candidates].sort((a, b) => b.weight - a.weight || Number(a.value) - Number(b.value))[0];
+    const any = [...candidates].sort(
+      (a, b) => b.weight - a.weight || Number(a.value) - Number(b.value),
+    )[0];
     return {
       price: explicitSale ?? any?.value,
       salePrice: explicitSale ?? current?.value,
@@ -129,8 +211,14 @@ export class SheinExtractorService {
     let match: RegExpExecArray | null;
     while ((match = imgRegex.exec(html)) && images.length < SHEIN_MAX_PRODUCT_IMAGES) {
       const tag = match[0] ?? '';
-      const nearby = html.slice(Math.max(0, match.index - 900), Math.min(html.length, match.index + tag.length + 300));
-      if (!/product-intro|thumb|gallery|swiper|crop-image|j-image|goods|product-image/i.test(nearby)) continue;
+      const nearby = html.slice(
+        Math.max(0, match.index - 900),
+        Math.min(html.length, match.index + tag.length + 300),
+      );
+      if (
+        !/product-intro|thumb|gallery|swiper|crop-image|j-image|goods|product-image/i.test(nearby)
+      )
+        continue;
       const candidates = [
         this.bestFromSrcset(this.readAttribute(tag, 'srcset')),
         this.readAttribute(tag, 'data-zoom-image'),
@@ -153,7 +241,8 @@ export class SheinExtractorService {
 
   private extractJsonLdProducts(html: string): Array<Record<string, unknown>> {
     const products: Array<Record<string, unknown>> = [];
-    const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    const scriptRegex =
+      /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
     let match: RegExpExecArray | null;
 
     while ((match = scriptRegex.exec(html))) {
@@ -168,20 +257,50 @@ export class SheinExtractorService {
     return products;
   }
 
-  private extractMetaProduct(html: string): { title?: string; description?: string; price?: string; currency?: string; sku?: string; images: string[] } {
+  private extractMetaProduct(html: string): {
+    title?: string;
+    description?: string;
+    price?: string;
+    currency?: string;
+    sku?: string;
+    images: string[];
+  } {
     return {
       title: this.readMeta(html, 'og:title') ?? this.readTitle(html),
       description: this.readMeta(html, 'og:description') ?? this.readMeta(html, 'description'),
       price: this.readMeta(html, 'product:price:amount') ?? this.readMeta(html, 'og:price:amount'),
-      currency: this.readMeta(html, 'product:price:currency') ?? this.readMeta(html, 'og:price:currency'),
+      currency:
+        this.readMeta(html, 'product:price:currency') ?? this.readMeta(html, 'og:price:currency'),
       sku: this.readMeta(html, 'product:retailer_item_id'),
       images: this.readAllMeta(html, 'og:image'),
     };
   }
 
-  private extractRecursiveSignals(html: string): { name?: string; description?: string; price?: string; currency?: string; sku?: string; images: string[]; variants: Array<Record<string, unknown>>; sizes: string[]; colors: string[]; warnings?: string[] } {
+  private extractRecursiveSignals(html: string): {
+    name?: string;
+    description?: string;
+    price?: string;
+    currency?: string;
+    sku?: string;
+    images: string[];
+    variants: Array<Record<string, unknown>>;
+    sizes: string[];
+    colors: string[];
+    warnings?: string[];
+  } {
     const candidates = this.extractEmbeddedJson(html);
-    const signal: { name?: string; description?: string; price?: string; currency?: string; sku?: string; images: string[]; variants: Array<Record<string, unknown>>; sizes: string[]; colors: string[]; warnings?: string[] } = { images: [], variants: [], sizes: [], colors: [] };
+    const signal: {
+      name?: string;
+      description?: string;
+      price?: string;
+      currency?: string;
+      sku?: string;
+      images: string[];
+      variants: Array<Record<string, unknown>>;
+      sizes: string[];
+      colors: string[];
+      warnings?: string[];
+    } = { images: [], variants: [], sizes: [], colors: [] };
 
     for (const candidate of candidates) {
       this.walkForSkuData(candidate, signal);
@@ -198,22 +317,48 @@ export class SheinExtractorService {
       currency: signal.currency,
       sku: signal.sku,
       images: this.unique(signal.images).slice(0, SHEIN_MAX_PRODUCT_IMAGES),
-      variants: signal.variants.length > 0
-        ? signal.variants.slice(0, 80)
-        : [],
-      sizes: sizesFromVariants.length > 0 ? sizesFromVariants : this.unique(signal.sizes).slice(0, 30),
-      colors: colorsFromVariants.length > 0 ? colorsFromVariants : this.unique(signal.colors).slice(0, 30),
-      warnings: signal.variants.length === 0 && (signal.sizes.length > 0 || signal.colors.length > 0) ? ['Could not extract real SKU variants. Manual review recommended.'] : undefined,
+      variants: signal.variants.length > 0 ? signal.variants.slice(0, 80) : [],
+      sizes:
+        sizesFromVariants.length > 0 ? sizesFromVariants : this.unique(signal.sizes).slice(0, 30),
+      colors:
+        colorsFromVariants.length > 0
+          ? colorsFromVariants
+          : this.unique(signal.colors).slice(0, 30),
+      warnings:
+        signal.variants.length === 0 && (signal.sizes.length > 0 || signal.colors.length > 0)
+          ? ['Could not extract real SKU variants. Manual review recommended.']
+          : undefined,
     };
   }
 
-  private walkForSkuData(value: unknown, signal: { name?: string; description?: string; price?: string; currency?: string; sku?: string; images: string[]; variants: Array<Record<string, unknown>>; sizes: string[]; colors: string[] }, key = '', depth = 0): void {
+  private walkForSkuData(
+    value: unknown,
+    signal: {
+      name?: string;
+      description?: string;
+      price?: string;
+      currency?: string;
+      sku?: string;
+      images: string[];
+      variants: Array<Record<string, unknown>>;
+      sizes: string[];
+      colors: string[];
+    },
+    key = '',
+    depth = 0,
+  ): void {
     if (depth > 10) {
       return;
     }
 
     // Check for SKU variant arrays by key name
-    if (Array.isArray(value) && key && /sku_list|skus|productvariants|goods_skus|product_skus|variant_list|product_variants/i.test(key)) {
+    if (
+      Array.isArray(value) &&
+      key &&
+      /sku_list|skus|productvariants|goods_skus|product_skus|variant_list|product_variants/i.test(
+        key,
+      )
+    ) {
       this.extractRealSkuVariants(value, signal);
       return;
     }
@@ -225,9 +370,14 @@ export class SheinExtractorService {
 
     // Check if this is a variant object itself (has sku, size, and/or color properties)
     if (this.isRecord(value)) {
-      const hasSkuProps = value.sku !== undefined || value.goods_sku !== undefined || value.productSku !== undefined;
-      const hasSizeProps = value.size !== undefined || value.size_name !== undefined || value.sizeName !== undefined;
-      const hasColorProps = value.color !== undefined || value.color_name !== undefined || value.colorName !== undefined;
+      const hasSkuProps =
+        value.sku !== undefined || value.goods_sku !== undefined || value.productSku !== undefined;
+      const hasSizeProps =
+        value.size !== undefined || value.size_name !== undefined || value.sizeName !== undefined;
+      const hasColorProps =
+        value.color !== undefined ||
+        value.color_name !== undefined ||
+        value.colorName !== undefined;
 
       if ((hasSkuProps || (hasSizeProps && hasColorProps)) && !Array.isArray(value.sku)) {
         this.extractVariantFromRecord(value, signal);
@@ -249,10 +399,15 @@ export class SheinExtractorService {
       if (!signal.description && /description|desc/i.test(key) && text.length <= 2000) {
         signal.description = text;
       }
-      if (!signal.price && /saleprice|retailprice|priceamount|price/i.test(key) && /^\d+(?:\.\d{1,2})?$/.test(text)) {
+      if (
+        !signal.price &&
+        /saleprice|retailprice|priceamount|price/i.test(key) &&
+        /^\d+(?:\.\d{1,2})?$/.test(text)
+      ) {
         const lowerKey = key.toLowerCase();
         const lowerText = text.toLowerCase();
-        const excludedContexts = /shipping|delivery|installment|tax|coupon|points|free|returns|qty|quantity|add to cart|cart|size guide|swiss franc|currency|language|egyptian pound|saudi riyal|emirati dirham|us dollar|euro|pound sterling/i;
+        const excludedContexts =
+          /shipping|delivery|installment|tax|coupon|points|free|returns|qty|quantity|add to cart|cart|size guide|swiss franc|currency|language|egyptian pound|saudi riyal|emirati dirham|us dollar|euro|pound sterling/i;
         if (!excludedContexts.test(lowerKey) && !excludedContexts.test(lowerText)) {
           signal.price = text;
         }
@@ -283,8 +438,10 @@ export class SheinExtractorService {
     }
   }
 
-
-  private extractAttributeOptionsFromRecord(record: Record<string, unknown>, signal: { sizes: string[]; colors: string[] }): void {
+  private extractAttributeOptionsFromRecord(
+    record: Record<string, unknown>,
+    signal: { sizes: string[]; colors: string[] },
+  ): void {
     const label = this.firstString(
       record.attr_name,
       record.attrName,
@@ -295,12 +452,13 @@ export class SheinExtractorService {
     )?.toLowerCase();
     if (!label || !/(size|مقاس|color|colour|لون)/i.test(label)) return;
 
-    const source = record.attr_value_list
-      ?? record.attrValueList
-      ?? record.valueList
-      ?? record.values
-      ?? record.options
-      ?? record.list;
+    const source =
+      record.attr_value_list ??
+      record.attrValueList ??
+      record.valueList ??
+      record.values ??
+      record.options ??
+      record.list;
     const values = this.collectOptionValueNames(source);
     if (/size|مقاس/i.test(label)) {
       signal.sizes.push(...values.filter((value) => this.isValidSizeValue(value)));
@@ -330,23 +488,35 @@ export class SheinExtractorService {
       value.title,
       value.label,
     );
-    const nested = value.attr_value_list
-      ?? value.attrValueList
-      ?? value.valueList
-      ?? value.values
-      ?? value.options
-      ?? value.list;
+    const nested =
+      value.attr_value_list ??
+      value.attrValueList ??
+      value.valueList ??
+      value.values ??
+      value.options ??
+      value.list;
     return [direct, ...this.collectOptionValueNames(nested, depth + 1)]
       .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
       .map((item) => item.replace(/\s+/g, ' ').trim());
   }
 
-  private buildVariantsFromOptions(sizes: string[], colors: string[]): Array<Record<string, unknown>> {
-    const cleanSizes = this.unique(sizes).filter((value) => this.isValidSizeValue(value)).slice(0, 30);
-    const cleanColors = this.unique(colors).filter((value) => this.isValidColorValue(value)).slice(0, 30);
+  private buildVariantsFromOptions(
+    sizes: string[],
+    colors: string[],
+  ): Array<Record<string, unknown>> {
+    const cleanSizes = this.unique(sizes)
+      .filter((value) => this.isValidSizeValue(value))
+      .slice(0, 30);
+    const cleanColors = this.unique(colors)
+      .filter((value) => this.isValidColorValue(value))
+      .slice(0, 30);
     const variants: Array<Record<string, unknown>> = [];
 
-    if (cleanSizes.length > 0 && cleanColors.length > 0 && cleanSizes.length * cleanColors.length <= 80) {
+    if (
+      cleanSizes.length > 0 &&
+      cleanColors.length > 0 &&
+      cleanSizes.length * cleanColors.length <= 80
+    ) {
       for (const size of cleanSizes) {
         for (const color of cleanColors) {
           variants.push({
@@ -370,20 +540,47 @@ export class SheinExtractorService {
     return variants;
   }
 
-  private extractRealSkuVariants(skuArray: unknown, signal: { variants: Array<Record<string, unknown>>; sizes: string[]; colors: string[] }): void {
+  private extractRealSkuVariants(
+    skuArray: unknown,
+    signal: { variants: Array<Record<string, unknown>>; sizes: string[]; colors: string[] },
+  ): void {
     if (!Array.isArray(skuArray)) return;
 
     for (const item of skuArray) {
       if (!this.isRecord(item)) continue;
 
-      const sku = typeof item.sku === 'string' ? item.sku.trim() : (typeof item.goods_sku === 'string' ? item.goods_sku.trim() : (typeof item.productSku === 'string' ? item.productSku.trim() : undefined));
-      const size = typeof item.size === 'string' || typeof item.size === 'number'
-        ? String(item.size).replace(/\s+/g, ' ').trim()
-        : (typeof item.size_name === 'string' ? item.size_name.trim() : (typeof item.sizeName === 'string' ? item.sizeName.trim() : undefined));
-      const color = typeof item.color === 'string' || typeof item.color === 'number'
-        ? String(item.color).trim()
-        : (typeof item.color_name === 'string' ? item.color_name.trim() : (typeof item.colorName === 'string' ? item.colorName.trim() : undefined));
-      const stock = typeof item.stock === 'number' ? item.stock : (typeof item.stockQuantity === 'number' ? item.stockQuantity : (typeof item.inventory === 'number' ? item.inventory : undefined));
+      const sku =
+        typeof item.sku === 'string'
+          ? item.sku.trim()
+          : typeof item.goods_sku === 'string'
+            ? item.goods_sku.trim()
+            : typeof item.productSku === 'string'
+              ? item.productSku.trim()
+              : undefined;
+      const size =
+        typeof item.size === 'string' || typeof item.size === 'number'
+          ? String(item.size).replace(/\s+/g, ' ').trim()
+          : typeof item.size_name === 'string'
+            ? item.size_name.trim()
+            : typeof item.sizeName === 'string'
+              ? item.sizeName.trim()
+              : undefined;
+      const color =
+        typeof item.color === 'string' || typeof item.color === 'number'
+          ? String(item.color).trim()
+          : typeof item.color_name === 'string'
+            ? item.color_name.trim()
+            : typeof item.colorName === 'string'
+              ? item.colorName.trim()
+              : undefined;
+      const stock =
+        typeof item.stock === 'number'
+          ? item.stock
+          : typeof item.stockQuantity === 'number'
+            ? item.stockQuantity
+            : typeof item.inventory === 'number'
+              ? item.inventory
+              : undefined;
 
       // Validate: skip if this looks like a size guide entry or invalid value
       if (size && !this.isValidSizeValue(size)) continue;
@@ -392,35 +589,65 @@ export class SheinExtractorService {
 
       signal.variants.push({
         sku: sku ? sku.slice(0, 80) : undefined,
-        nameAr: size && color ? `${size} / ${color}` : size ?? color ?? 'Variant',
+        nameAr: size && color ? `${size} / ${color}` : (size ?? color ?? 'Variant'),
         size: size ? size.slice(0, 60) : undefined,
         color: color ? color.slice(0, 80) : undefined,
-        stockQuantity: typeof stock === 'number' && stock > 0 ? stock : DEFAULT_SHEIN_IMPORT_VARIANT_STOCK,
+        stockQuantity:
+          typeof stock === 'number' && stock > 0 ? stock : DEFAULT_SHEIN_IMPORT_VARIANT_STOCK,
       });
     }
   }
 
   private isValidSizeValue(value: string): boolean {
     const text = value.trim().toLowerCase();
-    const invalidPatterns = /size guide|model stats|bust|waist|hip|length|shoulder|measurement|add to cart|select size|sold out|quantity|undefined|null/i;
+    const invalidPatterns =
+      /size guide|model stats|bust|waist|hip|length|shoulder|measurement|add to cart|select size|sold out|quantity|undefined|null/i;
     return !invalidPatterns.test(text) && this.looksLikeSizeValue(value);
   }
 
   private isValidColorValue(value: string): boolean {
     const text = value.trim().toLowerCase();
-    const invalidPatterns = /select color|choose color|more image|size guide|chart|guide|undefined|null/i;
+    const invalidPatterns =
+      /select color|choose color|more image|size guide|chart|guide|undefined|null/i;
     return !invalidPatterns.test(text) && this.looksLikeColorValue(value);
   }
 
-  private extractVariantFromRecord(record: Record<string, unknown>, signal: { variants: Array<Record<string, unknown>> }): void {
-    const sku = typeof record.sku === 'string' ? record.sku.trim() : (typeof record.goods_sku === 'string' ? record.goods_sku.trim() : (typeof record.productSku === 'string' ? record.productSku.trim() : undefined));
-    const size = typeof record.size === 'string' || typeof record.size === 'number'
-      ? String(record.size).replace(/\s+/g, ' ').trim()
-      : (typeof record.size_name === 'string' ? record.size_name.trim() : (typeof record.sizeName === 'string' ? record.sizeName.trim() : undefined));
-    const color = typeof record.color === 'string' || typeof record.color === 'number'
-      ? String(record.color).trim()
-      : (typeof record.color_name === 'string' ? record.color_name.trim() : (typeof record.colorName === 'string' ? record.colorName.trim() : undefined));
-    const stock = typeof record.stock === 'number' ? record.stock : (typeof record.stockQuantity === 'number' ? record.stockQuantity : (typeof record.inventory === 'number' ? record.inventory : undefined));
+  private extractVariantFromRecord(
+    record: Record<string, unknown>,
+    signal: { variants: Array<Record<string, unknown>> },
+  ): void {
+    const sku =
+      typeof record.sku === 'string'
+        ? record.sku.trim()
+        : typeof record.goods_sku === 'string'
+          ? record.goods_sku.trim()
+          : typeof record.productSku === 'string'
+            ? record.productSku.trim()
+            : undefined;
+    const size =
+      typeof record.size === 'string' || typeof record.size === 'number'
+        ? String(record.size).replace(/\s+/g, ' ').trim()
+        : typeof record.size_name === 'string'
+          ? record.size_name.trim()
+          : typeof record.sizeName === 'string'
+            ? record.sizeName.trim()
+            : undefined;
+    const color =
+      typeof record.color === 'string' || typeof record.color === 'number'
+        ? String(record.color).trim()
+        : typeof record.color_name === 'string'
+          ? record.color_name.trim()
+          : typeof record.colorName === 'string'
+            ? record.colorName.trim()
+            : undefined;
+    const stock =
+      typeof record.stock === 'number'
+        ? record.stock
+        : typeof record.stockQuantity === 'number'
+          ? record.stockQuantity
+          : typeof record.inventory === 'number'
+            ? record.inventory
+            : undefined;
 
     if (size && !this.isValidSizeValue(size)) return;
     if (color && !this.isValidColorValue(color)) return;
@@ -428,10 +655,11 @@ export class SheinExtractorService {
 
     signal.variants.push({
       sku: sku ? sku.slice(0, 80) : undefined,
-      nameAr: size && color ? `${size} / ${color}` : size ?? color ?? 'Variant',
+      nameAr: size && color ? `${size} / ${color}` : (size ?? color ?? 'Variant'),
       size: size ? size.slice(0, 60) : undefined,
       color: color ? color.slice(0, 80) : undefined,
-      stockQuantity: typeof stock === 'number' && stock > 0 ? stock : DEFAULT_SHEIN_IMPORT_VARIANT_STOCK,
+      stockQuantity:
+        typeof stock === 'number' && stock > 0 ? stock : DEFAULT_SHEIN_IMPORT_VARIANT_STOCK,
     });
   }
 
@@ -469,17 +697,26 @@ export class SheinExtractorService {
 
   private looksLikeSizeValue(value: string): boolean {
     const text = value.trim();
-    return /^(?:xxs|xs|s|m|l|xl|xxl|xxxl|[0-9]xl|one size|eu ?[0-9]{2}|us ?[0-9]{1,2}(?:\.[0-9])?|uk ?[0-9]{1,2}(?:\.[0-9])?|[0-9]{1,3}(?:\.[0-9])?|[0-9]{1,2}-[0-9]{1,2}|[0-9]{1,2}y)$/i.test(text);
+    return /^(?:xxs|xs|s|m|l|xl|xxl|xxxl|[0-9]xl|one size|eu ?[0-9]{2}|us ?[0-9]{1,2}(?:\.[0-9])?|uk ?[0-9]{1,2}(?:\.[0-9])?|[0-9]{1,3}(?:\.[0-9])?|[0-9]{1,2}-[0-9]{1,2}|[0-9]{1,2}y)$/i.test(
+      text,
+    );
   }
 
   private looksLikeColorValue(value: string): boolean {
     const text = value.trim();
-    return text.length > 2 && text.length <= 40 && !this.looksLikeSizeValue(text) && !/select|size|guide|chart|undefined|null/i.test(text);
+    return (
+      text.length > 2 &&
+      text.length <= 40 &&
+      !this.looksLikeSizeValue(text) &&
+      !/select|size|guide|chart|undefined|null/i.test(text)
+    );
   }
 
   private extractEmbeddedJson(html: string): unknown[] {
     const values: unknown[] = [];
-    const nextData = /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(html)?.[1];
+    const nextData = /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(
+      html,
+    )?.[1];
     if (nextData) {
       const parsed = this.safeJsonParse(this.decodeHtml(nextData));
       if (parsed) {
@@ -487,7 +724,8 @@ export class SheinExtractorService {
       }
     }
 
-    const stateRegex = /<script[^>]*>\s*window\.__INITIAL_STATE__\s*=\s*([\s\S]*?)\s*;?\s*<\/script>/gi;
+    const stateRegex =
+      /<script[^>]*>\s*window\.__INITIAL_STATE__\s*=\s*([\s\S]*?)\s*;?\s*<\/script>/gi;
     let match: RegExpExecArray | null;
     while ((match = stateRegex.exec(html))) {
       const parsed = this.safeJsonParse(match[1] ?? '');
@@ -499,9 +737,14 @@ export class SheinExtractorService {
     return values;
   }
 
-
-  private extractV1VisibleSignals(html: string, sourceUrl: string): { name?: string; price?: string; currency?: string; sku?: string; images: string[] } {
-    const decoded = this.decodeHtml(html).replace(/\\u002F/gi, '/').replace(/\\u0026/gi, '&').replace(/\\\//g, '/');
+  private extractV1VisibleSignals(
+    html: string,
+    sourceUrl: string,
+  ): { name?: string; price?: string; currency?: string; sku?: string; images: string[] } {
+    const decoded = this.decodeHtml(html)
+      .replace(/\\u002F/gi, '/')
+      .replace(/\\u0026/gi, '&')
+      .replace(/\\\//g, '/');
     const currency = this.firstString(
       /"(?:priceCurrency|currency|currencyCode)"\s*:\s*"([A-Z]{3})"/i.exec(decoded)?.[1],
       this.readMeta(html, 'product:price:currency'),
@@ -518,8 +761,11 @@ export class SheinExtractorService {
       let match: RegExpExecArray | null;
       while ((match = regex.exec(decoded)) && prices.length < 40) {
         if (match[1]) {
-          const context = decoded.slice(Math.max(0, match.index - 120), match.index + match[0].length + 120).toLowerCase();
-          const excludedContexts = /shipping|delivery|installment|tax|coupon|points?|free|returns|qty|quantity|add to cart|cart|size guide|swiss franc|currency|language|egyptian pound|saudi riyal|emirati dirham|us dollar|euro|pound sterling/i;
+          const context = decoded
+            .slice(Math.max(0, match.index - 120), match.index + match[0].length + 120)
+            .toLowerCase();
+          const excludedContexts =
+            /shipping|delivery|installment|tax|coupon|points?|free|returns|qty|quantity|add to cart|cart|size guide|swiss franc|currency|language|egyptian pound|saudi riyal|emirati dirham|us dollar|euro|pound sterling/i;
           if (excludedContexts.test(context)) continue;
           const hasCurrency = /sar|egp|aed|kwd|usd|us\$|\$|£|€/i.test(context);
           prices.push({ value: match[1], hasCurrency, context });
@@ -541,8 +787,16 @@ export class SheinExtractorService {
     const imageValues = [
       this.readMeta(html, 'og:image'),
       this.readMeta(html, 'twitter:image'),
-      ...[...decoded.matchAll(/"(?:image_url|goods_img|origin_image|originalImage|imageUrl|goods_img_url|src)"\s*:\s*"((?:https?:)?\/?\/[^"\\]+)"/gi)].map((item) => item[1] ?? ''),
-      ...[...decoded.matchAll(/(?:https?:)?\/?\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp|avif)(?:\?[^"'\s<>]*)?/gi)].map((item) => item[0] ?? ''),
+      ...[
+        ...decoded.matchAll(
+          /"(?:image_url|goods_img|origin_image|originalImage|imageUrl|goods_img_url|src)"\s*:\s*"((?:https?:)?\/?\/[^"\\]+)"/gi,
+        ),
+      ].map((item) => item[1] ?? ''),
+      ...[
+        ...decoded.matchAll(
+          /(?:https?:)?\/?\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp|avif)(?:\?[^"'\s<>]*)?/gi,
+        ),
+      ].map((item) => item[0] ?? ''),
     ].filter((value): value is string => typeof value === 'string' && value.length > 0);
 
     const slugName = this.nameFromUrl(sourceUrl);
@@ -553,29 +807,45 @@ export class SheinExtractorService {
       this.readMeta(html, 'twitter:title'),
       this.readTitle(html),
       slugName,
-    )?.replace(/\s*[|\-–]\s*SHEIN.*$/i, '').replace(/\s+/g, ' ').trim();
+    )
+      ?.replace(/\s*[|\-–]\s*SHEIN.*$/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     return {
       name,
       price: prices.length > 0 ? prices[0].value : undefined,
       currency,
       sku: /"(?:goods_sn|goodsSn|sku|productCode)"\s*:\s*"([^"\\]+)"/i.exec(decoded)?.[1],
-      images: this.unique(imageValues.map((url) => this.ensureHttps(this.normalizeMediaUrl(url, sourceUrl))).filter((url) => this.isProductImageUrl(url))).slice(0, SHEIN_MAX_PRODUCT_IMAGES),
+      images: this.unique(
+        imageValues
+          .map((url) => this.ensureHttps(this.normalizeMediaUrl(url, sourceUrl)))
+          .filter((url) => this.isProductImageUrl(url)),
+      ).slice(0, SHEIN_MAX_PRODUCT_IMAGES),
     };
   }
 
-  private assertDetectedCurrencyMatches(detectedCurrency: string | undefined, expectedCurrency: string): void {
+  private assertDetectedCurrencyMatches(
+    detectedCurrency: string | undefined,
+    expectedCurrency: string,
+  ): void {
     const detected = detectedCurrency?.trim().toUpperCase();
     if (detected && detected !== expectedCurrency) {
-      throw new BadRequestException('The visible price does not match the selected currency. Please reopen the link with the correct settings.');
+      throw new BadRequestException(
+        'The visible price does not match the selected currency. Please reopen the link with the correct settings.',
+      );
     }
   }
 
-  private extractOptionList(variants: Array<Record<string, unknown>>, key: 'size' | 'color'): string[] {
+  private extractOptionList(
+    variants: Array<Record<string, unknown>>,
+    key: 'size' | 'color',
+  ): string[] {
     const result: string[] = [];
     const seen = new Set<string>();
     for (const variant of variants) {
-      const value = typeof variant[key] === 'string' ? String(variant[key]).replace(/\s+/g, ' ').trim() : '';
+      const value =
+        typeof variant[key] === 'string' ? String(variant[key]).replace(/\s+/g, ' ').trim() : '';
       if (!value) continue;
       const normalized = value.slice(0, key === 'size' ? 60 : 80);
       const dedupeKey = normalized.toLowerCase();
@@ -588,7 +858,10 @@ export class SheinExtractorService {
   }
 
   private normalizeMediaUrl(value: string, baseUrl: string): string {
-    const raw = this.decodeHtml(String(value || '')).replaceAll('\\/', '/').replaceAll('\\u002F', '/').trim();
+    const raw = this.decodeHtml(String(value || ''))
+      .replaceAll('\\/', '/')
+      .replaceAll('\\u002F', '/')
+      .trim();
     if (!raw) {
       return '';
     }
@@ -600,7 +873,9 @@ export class SheinExtractorService {
   }
 
   private moneyFromText(value: string): string | undefined {
-    const normalized = String(value || '').replace(/,/g, '').match(/[0-9]+(?:\.[0-9]{1,2})?/);
+    const normalized = String(value || '')
+      .replace(/,/g, '')
+      .match(/[0-9]+(?:\.[0-9]{1,2})?/);
     if (!normalized) return undefined;
     const amount = Number(normalized[0]);
     return Number.isFinite(amount) && amount > 0 && amount < 1_000_000 ? normalized[0] : undefined;
@@ -640,10 +915,12 @@ export class SheinExtractorService {
 
   private nameFromUrl(sourceUrl: string): string | undefined {
     try {
-      return decodeURIComponent(new URL(sourceUrl).pathname.split('/').pop() || '')
-        .replace(/-p-\d+\.html.*$/i, '')
-        .replaceAll('-', ' ')
-        .trim() || undefined;
+      return (
+        decodeURIComponent(new URL(sourceUrl).pathname.split('/').pop() || '')
+          .replace(/-p-\d+\.html.*$/i, '')
+          .replaceAll('-', ' ')
+          .trim() || undefined
+      );
     } catch {
       return undefined;
     }
@@ -687,7 +964,9 @@ export class SheinExtractorService {
   }
 
   private mergeImages(urls: string[]): Array<{ url: string; altTextAr?: string }> {
-    return this.unique(urls.map((url) => this.ensureHttps(url)).filter((url) => this.isProductImageUrl(url)))
+    return this.unique(
+      urls.map((url) => this.ensureHttps(url)).filter((url) => this.isProductImageUrl(url)),
+    )
       .slice(0, SHEIN_MAX_PRODUCT_IMAGES)
       .map((url) => ({ url }));
   }
@@ -698,7 +977,10 @@ export class SheinExtractorService {
 
   private readAllMeta(html: string, name: string): string[] {
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}"[^>]+content=["']([^"']+)["'][^>]*>`, 'gi');
+    const regex = new RegExp(
+      `<meta[^>]+(?:property|name)=["']${escaped}"[^>]+content=["']([^"']+)["'][^>]*>`,
+      'gi',
+    );
     const values: string[] = [];
     let match: RegExpExecArray | null;
     while ((match = regex.exec(html))) {

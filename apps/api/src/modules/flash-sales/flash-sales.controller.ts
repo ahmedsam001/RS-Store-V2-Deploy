@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -15,7 +26,6 @@ import { FlashSalesService } from './flash-sales.service';
 @Controller('flash-sales')
 export class FlashSalesController {
   constructor(private readonly flashSalesService: FlashSalesService) {}
-
 
   @Get('admin/list')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -44,7 +54,11 @@ export class FlashSalesController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OWNER)
-  update(@Param() params: IdParamDto, @Body() dto: UpdateFlashSaleDto, @CurrentUser() user: AuthenticatedUser) {
+  update(
+    @Param() params: IdParamDto,
+    @Body() dto: UpdateFlashSaleDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.flashSalesService.update(params.id, dto, user);
   }
 
@@ -58,7 +72,11 @@ export class FlashSalesController {
   @Post(':id/products')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OWNER)
-  addProduct(@Param() params: IdParamDto, @Body() dto: FlashSaleProductDto, @CurrentUser() user: AuthenticatedUser) {
+  addProduct(
+    @Param() params: IdParamDto,
+    @Body() dto: FlashSaleProductDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.flashSalesService.addProduct(params.id, dto, user);
   }
 

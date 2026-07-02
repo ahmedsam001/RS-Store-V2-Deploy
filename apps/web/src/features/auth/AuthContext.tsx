@@ -60,7 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [csrfToken, setCsrfToken] = useState<string | null>(storedAuth?.csrfToken ?? null);
 
   useEffect(() => {
-    writeStoredAuth(status === 'authenticated' ? user : null, status === 'authenticated' ? csrfToken : null);
+    writeStoredAuth(
+      status === 'authenticated' ? user : null,
+      status === 'authenticated' ? csrfToken : null,
+    );
   }, [status, user, csrfToken]);
 
   const refresh = useCallback(async () => {

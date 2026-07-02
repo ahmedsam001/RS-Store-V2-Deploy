@@ -18,7 +18,8 @@ export function SheinImportStartCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm leading-7 text-muted-foreground">
-          Paste a SHEIN product link to start automatic extraction, then review and edit product data before publishing
+          Paste a SHEIN product link to start automatic extraction, then review and edit product
+          data before publishing
         </p>
         <form
           className="import-link-panel grid gap-3 rounded-2xl border border-[hsl(var(--border)/0.8)] bg-[hsl(var(--card))] p-3"

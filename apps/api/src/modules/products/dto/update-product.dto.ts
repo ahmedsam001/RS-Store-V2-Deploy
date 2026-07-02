@@ -1,5 +1,19 @@
 import { ProductStatus } from '@prisma/client';
-import { IsBoolean, IsDecimal, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUrl, IsUUID, Matches, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsDecimal,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  IsUUID,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class UpdateProductDto {
   @IsOptional()

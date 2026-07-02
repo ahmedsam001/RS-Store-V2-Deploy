@@ -11,7 +11,12 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     const request = context.getRequest<Request>();
     const statusCode = this.resolveStatusCode(exception.code);
 
-    logStructured('error', 'prisma_exception', { requestId: request.requestId, statusCode, code: exception.code, path: request.url });
+    logStructured('error', 'prisma_exception', {
+      requestId: request.requestId,
+      statusCode,
+      code: exception.code,
+      path: request.url,
+    });
 
     response.status(statusCode).json({
       statusCode,

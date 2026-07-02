@@ -52,7 +52,13 @@ const requiredStringKeys = [
   'CLOUDINARY_API_SECRET',
 ] as const;
 
-const placeholderValues = new Set(['replace_me', 'demo', 'demo_cloud_name', 'demo_api_key', 'demo_api_secret']);
+const placeholderValues = new Set([
+  'replace_me',
+  'demo',
+  'demo_cloud_name',
+  'demo_api_key',
+  'demo_api_secret',
+]);
 
 function requirePositiveInteger(key: string, value: unknown, fallback: number): number {
   const parsedValue = Number(value ?? fallback);
@@ -167,7 +173,10 @@ function validateFolders(value: string): string {
   return folders.join(',');
 }
 
-function validateBootstrap(config: Record<string, unknown>, nodeEnvironment: NodeEnvironment): Partial<ValidatedEnvironment> {
+function validateBootstrap(
+  config: Record<string, unknown>,
+  nodeEnvironment: NodeEnvironment,
+): Partial<ValidatedEnvironment> {
   const enabled = optionalBoolean(config.ADMIN_BOOTSTRAP_ENABLED, false);
   const name = optionalTrimmed(config.ADMIN_BOOTSTRAP_NAME);
   const email = optionalTrimmed(config.ADMIN_BOOTSTRAP_EMAIL);
@@ -199,8 +208,13 @@ function validateBootstrap(config: Record<string, unknown>, nodeEnvironment: Nod
     throw new Error('ADMIN_BOOTSTRAP_PHONE must contain 8 to 15 digits and may start with +');
   }
 
-  if ((password?.length ?? 0) < 12 || /^(?:admin|password|12345678|123456789|rsstore)$/i.test(password ?? '')) {
-    throw new Error('ADMIN_BOOTSTRAP_PASSWORD must be at least 12 characters and not a weak default');
+  if (
+    (password?.length ?? 0) < 12 ||
+    /^(?:admin|password|12345678|123456789|rsstore)$/i.test(password ?? '')
+  ) {
+    throw new Error(
+      'ADMIN_BOOTSTRAP_PASSWORD must be at least 12 characters and not a weak default',
+    );
   }
 
   if (nodeEnvironment === 'production' && password === 'ChangeMe12345!') {
@@ -215,7 +229,6 @@ function validateBootstrap(config: Record<string, unknown>, nodeEnvironment: Nod
     ADMIN_BOOTSTRAP_PASSWORD: password,
   };
 }
-
 
 function normalizeSheinCountryEnv(value: unknown): string {
   const country = optionalString(value, 'KW').toUpperCase();
@@ -262,14 +275,25 @@ export function validateEnvironment(config: Record<string, unknown>): ValidatedE
   const cloudinaryApiKey = String(config.CLOUDINARY_API_KEY);
   const cloudinaryApiSecret = String(config.CLOUDINARY_API_SECRET);
   const cookieSecure = optionalBoolean(config.COOKIE_SECURE, typedNodeEnvironment === 'production');
-  const sessionTtlSeconds = requirePositiveInteger('SESSION_TTL_SECONDS', config.SESSION_TTL_SECONDS, 8 * 60 * 60);
+  const sessionTtlSeconds = requirePositiveInteger(
+    'SESSION_TTL_SECONDS',
+    config.SESSION_TTL_SECONDS,
+    8 * 60 * 60,
+  );
   const rememberMeTtlSeconds = requirePositiveInteger(
     'REMEMBER_ME_TTL_SECONDS',
     config.REMEMBER_ME_TTL_SECONDS,
     30 * 24 * 60 * 60,
   );
-  const guestTtlSeconds = requirePositiveInteger('GUEST_TTL_SECONDS', config.GUEST_TTL_SECONDS, 30 * 24 * 60 * 60);
-  const guestCookieSecret = optionalString(config.GUEST_COOKIE_SECRET, 'development_guest_cookie_secret_change_me');
+  const guestTtlSeconds = requirePositiveInteger(
+    'GUEST_TTL_SECONDS',
+    config.GUEST_TTL_SECONDS,
+    30 * 24 * 60 * 60,
+  );
+  const guestCookieSecret = optionalString(
+    config.GUEST_COOKIE_SECRET,
+    'development_guest_cookie_secret_change_me',
+  );
 
   validateApiPrefix(apiPrefix);
   validateUrl('FRONTEND_ORIGIN', frontendOrigin, typedNodeEnvironment);
@@ -284,8 +308,13 @@ export function validateEnvironment(config: Record<string, unknown>): ValidatedE
   }
 
   if (typedNodeEnvironment === 'production') {
-    if (guestCookieSecret.length < 32 || guestCookieSecret === 'development_guest_cookie_secret_change_me') {
-      throw new Error('GUEST_COOKIE_SECRET must be at least 32 characters and not use the development default in production');
+    if (
+      guestCookieSecret.length < 32 ||
+      guestCookieSecret === 'development_guest_cookie_secret_change_me'
+    ) {
+      throw new Error(
+        'GUEST_COOKIE_SECRET must be at least 32 characters and not use the development default in production',
+      );
     }
   }
 
@@ -293,12 +322,18 @@ export function validateEnvironment(config: Record<string, unknown>): ValidatedE
     throw new Error('REMEMBER_ME_TTL_SECONDS must be greater than SESSION_TTL_SECONDS');
   }
 
-  const uploadMaxImageBytes = requirePositiveInteger('UPLOAD_MAX_IMAGE_BYTES', config.UPLOAD_MAX_IMAGE_BYTES, 5 * 1024 * 1024);
+  const uploadMaxImageBytes = requirePositiveInteger(
+    'UPLOAD_MAX_IMAGE_BYTES',
+    config.UPLOAD_MAX_IMAGE_BYTES,
+    5 * 1024 * 1024,
+  );
   if (uploadMaxImageBytes > 10 * 1024 * 1024) {
     throw new Error('UPLOAD_MAX_IMAGE_BYTES must not exceed 10485760');
   }
 
-  const uploadAllowedFolders = validateFolders(optionalString(config.UPLOAD_ALLOWED_FOLDERS, 'rs-store/products,rs-store/order-proofs'));
+  const uploadAllowedFolders = validateFolders(
+    optionalString(config.UPLOAD_ALLOWED_FOLDERS, 'rs-store/products,rs-store/order-proofs'),
+  );
   const bootstrapConfig = validateBootstrap(config, typedNodeEnvironment);
   const sheinImportCurrency = optionalString(config.SHEIN_IMPORT_CURRENCY, 'SAR').toUpperCase();
   if (sheinImportCurrency !== 'SAR') {

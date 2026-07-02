@@ -4,9 +4,12 @@ import type { SheinImportImage } from './shein.types';
 export const SHEIN_MAX_PRODUCT_IMAGES = 20;
 
 const IMAGE_EXTENSIONS = /\.(?:jpe?g|png|webp|avif)(?:[?#].*)?$/i;
-const SHEIN_IMAGE_HOST = /(?:^|\.)(?:ltwebstatic\.com|shein\.com|shein\.co\.[a-z]{2}|shein\.[a-z]{2})$/i;
-const MAIN_PRODUCT_IMAGE_PATH = /(?:images\d*_(?:pi|spmp|mp|p)|\/v4\/j\/(?:pi|spmp|mp|p)\/|\/pi\/|\/product\/|\/goods\/)/i;
-const BAD_IMAGE_CONTEXT = /facebook|instagram|twitter|youtube|pinterest|snapchat|visa|mastercard|maestro|american\s*express|amex|diners\s*club|discover|paypal|payment|footer|social|logo|icon|sprite|app[-_\s]?store|google[-_\s]?play|qr|flag|currency|size[-_\s]?guide|size[-_\s]?chart|swatch|banner|placeholder|loading|avatar|\/assets\/|\/she_dist\/|blank|base64|grey\.gif|star|rating|review|points?|coupon|badge|shipping|return|favicon|common|download|swiss|franc|profile|measurement|color[-_\s]?block|advert|tracking|pixel/i;
+const SHEIN_IMAGE_HOST =
+  /(?:^|\.)(?:ltwebstatic\.com|shein\.com|shein\.co\.[a-z]{2}|shein\.[a-z]{2})$/i;
+const MAIN_PRODUCT_IMAGE_PATH =
+  /(?:images\d*_(?:pi|spmp|mp|p)|\/v4\/j\/(?:pi|spmp|mp|p)\/|\/pi\/|\/product\/|\/goods\/)/i;
+const BAD_IMAGE_CONTEXT =
+  /facebook|instagram|twitter|youtube|pinterest|snapchat|visa|mastercard|maestro|american\s*express|amex|diners\s*club|discover|paypal|payment|footer|social|logo|icon|sprite|app[-_\s]?store|google[-_\s]?play|qr|flag|currency|size[-_\s]?guide|size[-_\s]?chart|swatch|banner|placeholder|loading|avatar|\/assets\/|\/she_dist\/|blank|base64|grey\.gif|star|rating|review|points?|coupon|badge|shipping|return|favicon|common|download|swiss|franc|profile|measurement|color[-_\s]?block|advert|tracking|pixel/i;
 
 export function normalizeImageUrl(value: unknown, baseUrl?: string): string | null {
   if (typeof value !== 'string') return null;
@@ -17,7 +20,12 @@ export function normalizeImageUrl(value: unknown, baseUrl?: string): string | nu
     .replace(/\\\//g, '/')
     .trim();
 
-  if (!raw || /^(?:data|blob|javascript):/i.test(raw) || /^data:/i.test(raw) || /base64/i.test(raw)) {
+  if (
+    !raw ||
+    /^(?:data|blob|javascript):/i.test(raw) ||
+    /^data:/i.test(raw) ||
+    /base64/i.test(raw)
+  ) {
     return null;
   }
 
@@ -87,11 +95,17 @@ export function dedupeProductImages(values: unknown[], max = SHEIN_MAX_PRODUCT_I
   return result;
 }
 
-export function selectMainProductImages(values: unknown[], max = SHEIN_MAX_PRODUCT_IMAGES): string[] {
+export function selectMainProductImages(
+  values: unknown[],
+  max = SHEIN_MAX_PRODUCT_IMAGES,
+): string[] {
   return dedupeProductImages(values, Math.min(max, SHEIN_MAX_PRODUCT_IMAGES));
 }
 
-export function normalizeSheinImageEntries(value: unknown, options: { strict?: boolean; sourceUrl?: string } = {}): SheinImportImage[] {
+export function normalizeSheinImageEntries(
+  value: unknown,
+  options: { strict?: boolean; sourceUrl?: string } = {},
+): SheinImportImage[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -119,7 +133,9 @@ export function normalizeSheinImageEntries(value: unknown, options: { strict?: b
   }
 
   if (options.strict && invalidCount > 0) {
-    throw new BadRequestException('Product images must be valid SHEIN image URLs without icons, logos, or rating images');
+    throw new BadRequestException(
+      'Product images must be valid SHEIN image URLs without icons, logos, or rating images',
+    );
   }
 
   return validImages;
@@ -135,20 +151,23 @@ function readImageCandidate(value: unknown, baseUrl?: string): SheinImportImage 
 
   const candidate = value as Record<string, unknown>;
   const url = normalizeImageUrl(candidate.url, baseUrl) ?? '';
-  const altTextAr = typeof candidate.altTextAr === 'string' && candidate.altTextAr.trim()
-    ? candidate.altTextAr.trim().slice(0, 180)
-    : typeof candidate.alt === 'string' && candidate.alt.trim()
-      ? candidate.alt.trim().slice(0, 180)
+  const altTextAr =
+    typeof candidate.altTextAr === 'string' && candidate.altTextAr.trim()
+      ? candidate.altTextAr.trim().slice(0, 180)
+      : typeof candidate.alt === 'string' && candidate.alt.trim()
+        ? candidate.alt.trim().slice(0, 180)
+        : undefined;
+  const cloudinaryPublicId =
+    typeof candidate.cloudinaryPublicId === 'string' && candidate.cloudinaryPublicId.trim()
+      ? candidate.cloudinaryPublicId.trim().slice(0, 220)
       : undefined;
-  const cloudinaryPublicId = typeof candidate.cloudinaryPublicId === 'string' && candidate.cloudinaryPublicId.trim()
-    ? candidate.cloudinaryPublicId.trim().slice(0, 220)
-    : undefined;
   const width = readPositiveInteger(candidate.width);
   const height = readPositiveInteger(candidate.height);
   const byteSize = readPositiveInteger(candidate.byteSize);
-  const format = typeof candidate.format === 'string' && candidate.format.trim()
-    ? candidate.format.trim().slice(0, 40)
-    : undefined;
+  const format =
+    typeof candidate.format === 'string' && candidate.format.trim()
+      ? candidate.format.trim().slice(0, 40)
+      : undefined;
   const isPrimary = candidate.isPrimary === true;
   const source = cloudinaryPublicId ? 'ADMIN_UPLOAD' : 'SHEIN_IMPORT';
 

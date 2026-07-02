@@ -46,6 +46,9 @@
   "dependencies": {
     "@nestjs/platform-express": "^11.1.27",
     "cloudinary": "^2.10.0",
-    "multer": "^2.2.0"
+    "multer": "2.2.0"
+  },
+  "overrides": {
+    "multer": "2.2.0"
   }
 }

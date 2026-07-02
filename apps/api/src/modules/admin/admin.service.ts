@@ -12,8 +12,6 @@ import { buildPaginationMeta } from '../../common/pagination/paginated-response'
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
 import { AuditLogsQueryDto } from './dto/audit-logs-query.dto';
 
-
-
 type AggregateCountValue = number | boolean | { _all?: number | null } | null | undefined;
 
 const getAggregateCount = (value: AggregateCountValue): number => {
@@ -26,7 +24,13 @@ const getAggregateCount = (value: AggregateCountValue): number => {
   return 0;
 };
 
-const calculateOutstandingAmount = (sum?: { totalAmount?: number | null; depositPaidAmount?: number | null; finalPaidAmount?: number | null } | null): number => {
+const calculateOutstandingAmount = (
+  sum?: {
+    totalAmount?: number | null;
+    depositPaidAmount?: number | null;
+    finalPaidAmount?: number | null;
+  } | null,
+): number => {
   const total = sum?.totalAmount ?? 0;
   const paid = (sum?.depositPaidAmount ?? 0) + (sum?.finalPaidAmount ?? 0);
   return Math.max(0, total - paid);
@@ -92,9 +96,15 @@ export class AdminService {
           startsAt: { gt: now },
         },
       }),
-      this.prisma.sheinImport.count({ where: { status: { in: ['PENDING', 'PREVIEW_READY', 'REVIEWING', 'APPROVED', 'PROCESSING'] } } }),
+      this.prisma.sheinImport.count({
+        where: {
+          status: { in: ['PENDING', 'PREVIEW_READY', 'REVIEWING', 'APPROVED', 'PROCESSING'] },
+        },
+      }),
       this.prisma.sheinImport.count({ where: { status: 'FAILED' } }),
-      this.prisma.productVariant.count({ where: { deletedAt: null, isActive: true, stockQuantity: { lte: 3 } } }),
+      this.prisma.productVariant.count({
+        where: { deletedAt: null, isActive: true, stockQuantity: { lte: 3 } },
+      }),
       this.prisma.notification.count({ where: { readAt: null } }),
       this.prisma.order.findMany({
         orderBy: { createdAt: 'desc' },
@@ -167,7 +177,6 @@ export class AdminService {
     };
   }
 
-
   async getReports() {
     const openBatchStatuses = [
       SheinBatchStatus.DRAFT,
@@ -178,8 +187,15 @@ export class AdminService {
       SheinBatchStatus.ARRIVED_STORE,
       SheinBatchStatus.READY_FOR_PICKUP,
     ];
-    const activeOrderStatuses = [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED];
-    const nonTerminalOrderWhere = { status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] } };
+    const activeOrderStatuses = [
+      OrderStatus.PENDING,
+      OrderStatus.CONFIRMED,
+      OrderStatus.PROCESSING,
+      OrderStatus.SHIPPED,
+    ];
+    const nonTerminalOrderWhere = {
+      status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] },
+    };
     const readyForBatchWhere: Prisma.OrderWhereInput = {
       ...nonTerminalOrderWhere,
       paymentStatus: OrderPaymentStatus.DEPOSIT_APPROVED,
@@ -187,7 +203,11 @@ export class AdminService {
         some: {
           status: { not: OrderItemStatus.CANCELLED },
           sheinBatchItems: {
-            none: { batch: { status: { notIn: [SheinBatchStatus.CANCELLED, SheinBatchStatus.DELIVERED] } } },
+            none: {
+              batch: {
+                status: { notIn: [SheinBatchStatus.CANCELLED, SheinBatchStatus.DELIVERED] },
+              },
+            },
           },
         },
       },
@@ -198,7 +218,11 @@ export class AdminService {
       items: {
         some: {
           sheinBatchItems: {
-            some: { batch: { status: { notIn: [SheinBatchStatus.CANCELLED, SheinBatchStatus.DELIVERED] } } },
+            some: {
+              batch: {
+                status: { notIn: [SheinBatchStatus.CANCELLED, SheinBatchStatus.DELIVERED] },
+              },
+            },
           },
         },
       },
@@ -287,7 +311,9 @@ export class AdminService {
       this.prisma.order.count({ where: waitingFinalPaymentWhere }),
       this.prisma.order.count({ where: readyToDeliverWhere }),
       this.prisma.order.count({ where: { paymentStatus: OrderPaymentStatus.DEPOSIT_SUBMITTED } }),
-      this.prisma.order.count({ where: { paymentStatus: OrderPaymentStatus.FINAL_PAYMENT_SUBMITTED } }),
+      this.prisma.order.count({
+        where: { paymentStatus: OrderPaymentStatus.FINAL_PAYMENT_SUBMITTED },
+      }),
       this.prisma.order.count({
         where: {
           ...nonTerminalOrderWhere,
@@ -308,13 +334,23 @@ export class AdminService {
         by: ['status'],
         orderBy: { status: 'asc' },
         _count: { _all: true },
-        _sum: { totalAmount: true, depositPaidAmount: true, finalPaidAmount: true, remainingAmount: true },
+        _sum: {
+          totalAmount: true,
+          depositPaidAmount: true,
+          finalPaidAmount: true,
+          remainingAmount: true,
+        },
       }),
       this.prisma.order.groupBy({
         by: ['paymentStatus'],
         orderBy: { paymentStatus: 'asc' },
         _count: { _all: true },
-        _sum: { totalAmount: true, depositPaidAmount: true, finalPaidAmount: true, remainingAmount: true },
+        _sum: {
+          totalAmount: true,
+          depositPaidAmount: true,
+          finalPaidAmount: true,
+          remainingAmount: true,
+        },
       }),
     ]);
 
@@ -335,7 +371,14 @@ export class AdminService {
       SheinBatchStatus.DELIVERED,
       SheinBatchStatus.CANCELLED,
     ];
-    const orderStatusOrder = [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.COMPLETED, OrderStatus.CANCELLED];
+    const orderStatusOrder = [
+      OrderStatus.PENDING,
+      OrderStatus.CONFIRMED,
+      OrderStatus.PROCESSING,
+      OrderStatus.SHIPPED,
+      OrderStatus.COMPLETED,
+      OrderStatus.CANCELLED,
+    ];
     const paymentStatusOrder = [
       OrderPaymentStatus.DEPOSIT_PENDING,
       OrderPaymentStatus.DEPOSIT_SUBMITTED,
@@ -438,7 +481,9 @@ export class AdminService {
     const where: Prisma.AuditLogWhereInput = {
       actorUserId: query.actorUserId,
       action: query.action ? { contains: query.action, mode: 'insensitive' } : undefined,
-      entityType: query.entityType ? { contains: query.entityType, mode: 'insensitive' } : undefined,
+      entityType: query.entityType
+        ? { contains: query.entityType, mode: 'insensitive' }
+        : undefined,
       entityId: query.entityId ? { contains: query.entityId, mode: 'insensitive' } : undefined,
       createdAt:
         query.createdFrom || query.createdTo

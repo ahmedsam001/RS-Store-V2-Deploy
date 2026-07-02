@@ -29,7 +29,10 @@ export function AdminConfirmationDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="presentation">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+      role="presentation"
+    >
       <div
         role="dialog"
         aria-modal="true"
@@ -65,7 +68,11 @@ export function AdminConfirmationDialog({
           <Button type="button" variant="outline" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button type="button" variant={tone === 'danger' ? 'danger' : 'default'} onClick={onConfirm}>
+          <Button
+            type="button"
+            variant={tone === 'danger' ? 'danger' : 'default'}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </div>
