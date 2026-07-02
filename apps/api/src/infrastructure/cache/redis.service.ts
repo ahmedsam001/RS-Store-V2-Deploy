@@ -8,11 +8,20 @@ export class RedisService implements OnModuleDestroy {
   private connectPromise?: Promise<void>;
 
   constructor(configService: ConfigService) {
-    this.client = new Redis(configService.getOrThrow<string>('REDIS_URL'), {
+    const redisUrl = configService.getOrThrow<string>('REDIS_URL');
+
+    this.client = new Redis(redisUrl, {
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
       lazyConnect: true,
+      tls: redisUrl.startsWith('rediss://')
+        ? {
+            rejectUnauthorized: false,
+          }
+        : undefined,
     });
+
+    this.client.on('error', () => undefined);
   }
 
   async incrementWithTtl(key: string, windowMs: number): Promise<{ count: number; ttlMs: number }> {
