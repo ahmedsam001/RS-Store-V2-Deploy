@@ -55,11 +55,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const storedAuth = useMemo(() => readStoredAuth(), []);
-  const [status, setStatus] = useState<AuthStatus>(storedAuth?.user ? 'authenticated' : 'loading');
+  const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<AuthUser | null>(storedAuth?.user ?? null);
   const [csrfToken, setCsrfToken] = useState<string | null>(storedAuth?.csrfToken ?? null);
 
   useEffect(() => {
+    if (status === 'loading') return;
     writeStoredAuth(
       status === 'authenticated' ? user : null,
       status === 'authenticated' ? csrfToken : null,
@@ -85,9 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (status === 'loading') {
-        setStatus('anonymous');
-      }
+      setStatus((currentStatus) => (currentStatus === 'loading' ? 'anonymous' : currentStatus));
     }
   }, []);
 

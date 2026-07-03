@@ -1,5 +1,6 @@
 import { ChangeEvent, DragEvent, useRef, useState } from 'react';
 import { adminApi, SheinPreviewImage } from '@/features/admin/api/admin-api';
+import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/shared/components/ui/Button';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 
@@ -25,6 +26,7 @@ export function ImageUploadGallery({
   onNotice,
 }: ImageUploadGalleryProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { csrfToken } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -59,7 +61,7 @@ export function ImageUploadGallery({
     try {
       const uploadedImages: EditableGalleryImage[] = [];
       for (const file of files) {
-        const uploaded = await adminApi.uploadImage(file, uploadFolder);
+        const uploaded = await adminApi.uploadImage(file, uploadFolder, { csrfToken });
         uploadedImages.push({
           url: uploaded.secureUrl,
           cloudinaryPublicId: uploaded.cloudinaryPublicId,
