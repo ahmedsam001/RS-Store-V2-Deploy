@@ -31,6 +31,7 @@ import {
   resolveOrderCurrency,
   toOrderItemInput,
 } from './checkout-order.builder';
+import type { CheckoutCartItem } from './checkout-order.builder';
 import {
   assertCheckoutIdempotencyReplay,
   hashCheckoutRequest,
@@ -133,6 +134,7 @@ type ReservableOrderItem = {
   productVariantId: string | null;
   productId: string | null;
   quantity: number;
+  customOrderRequestId?: string | null;
 };
 type UploadedPaymentProofSnapshot = {
   cloudinaryPublicId: string;
@@ -255,7 +257,7 @@ export class OrdersService {
             where: { userId: user.id },
             include: {
               items: {
-                include: { product: true, productVariant: true },
+                include: { product: true, productVariant: true, customOrderRequest: true },
                 orderBy: { createdAt: 'asc' },
               },
             },
@@ -267,19 +269,21 @@ export class OrdersService {
 
           await assertCheckoutItems(tx, cart.items);
           await this.reserveInventoryForItems(tx, cart.items);
+          const hasProductItems = cart.items.some(
+            (item) => item.productId && item.productVariantId,
+          );
 
           const settings = await this.getPaymentSettings(tx);
           const currency = resolveOrderCurrency(cart.items);
           const saleAdjustments = await this.pricingService.getActiveSaleAdjustments(
-            cart.items.map((item) => item.productId),
+            cart.items.flatMap((item) => (item.productId ? [item.productId] : [])),
             tx,
           );
           const orderItems = cart.items.map((item) =>
             toOrderItemInput(item, this.pricingService, saleAdjustments),
           );
           const subtotalBeforeDiscount = cart.items.reduce(
-            (sum, item) =>
-              sum + (item.productVariant?.priceAmount ?? item.product.priceAmount) * item.quantity,
+            (sum, item) => sum + this.checkoutItemBaseLineAmount(item),
             0,
           );
           const subtotal = orderItems.reduce((sum, item) => sum + item.lineTotalAmount, 0);
@@ -310,7 +314,7 @@ export class OrdersService {
               depositPaymentMethod: paymentSnapshot.depositPaymentMethod,
               depositPaymentFeeAmount: paymentSnapshot.depositPaymentFeeAmount,
               finalAmountDue: paymentSnapshot.remainingAmount,
-              inventoryStatus: InventoryStatus.RESERVED,
+              inventoryStatus: hasProductItems ? InventoryStatus.RESERVED : InventoryStatus.NONE,
               customerNameSnapshot: dto.customerName.trim(),
               customerPhoneSnapshot: dto.customerPhone.trim(),
               customerEmailSnapshot: dto.customerEmail?.trim() || null,
@@ -340,6 +344,15 @@ export class OrdersService {
             where: { id: idempotencyRecord.id },
             data: { status: CheckoutIdempotencyStatus.COMPLETED, orderId: order.id },
           });
+          const customOrderRequestIds = cart.items.flatMap((item) =>
+            item.customOrderRequestId ? [item.customOrderRequestId] : [],
+          );
+          if (customOrderRequestIds.length > 0) {
+            await tx.customOrderRequest.updateMany({
+              where: { id: { in: customOrderRequestIds }, convertedOrderId: null },
+              data: { convertedOrderId: order.id },
+            });
+          }
           await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
           await tx.auditLog.create({
             data: {
@@ -401,6 +414,14 @@ export class OrdersService {
       hasDepositProof: Boolean(file),
       fileSize: file?.size,
     });
+  }
+
+  private checkoutItemBaseLineAmount(item: CheckoutCartItem): number {
+    if (item.customOrderRequest) {
+      return item.customOrderRequest.adminTotalAmount ?? 0;
+    }
+
+    return (item.productVariant?.priceAmount ?? item.product?.priceAmount ?? 0) * item.quantity;
   }
 
   async findAll(query: OrdersQueryDto) {
@@ -877,6 +898,12 @@ export class OrdersService {
     if (type === PaymentProofType.DEPOSIT) {
       if (order.inventoryStatus === InventoryStatus.RELEASED)
         await this.reserveInventoryForItems(tx, order.items);
+      if (order.inventoryStatus === InventoryStatus.NONE) {
+        return {
+          paymentStatus: OrderPaymentStatus.DEPOSIT_SUBMITTED,
+          inventoryStatus: InventoryStatus.NONE,
+        };
+      }
       return {
         paymentStatus: OrderPaymentStatus.DEPOSIT_SUBMITTED,
         inventoryStatus: InventoryStatus.RESERVED,
@@ -1077,6 +1104,9 @@ export class OrdersService {
   ): Promise<void> {
     for (const item of items) {
       if (!item.productVariantId || !item.productId) {
+        if (item.customOrderRequestId || (!item.productVariantId && !item.productId)) {
+          continue;
+        }
         throw new BadRequestException(
           'Every checkout item must reference a purchasable product variant',
         );
@@ -1102,11 +1132,11 @@ export class OrdersService {
     order: OrderWithProofs,
   ): Promise<void> {
     if (order.inventoryStatus === InventoryStatus.DEDUCTED) return;
+    if (order.inventoryStatus === InventoryStatus.NONE) return;
     if (order.inventoryStatus !== InventoryStatus.RESERVED)
       throw new ConflictException('Order inventory is not reserved');
     for (const item of order.items) {
-      if (!item.productVariantId)
-        throw new ConflictException('Order item is missing a reserved product variant');
+      if (!item.productVariantId) continue;
       const affected = await tx.$executeRaw`
         UPDATE product_variants
         SET stock_quantity = stock_quantity - ${item.quantity},
@@ -1144,8 +1174,7 @@ export class OrdersService {
       return;
     if (order.inventoryStatus === InventoryStatus.RESERVED) {
       for (const item of order.items) {
-        if (!item.productVariantId)
-          throw new ConflictException('Order item is missing a reserved product variant');
+        if (!item.productVariantId) continue;
         const affected = await tx.$executeRaw`
           UPDATE product_variants
           SET reserved_quantity = reserved_quantity - ${item.quantity},
@@ -1172,8 +1201,7 @@ export class OrdersService {
     }
     if (order.inventoryStatus === InventoryStatus.DEDUCTED) {
       for (const item of order.items) {
-        if (!item.productVariantId)
-          throw new ConflictException('Order item is missing a deducted product variant');
+        if (!item.productVariantId) continue;
         await tx.$executeRaw`UPDATE product_variants SET stock_quantity = stock_quantity + ${item.quantity}, status = CASE WHEN is_active = TRUE AND deleted_at IS NULL THEN 'ACTIVE'::"ProductVariantStatus" ELSE status END, updated_at = CURRENT_TIMESTAMP WHERE id = ${item.productVariantId}::uuid`;
       }
       await tx.order.update({

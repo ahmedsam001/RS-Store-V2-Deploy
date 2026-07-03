@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, ProductStatus, ProductVariantStatus } from '@prisma/client';
+import { CustomOrderStatus, Prisma, ProductStatus, ProductVariantStatus } from '@prisma/client';
 import { Request, Response } from 'express';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
 import { ShopperContextService } from '../shopper-context/shopper-context.service';
@@ -68,6 +68,12 @@ export class CartService {
     const payload = await this.runCartWrite(async (tx) => {
       const cart = await this.getOrCreateCart(context, tx);
       const item = await this.assertCartItem(tx, cart.id, itemId);
+      if (item.customOrderRequestId) {
+        throw new BadRequestException('Custom order quantity cannot be changed after admin review');
+      }
+      if (!item.productId) {
+        throw new BadRequestException('Cart item is missing product details');
+      }
       await this.assertCartQuantityAvailable(
         tx,
         cart.id,
@@ -148,13 +154,23 @@ export class CartService {
       include: {
         items: {
           where: {
-            product: visibleProductWhere,
-            productVariantId: { not: null },
-            productVariant: {
-              isActive: true,
-              status: ProductVariantStatus.ACTIVE,
-              deletedAt: null,
-            },
+            OR: [
+              {
+                product: visibleProductWhere,
+                productVariantId: { not: null },
+                productVariant: {
+                  isActive: true,
+                  status: ProductVariantStatus.ACTIVE,
+                  deletedAt: null,
+                },
+              },
+              {
+                customOrderRequest: {
+                  status: CustomOrderStatus.ACCEPTED,
+                  convertedOrderId: null,
+                },
+              },
+            ],
           },
           include: cartItemInclude,
           orderBy: [{ createdAt: 'asc' }],
@@ -247,10 +263,15 @@ export class CartService {
     client: PrismaClientLike,
     cartId: string,
     itemId: string,
-  ): Promise<{ id: string; productId: string; productVariantId: string | null }> {
+  ): Promise<{
+    id: string;
+    productId: string | null;
+    productVariantId: string | null;
+    customOrderRequestId: string | null;
+  }> {
     const item = await client.cartItem.findFirst({
       where: { id: itemId, cartId },
-      select: { id: true, productId: true, productVariantId: true },
+      select: { id: true, productId: true, productVariantId: true, customOrderRequestId: true },
     });
 
     if (!item) {
@@ -298,8 +319,25 @@ export class CartService {
   private async mergeGuestCartItem(
     client: Prisma.TransactionClient,
     cartId: string,
-    item: { productId: string; productVariantId: string | null; quantity: number },
+    item: {
+      productId: string | null;
+      productVariantId: string | null;
+      customOrderRequestId: string | null;
+      quantity: number;
+    },
   ): Promise<void> {
+    if (item.customOrderRequestId) {
+      await client.cartItem.update({
+        where: { customOrderRequestId: item.customOrderRequestId },
+        data: { cartId, quantity: item.quantity },
+      });
+      return;
+    }
+
+    if (!item.productId) {
+      return;
+    }
+
     if (!item.productVariantId) {
       return;
     }

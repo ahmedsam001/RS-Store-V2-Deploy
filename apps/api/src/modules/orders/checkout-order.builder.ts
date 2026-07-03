@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { Prisma, ProductStatus, ProductVariantStatus } from '@prisma/client';
+import { CustomOrderStatus, Prisma, ProductStatus, ProductVariantStatus } from '@prisma/client';
 import { ProductPricingService, SaleAdjustment } from '../pricing/product-pricing.service';
 
 type PrismaClientLike = Prisma.TransactionClient;
@@ -10,6 +10,7 @@ export type CheckoutCart = Prisma.CartGetPayload<{
       include: {
         product: true;
         productVariant: true;
+        customOrderRequest: true;
       };
     };
   };
@@ -28,6 +29,25 @@ export async function assertCheckoutItems(
   items: CheckoutCartItem[],
 ): Promise<void> {
   for (const item of items) {
+    if (item.customOrderRequestId) {
+      const customOrder = item.customOrderRequest;
+      if (
+        !customOrder ||
+        customOrder.status !== CustomOrderStatus.ACCEPTED ||
+        customOrder.convertedOrderId ||
+        !customOrder.adminTitle ||
+        customOrder.adminTotalAmount === null ||
+        customOrder.adminTotalAmount <= 0
+      ) {
+        throw new BadRequestException('Cart contains an unavailable custom order');
+      }
+      continue;
+    }
+
+    if (!item.productId || !item.product) {
+      throw new BadRequestException('Cart item is missing product details');
+    }
+
     const product = await client.product.findFirst({
       where: { id: item.productId, ...visibleProductWhere },
       select: { id: true },
@@ -65,8 +85,11 @@ export async function assertCheckoutItems(
 }
 
 export function resolveOrderCurrency(items: CheckoutCartItem[]): string {
-  const currency = items[0]?.product.currency ?? 'EGP';
-  if (items.some((item) => item.product.currency !== currency)) {
+  const currencies = items.map((item) =>
+    item.customOrderRequestId ? 'EGP' : (item.product?.currency ?? 'EGP'),
+  );
+  const currency = currencies[0] ?? 'EGP';
+  if (currencies.some((itemCurrency) => itemCurrency !== currency)) {
     throw new BadRequestException('Cart contains multiple currencies');
   }
 
@@ -78,6 +101,35 @@ export function toOrderItemInput(
   pricingService: ProductPricingService,
   saleAdjustments: Map<string, SaleAdjustment>,
 ): Prisma.OrderItemCreateWithoutOrderInput {
+  if (item.customOrderRequestId) {
+    const customOrder = item.customOrderRequest;
+    if (!customOrder?.adminTitle || customOrder.adminTotalAmount === null) {
+      throw new BadRequestException('Custom order is missing final product details');
+    }
+
+    const quantity = Math.max(1, item.quantity);
+    const unitPriceAmount =
+      quantity > 1
+        ? Math.floor(customOrder.adminTotalAmount / quantity)
+        : customOrder.adminTotalAmount;
+
+    return {
+      productNameSnapshot: customOrder.adminTitle,
+      productSkuSnapshot: `CUSTOM-${customOrder.id.slice(0, 8).toUpperCase()}`,
+      productVariantNameSnapshot: null,
+      productVariantSkuSnapshot: null,
+      productVariantSizeSnapshot: customOrder.requestedSize,
+      productVariantColorSnapshot: customOrder.requestedColor,
+      quantity: item.quantity,
+      unitPriceAmount,
+      lineTotalAmount: customOrder.adminTotalAmount,
+    };
+  }
+
+  if (!item.productId || !item.product) {
+    throw new BadRequestException('Cart item is missing product details');
+  }
+
   const baseAmount = item.productVariant?.priceAmount ?? item.product.priceAmount;
   const productDiscountPercent = Number(item.product.discountPercent ?? 0);
   const input = {

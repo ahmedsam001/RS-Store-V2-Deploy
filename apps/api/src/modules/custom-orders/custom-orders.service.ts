@@ -146,6 +146,38 @@ export class CustomOrdersService {
           data,
           include: customOrderInclude,
         });
+        if (dto.status === CustomOrderStatus.ACCEPTED) {
+          const cart = await tx.cart.upsert({
+            where: { userId: current.userId },
+            update: {},
+            create: { userId: current.userId },
+            select: { id: true },
+          });
+          await tx.cartItem.upsert({
+            where: { customOrderRequestId: id },
+            update: {
+              cartId: cart.id,
+              quantity: record.quantity,
+            },
+            create: {
+              cartId: cart.id,
+              customOrderRequestId: id,
+              quantity: record.quantity,
+            },
+          });
+          await tx.auditLog.create({
+            data: {
+              actorUserId: actor.id,
+              action: 'CUSTOM_ORDER_ADDED_TO_CART',
+              entityType: 'CUSTOM_ORDER',
+              entityId: id,
+              metadata: { customOrderId: id, userId: current.userId, cartId: cart.id },
+            },
+          });
+        }
+        if (dto.status === CustomOrderStatus.REJECTED) {
+          await tx.cartItem.deleteMany({ where: { customOrderRequestId: id } });
+        }
         await tx.auditLog.create({
           data: {
             actorUserId: actor.id,
@@ -280,7 +312,7 @@ export class CustomOrdersService {
     const accepted = dto.status === CustomOrderStatus.ACCEPTED;
     const adminTitle = this.optionalText(dto.adminTitle);
     const total = this.optionalMoney(dto.adminTotalAmount, 'adminTotalAmount');
-    if (accepted && (!adminTitle || total === null)) {
+    if (accepted && (!adminTitle || total === null || total <= 0)) {
       throw new BadRequestException('Accepted custom orders need a title and total amount');
     }
 
