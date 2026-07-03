@@ -38,6 +38,7 @@ export function AdminCustomOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [reviewErrors, setReviewErrors] = useState<Record<string, string>>({});
 
   const status = (searchParams.get('status') as CustomOrderStatus | null) ?? 'ALL';
   const search = searchParams.get('search') ?? '';
@@ -93,9 +94,9 @@ export function AdminCustomOrdersPage() {
     status: 'ACCEPTED' | 'REJECTED',
   ) {
     event.preventDefault();
-    setReviewingId(id);
     setError(null);
     setSuccess(null);
+
     const form = new FormData(event.currentTarget);
     const file = form.get('adminImage');
     const adminTitle = String(form.get('adminTitle') ?? '').trim();
@@ -104,11 +105,21 @@ export function AdminCustomOrdersPage() {
     const adminTotalAmount = String(form.get('adminTotalAmount') ?? '').trim();
     const adminNote = String(form.get('adminNote') ?? '').trim();
 
-    if (status === 'ACCEPTED' && (!adminTitle || !adminTotalAmount)) {
-      setError('Accepted custom orders need an admin title and final total amount');
-      setReviewingId(null);
+    setReviewErrors((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+
+    if (status === 'ACCEPTED' && (!adminTitle || !isPositiveMoneyInput(adminTotalAmount))) {
+      setReviewErrors((current) => ({
+        ...current,
+        [id]: 'To accept this request add an admin title and a final total amount greater than 0.',
+      }));
       return;
     }
+
+    setReviewingId(id);
 
     try {
       const updated = await customOrdersApi.review(
@@ -124,14 +135,23 @@ export function AdminCustomOrdersPage() {
         file instanceof File && file.size > 0 ? file : null,
         { csrfToken },
       );
+
       setItems((current) => current.map((item) => (item.id === id ? updated : item)));
+      setReviewErrors((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
       setSuccess(
         status === 'ACCEPTED'
           ? 'Custom order accepted and added to the customer cart'
           : 'Custom order rejected',
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to review custom order');
+      setReviewErrors((current) => ({
+        ...current,
+        [id]: err instanceof Error ? err.message : 'Unable to review custom order',
+      }));
     } finally {
       setReviewingId(null);
     }
@@ -229,6 +249,7 @@ export function AdminCustomOrdersPage() {
                 item={item}
                 reviewing={reviewingId === item.id}
                 onReview={review}
+                reviewError={reviewErrors[item.id]}
               />
             ))}
           </div>
@@ -242,9 +263,11 @@ function CustomOrderAdminCard({
   item,
   reviewing,
   onReview,
+  reviewError,
 }: {
   item: CustomOrderRequest;
   reviewing: boolean;
+  reviewError?: string;
   onReview: (
     id: string,
     event: FormEvent<HTMLFormElement>,
@@ -374,6 +397,21 @@ function CustomOrderAdminCard({
             Current admin image
           </a>
         ) : null}
+        {reviewError ? (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+            {reviewError}
+          </p>
+        ) : null}
+        {reviewError ? (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+            {reviewError}
+          </p>
+        ) : null}
+        {reviewError ? (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+            {reviewError}
+          </p>
+        ) : null}
         {item.convertedOrder ? (
           <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">
             Converted to order {item.convertedOrder.orderNumber}
@@ -423,6 +461,13 @@ function countByStatus(items: CustomOrderRequest[]) {
     counts[item.status] = (counts[item.status] ?? 0) + 1;
     return counts;
   }, {});
+}
+
+function isPositiveMoneyInput(value: string) {
+  if (!value.trim()) return false;
+  const normalized = value.trim().replace(',', '.');
+  const amount = Number(normalized);
+  return Number.isFinite(amount) && amount > 0;
 }
 
 function minorToInput(value: string | number | null | undefined) {
