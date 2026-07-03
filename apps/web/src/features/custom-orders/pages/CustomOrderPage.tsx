@@ -46,10 +46,11 @@ export function CustomOrderPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSubmitting(true);
     setError(null);
     setSuccess(null);
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const file = form.get('customerImage');
     try {
       const created = await customOrdersApi.create(
@@ -64,7 +65,7 @@ export function CustomOrderPage() {
         { csrfToken },
       );
       setItems((current) => [created, ...current]);
-      event.currentTarget.reset();
+      formElement.reset();
       setCustomerImageName(null);
       setSuccess('Custom order request sent');
     } catch (err) {
