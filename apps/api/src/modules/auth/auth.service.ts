@@ -156,8 +156,12 @@ export class AuthService {
   async me(request: Request): Promise<AuthMeResponse> {
     const session = await this.authSessionService.findSessionFromRequest(request);
     if (!session) {
-      throw new UnauthorizedException('Invalid or expired session');
-    }
+  return {
+    ok: true,
+    csrfToken: null,
+    user: null,
+  };
+}
 
     return {
       ok: true,
