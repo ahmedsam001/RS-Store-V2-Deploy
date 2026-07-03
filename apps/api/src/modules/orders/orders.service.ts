@@ -613,7 +613,6 @@ export class OrdersService {
         this.assertFinalPaymentAllowed(order);
         const finalPaymentSnapshot = buildFinalPaymentSnapshot({
           currentTotalAmount: order.totalAmount,
-          currentFinalPaymentFeeAmount: order.finalPaymentFeeAmount,
           remainingAmount: order.remainingAmount,
           finalPaymentMethod: PaymentMethod.CASH_AT_SHOP,
           settings: { vodafoneFeePercent: 0 },
@@ -864,7 +863,6 @@ export class OrdersService {
     const settings = await this.getPaymentSettings(tx);
     const finalPaymentSnapshot = buildFinalPaymentSnapshot({
       currentTotalAmount: order.totalAmount,
-      currentFinalPaymentFeeAmount: order.finalPaymentFeeAmount,
       remainingAmount: order.remainingAmount,
       finalPaymentMethod,
       settings,

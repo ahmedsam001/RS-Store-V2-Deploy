@@ -82,13 +82,11 @@ export function buildCheckoutPaymentSnapshot(
 
 export function buildFinalPaymentSnapshot({
   currentTotalAmount,
-  currentFinalPaymentFeeAmount,
   remainingAmount,
   finalPaymentMethod,
   settings,
 }: {
   currentTotalAmount: number;
-  currentFinalPaymentFeeAmount: number;
   remainingAmount: number;
   finalPaymentMethod: PaymentMethod;
   settings: Pick<PaymentSettingsSnapshot, 'vodafoneFeePercent'>;
