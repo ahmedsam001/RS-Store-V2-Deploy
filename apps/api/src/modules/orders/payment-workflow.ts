@@ -68,9 +68,9 @@ export function buildCheckoutPaymentSnapshot(
     depositPaymentMethod === PaymentMethod.VODAFONE
       ? calculatePercentAmount(depositBaseAmount, settings.vodafoneFeePercent)
       : 0;
-  const totalAmount = subtotal + depositPaymentFeeAmount;
+  const totalAmount = subtotal;
   const depositAmount = depositBaseAmount + depositPaymentFeeAmount;
-  const remainingAmount = Math.max(0, totalAmount - depositAmount);
+  const remainingAmount = Math.max(0, totalAmount - depositBaseAmount);
   return {
     depositPaymentMethod,
     depositPaymentFeeAmount,
@@ -102,6 +102,6 @@ export function buildFinalPaymentSnapshot({
     finalPaymentMethod,
     finalPaymentFeeAmount,
     finalAmountDue: remainingAmount + finalPaymentFeeAmount,
-    totalAmount: currentTotalAmount - currentFinalPaymentFeeAmount + finalPaymentFeeAmount,
+    totalAmount: currentTotalAmount,
   };
 }

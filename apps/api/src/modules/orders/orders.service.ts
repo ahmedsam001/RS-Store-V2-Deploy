@@ -156,7 +156,7 @@ export class OrdersService {
     dto: CheckoutOrderDto,
     idempotencyKey?: string | null,
   ): Promise<OrderWithTimeline> {
-    return this.checkoutInternal(user, dto, idempotencyKey, null);
+    return this.checkoutInternal(user, this.normalizeCheckoutDto(dto), idempotencyKey, null);
   }
 
   async checkoutWithDepositProof(
@@ -165,8 +165,9 @@ export class OrdersService {
     file: UploadedImageFile | undefined,
     idempotencyKey?: string | null,
   ): Promise<OrderWithTimeline> {
-    const key = normalizeCheckoutIdempotencyKey(idempotencyKey ?? dto.idempotencyKey);
-    const requestHash = hashCheckoutRequest(dto);
+    const normalizedDto = this.normalizeCheckoutDto(dto);
+    const key = normalizeCheckoutIdempotencyKey(idempotencyKey ?? normalizedDto.idempotencyKey);
+    const requestHash = hashCheckoutRequest(normalizedDto);
     const replay = await this.prisma.checkoutIdempotencyKey.findUnique({
       where: { userId_key: { userId: user.id, key } },
       include: { order: { include: orderInclude } },
@@ -181,7 +182,7 @@ export class OrdersService {
       folder: ORDER_PAYMENT_PROOFS_FOLDER,
     });
     try {
-      const order = await this.checkoutInternal(user, dto, key, uploaded);
+      const order = await this.checkoutInternal(user, normalizedDto, key, uploaded);
       const proofWasAttached = order.paymentProofs.some(
         (proof) => proof.cloudinaryPublicId === uploaded.cloudinaryPublicId,
       );
@@ -205,14 +206,27 @@ export class OrdersService {
     }
   }
 
+  private normalizeCheckoutDto(dto: CheckoutOrderDto): CheckoutOrderDto {
+    return {
+      ...dto,
+      customerName: dto.customerName?.trim(),
+      customerPhone: dto.customerPhone?.trim(),
+      customerEmail: dto.customerEmail?.trim() || undefined,
+      shippingAddress: dto.shippingAddress?.trim(),
+      notes: dto.notes?.trim() || undefined,
+      depositPercent: Number(dto.depositPercent) as CheckoutOrderDto['depositPercent'],
+    };
+  }
+
   private async checkoutInternal(
     user: AuthenticatedUser,
     dto: CheckoutOrderDto,
     idempotencyKey?: string | null,
     depositProof?: UploadedPaymentProofSnapshot | null,
   ): Promise<OrderWithTimeline> {
-    const key = normalizeCheckoutIdempotencyKey(idempotencyKey ?? dto.idempotencyKey);
-    const requestHash = hashCheckoutRequest(dto);
+    const normalizedDto = this.normalizeCheckoutDto(dto);
+    const key = normalizeCheckoutIdempotencyKey(idempotencyKey ?? normalizedDto.idempotencyKey);
+    const requestHash = hashCheckoutRequest(normalizedDto);
 
     try {
       const order = await this.prisma.$transaction(
@@ -988,7 +1002,7 @@ export class OrdersService {
         paymentStatus: OrderPaymentStatus.FINAL_PAYMENT_PENDING,
         finalAmountDue: order.remainingAmount,
         finalPaymentFeeAmount: 0,
-        totalAmount: order.totalAmount - order.finalPaymentFeeAmount,
+        totalAmount: order.totalAmount,
       },
     });
     await tx.notification.create({

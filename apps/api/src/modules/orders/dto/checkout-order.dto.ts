@@ -1,6 +1,8 @@
+import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   Matches,
@@ -39,6 +41,8 @@ export class CheckoutOrderDto {
   @MaxLength(1000)
   notes?: string;
 
+  @Type(() => Number)
+  @IsInt()
   @IsIn(DEPOSIT_PERCENT_CHOICES)
   depositPercent!: DepositPercentInput;
 
