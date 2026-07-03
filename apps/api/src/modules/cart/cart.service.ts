@@ -30,12 +30,14 @@ export class CartService {
 
   async findCurrentCart(request: Request, response: Response): Promise<CartResponse> {
     const context = await this.resolveAndMerge(request, response);
-    const payload = await this.runCartWrite(async (tx) => {
-      const cart = await this.getOrCreateCart(context, tx);
-      return this.getCartPayload(cart.id, tx);
-    });
+    const cart = await this.getOrCreateCart(context, this.prisma);
+    const payload = await this.getCartPayload(cart.id, this.prisma);
 
     return mapCart(payload, this.pricingService);
+  }
+
+  async prepareCheckoutCart(request: Request, response: Response): Promise<void> {
+    await this.resolveAndMerge(request, response);
   }
 
   async addItem(request: Request, response: Response, dto: AddCartItemDto): Promise<CartResponse> {

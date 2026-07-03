@@ -18,6 +18,7 @@ type ApiRequestOptions = {
   signal?: AbortSignal;
   cache?: RequestCache;
   headers?: Record<string, string | undefined>;
+  timeoutMs?: number;
 };
 
 const apiBaseUrl = normalizeBaseUrl(
@@ -46,7 +47,7 @@ export async function apiRequest<TResponse>(
     headers.set('X-CSRF-Token', csrfToken);
   }
 
-  const signal = buildRequestSignal(options.signal);
+  const signal = buildRequestSignal(options.signal, options.timeoutMs);
   let response: Response;
   try {
     response = await fetch(`${apiBaseUrl}${path}`, {
@@ -80,10 +81,14 @@ export async function apiRequest<TResponse>(
   return payload as TResponse;
 }
 
-function buildRequestSignal(externalSignal?: AbortSignal): AbortSignal | undefined {
-  const timeoutMs = Number.isFinite(DEFAULT_REQUEST_TIMEOUT_MS)
-    ? DEFAULT_REQUEST_TIMEOUT_MS
-    : 15000;
+function buildRequestSignal(
+  externalSignal?: AbortSignal,
+  timeoutOverrideMs?: number,
+): AbortSignal | undefined {
+  const configuredTimeoutMs =
+    timeoutOverrideMs ??
+    (Number.isFinite(DEFAULT_REQUEST_TIMEOUT_MS) ? DEFAULT_REQUEST_TIMEOUT_MS : 15000);
+  const timeoutMs = Number.isFinite(configuredTimeoutMs) ? configuredTimeoutMs : 15000;
 
   if (timeoutMs <= 0 && !externalSignal) return undefined;
   if (timeoutMs <= 0) return externalSignal;

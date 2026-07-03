@@ -475,7 +475,9 @@ export function CheckoutPage() {
               size="lg"
               disabled={!canSubmit || isSubmitting}
             >
-              {isSubmitting ? 'Creating order...' : 'Confirm Order & Upload Deposit'}
+              {isSubmitting
+                ? 'Creating order and uploading proof...'
+                : 'Confirm Order & Upload Deposit'}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           </aside>

@@ -1,5 +1,8 @@
 import { apiRequest } from '@/shared/api/http-client';
 import type { CheckoutInput, Order } from '@/shared/types/OrderTypes';
+import { optimizePaymentProofImage } from './payment-proof-image';
+
+const PAYMENT_PROOF_REQUEST_TIMEOUT_MS = 30000;
 
 type OrderRequestOptions = {
   csrfToken?: string | null;
@@ -17,15 +20,22 @@ export const ordersApi = {
     });
   },
 
-  checkoutWithDepositProof(input: CheckoutInput, file: File, options: OrderRequestOptions = {}) {
+  async checkoutWithDepositProof(
+    input: CheckoutInput,
+    file: File,
+    options: OrderRequestOptions = {},
+  ) {
     const body = new FormData();
-    body.append('file', file);
+    const optimizedFile = await optimizePaymentProofImage(file);
+    body.append('file', optimizedFile);
     appendCheckoutFormFields(body, input);
     return apiRequest<Order>('/orders/checkout-with-deposit-proof', {
       method: 'POST',
       body,
       csrfToken: options.csrfToken,
+      signal: options.signal,
       headers: { 'Idempotency-Key': options.idempotencyKey ?? input.idempotencyKey },
+      timeoutMs: PAYMENT_PROOF_REQUEST_TIMEOUT_MS,
     });
   },
 
@@ -38,7 +48,7 @@ export const ordersApi = {
   },
 
   uploadDepositProof(orderId: string, file: File, options: OrderRequestOptions = {}) {
-    return uploadProof(`/orders/${orderId}/deposit-proof`, file, options.csrfToken);
+    return uploadProof(`/orders/${orderId}/deposit-proof`, file, options);
   },
 
   uploadFinalPaymentProof(
@@ -47,7 +57,7 @@ export const ordersApi = {
     method: 'instapay' | 'vodafone',
     options: OrderRequestOptions = {},
   ) {
-    return uploadProof(`/orders/${orderId}/final-payment-proof`, file, options.csrfToken, {
+    return uploadProof(`/orders/${orderId}/final-payment-proof`, file, options, {
       method,
     });
   },
@@ -61,16 +71,23 @@ export const ordersApi = {
   },
 };
 
-function uploadProof(
+async function uploadProof(
   path: string,
   file: File,
-  csrfToken?: string | null,
+  options: OrderRequestOptions = {},
   fields: Record<string, string> = {},
 ): Promise<Order> {
   const body = new FormData();
-  body.append('file', file);
+  const optimizedFile = await optimizePaymentProofImage(file);
+  body.append('file', optimizedFile);
   for (const [name, value] of Object.entries(fields)) body.append(name, value);
-  return apiRequest<Order>(path, { method: 'POST', body, csrfToken });
+  return apiRequest<Order>(path, {
+    method: 'POST',
+    body,
+    csrfToken: options.csrfToken,
+    signal: options.signal,
+    timeoutMs: PAYMENT_PROOF_REQUEST_TIMEOUT_MS,
+  });
 }
 
 function appendCheckoutFormFields(body: FormData, input: CheckoutInput): void {

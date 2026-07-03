@@ -60,7 +60,7 @@ export class OrdersController {
     @UploadedFile() file: UploadedImageFile | undefined,
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    await this.cartService.findCurrentCart(request, response);
+    await this.cartService.prepareCheckoutCart(request, response);
     return this.ordersService.checkoutWithDepositProof(user, dto, file, idempotencyKey);
   }
 
@@ -72,7 +72,7 @@ export class OrdersController {
     @Res({ passthrough: true }) response: Response,
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    await this.cartService.findCurrentCart(request, response);
+    await this.cartService.prepareCheckoutCart(request, response);
     return this.ordersService.checkout(user, dto, idempotencyKey);
   }
 

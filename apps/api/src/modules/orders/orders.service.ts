@@ -18,6 +18,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import type { PaymentProofStatus } from '@prisma/client';
+import { logStructured } from '../../common/logging/structured-logger';
 import { buildPaginationMeta } from '../../common/pagination/paginated-response';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
@@ -165,6 +166,7 @@ export class OrdersService {
     file: UploadedImageFile | undefined,
     idempotencyKey?: string | null,
   ): Promise<OrderWithTimeline> {
+    const startedAt = Date.now();
     const key = normalizeCheckoutIdempotencyKey(idempotencyKey ?? dto.idempotencyKey);
     const requestHash = hashCheckoutRequest(dto);
     const replay = await this.prisma.checkoutIdempotencyKey.findUnique({
@@ -174,11 +176,20 @@ export class OrdersService {
     if (replay) {
       assertCheckoutIdempotencyReplay(replay.requestHash, requestHash, replay.orderId !== null);
       if (!replay.order) throw new ConflictException('Checkout is already being processed');
-      return this.attachTimeline(replay.order);
+      const order = await this.attachTimeline(replay.order);
+      this.logCheckoutWithProofCompleted(startedAt, user.id, order, file);
+      return order;
     }
 
+    const uploadStartedAt = Date.now();
     const uploaded = await this.uploadsService.uploadImage(file, {
       folder: ORDER_PAYMENT_PROOFS_FOLDER,
+    });
+    logStructured('info', 'checkout_deposit_proof_upload_completed', {
+      durationMs: Date.now() - uploadStartedAt,
+      userId: user.id,
+      hasDepositProof: Boolean(file),
+      fileSize: file?.size,
     });
     try {
       const order = await this.checkoutInternal(user, dto, key, uploaded);
@@ -187,6 +198,7 @@ export class OrdersService {
       );
       if (!proofWasAttached) {
         await this.uploadsService.deleteImage(uploaded.cloudinaryPublicId).catch(() => undefined);
+        this.logCheckoutWithProofCompleted(startedAt, user.id, order, file);
         return order;
       }
       await this.notificationsService.createAdminNotification({
@@ -198,6 +210,7 @@ export class OrdersService {
         entityType: 'ORDER',
         entityId: order.id,
       });
+      this.logCheckoutWithProofCompleted(startedAt, user.id, order, file);
       return order;
     } catch (error) {
       await this.uploadsService.deleteImage(uploaded.cloudinaryPublicId).catch(() => undefined);
@@ -211,6 +224,7 @@ export class OrdersService {
     idempotencyKey?: string | null,
     depositProof?: UploadedPaymentProofSnapshot | null,
   ): Promise<OrderWithTimeline> {
+    const startedAt = Date.now();
     const key = normalizeCheckoutIdempotencyKey(idempotencyKey ?? dto.idempotencyKey);
     const requestHash = hashCheckoutRequest(dto);
 
@@ -356,13 +370,37 @@ export class OrdersService {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
 
-      return this.attachTimeline(order);
+      const orderWithTimeline = await this.attachTimeline(order);
+      logStructured('info', 'checkout_internal_completed', {
+        durationMs: Date.now() - startedAt,
+        userId: user.id,
+        orderId: orderWithTimeline.id,
+        orderNumber: orderWithTimeline.orderNumber,
+        hasDepositProof: Boolean(depositProof),
+      });
+      return orderWithTimeline;
     } catch (error) {
       if (this.isUniqueIdempotencyConflict(error)) {
         return this.replayCheckout(user.id, key, requestHash);
       }
       throw error;
     }
+  }
+
+  private logCheckoutWithProofCompleted(
+    startedAt: number,
+    userId: string,
+    order: Pick<OrderWithTimeline, 'id' | 'orderNumber'>,
+    file: UploadedImageFile | undefined,
+  ): void {
+    logStructured('info', 'checkout_with_deposit_proof_completed', {
+      durationMs: Date.now() - startedAt,
+      userId,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      hasDepositProof: Boolean(file),
+      fileSize: file?.size,
+    });
   }
 
   async findAll(query: OrdersQueryDto) {
