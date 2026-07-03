@@ -37,11 +37,25 @@ export type CartVariant = {
   sale: CartSale | null;
 };
 
+export type CartItemType = 'PRODUCT' | 'CUSTOM_ORDER';
+
+export type CartCustomOrder = {
+  id: string;
+  productUrl: string;
+  title: string;
+  imageUrl: string | null;
+  requestedColor: string | null;
+  requestedSize: string | null;
+  adminNote: string | null;
+};
+
 export type CartItemResponse = {
   id: string;
+  type: CartItemType;
   quantity: number;
-  product: CartProduct;
+  product: CartProduct | null;
   variant: CartVariant | null;
+  customOrder?: CartCustomOrder | null;
   unitPrice: CartMoney;
   originalUnitPrice: CartMoney | null;
   sale: CartSale | null;

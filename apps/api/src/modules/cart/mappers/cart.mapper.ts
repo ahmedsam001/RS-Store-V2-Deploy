@@ -10,6 +10,7 @@ export const cartItemInclude = {
     },
   },
   productVariant: true,
+  customOrderRequest: true,
 } satisfies Prisma.CartItemInclude;
 
 export type CartPayload = Prisma.CartGetPayload<{
@@ -17,12 +18,14 @@ export type CartPayload = Prisma.CartGetPayload<{
 }>;
 export type CartItemPayload = Prisma.CartItemGetPayload<{ include: typeof cartItemInclude }>;
 
+const CUSTOM_ORDER_CURRENCY = 'EGP';
+
 export async function mapCart(
   cart: CartPayload,
   pricingService: ProductPricingService,
 ): Promise<CartResponse> {
   const saleAdjustments = await pricingService.getActiveSaleAdjustments(
-    cart.items.map((item) => item.productId),
+    cart.items.flatMap((item) => (item.productId ? [item.productId] : [])),
   );
   const pricedItems = cart.items.map((item) => mapCartItem(item, pricingService, saleAdjustments));
   const currency = pricedItems[0]?.response.unitPrice.currency ?? 'EGP';
@@ -47,6 +50,15 @@ function mapCartItem(
     { flashSaleId: string; titleAr: string; discountPercent: string; discountBasisPoints: number }
   >,
 ): { response: CartItemResponse; lineTotalAmount: number } {
+  const customOrder = item.customOrderRequest;
+  if (customOrder) {
+    return mapCustomCartItem(item, customOrder);
+  }
+
+  if (!item.product || !item.productId) {
+    throw new Error('Cart item is missing product details');
+  }
+
   const baseAmount = item.productVariant?.priceAmount ?? item.product.priceAmount;
   const productDiscountPercent = Number(item.product.discountPercent ?? 0);
   const input = {
@@ -68,6 +80,7 @@ function mapCartItem(
     lineTotalAmount,
     response: {
       id: item.id,
+      type: 'PRODUCT',
       quantity: item.quantity,
       product: {
         id: item.product.id,
@@ -81,6 +94,7 @@ function mapCartItem(
           ? { id: image.id, url: image.secureUrl, altText: image.altTextAr ?? null }
           : null,
       },
+      customOrder: null,
       variant: item.productVariant
         ? {
             id: item.productVariant.id,
@@ -95,6 +109,40 @@ function mapCartItem(
       originalUnitPrice,
       sale,
       lineTotal: money(lineTotalAmount, currency),
+    },
+  };
+}
+
+function mapCustomCartItem(
+  item: CartItemPayload,
+  customOrder: NonNullable<CartItemPayload['customOrderRequest']>,
+): { response: CartItemResponse; lineTotalAmount: number } {
+  const quantity = Math.max(1, item.quantity);
+  const lineTotalAmount = customOrder.adminTotalAmount ?? 0;
+  const unitPriceAmount = quantity > 1 ? Math.floor(lineTotalAmount / quantity) : lineTotalAmount;
+  const unitPrice = money(unitPriceAmount, CUSTOM_ORDER_CURRENCY);
+
+  return {
+    lineTotalAmount,
+    response: {
+      id: item.id,
+      type: 'CUSTOM_ORDER',
+      quantity: item.quantity,
+      product: null,
+      variant: null,
+      customOrder: {
+        id: customOrder.id,
+        productUrl: customOrder.productUrl,
+        title: customOrder.adminTitle ?? 'Accepted custom order',
+        imageUrl: customOrder.adminImageUrl ?? customOrder.customerImageUrl,
+        requestedColor: customOrder.requestedColor,
+        requestedSize: customOrder.requestedSize,
+        adminNote: customOrder.adminNote,
+      },
+      unitPrice,
+      originalUnitPrice: null,
+      sale: null,
+      lineTotal: money(lineTotalAmount, CUSTOM_ORDER_CURRENCY),
     },
   };
 }
