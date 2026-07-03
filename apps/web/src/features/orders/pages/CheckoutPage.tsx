@@ -387,12 +387,23 @@ export function CheckoutPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <CatalogLink
-                        href={productPath(item.product.slug)}
-                        className="line-clamp-2 font-extrabold transition hover:text-rs-gold"
-                      >
-                        {item.product.name}
-                      </CatalogLink>
+                      {item.type === 'PRODUCT' && item.product ? (
+                        <CatalogLink
+                          href={productPath(item.product.slug)}
+                          className="line-clamp-2 font-extrabold transition hover:text-rs-gold"
+                        >
+                          {item.product.name}
+                        </CatalogLink>
+                      ) : (
+                        <div>
+                          <p className="line-clamp-2 font-extrabold">
+                            {item.customOrder?.title ?? 'Custom order'}
+                          </p>
+                          <span className="mt-1 inline-flex rounded-full bg-rs-gold-bg px-2 py-0.5 text-[11px] font-black text-rs-gold">
+                            Custom Order
+                          </span>
+                        </div>
+                      )}
                       <p className="mt-1 text-xs text-muted-foreground">Qty: {item.quantity}</p>
                     </div>
                     <span className="shrink-0 break-words text-end font-black rs-price-primary">
@@ -495,7 +506,9 @@ function staticCartBlockReason(cart: Cart | null): string | null {
 
   const hasStaticProduct = cart.items.some(
     (item) =>
-      !isDatabaseId(item.product.id) || (item.variant?.id ? !isDatabaseId(item.variant.id) : false),
+      item.type === 'PRODUCT' &&
+      (!isDatabaseId(item.product?.id) ||
+        (item.variant?.id ? !isDatabaseId(item.variant.id) : false)),
   );
   return hasStaticProduct
     ? 'Checkout is blocked because the cart contains products without real database IDs. Remove static preview products and add live catalog products.'

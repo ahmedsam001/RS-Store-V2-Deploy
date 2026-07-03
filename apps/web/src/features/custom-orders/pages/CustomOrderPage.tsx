@@ -8,7 +8,7 @@ import {
 import { useAuth } from '@/features/auth/AuthContext';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 import { Button } from '@/shared/components/ui/Button';
-import { orderPath } from '@/shared/constants/routes';
+import { orderPath, PATHS } from '@/shared/constants/routes';
 
 const STATUS_LABELS: Record<CustomOrderRequest['status'], string> = {
   PENDING_REVIEW: 'Waiting Admin Review',
@@ -26,7 +26,6 @@ export function CustomOrderPage() {
   const [items, setItems] = useState<CustomOrderRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [creatingOrderId, setCreatingOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [customerImageName, setCustomerImageName] = useState<string | null>(null);
@@ -72,21 +71,6 @@ export function CustomOrderPage() {
       setError(err instanceof Error ? err.message : 'Unable to create custom order');
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleCreateOrder(item: CustomOrderRequest) {
-    setCreatingOrderId(item.id);
-    setError(null);
-    try {
-      const order = await customOrdersApi.createOrder(item.id, { csrfToken });
-      navigate(orderPath(order.id));
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Unable to start checkout for this custom order',
-      );
-    } finally {
-      setCreatingOrderId(null);
     }
   }
 
@@ -218,8 +202,11 @@ export function CustomOrderPage() {
                 <AcceptedCustomOrderCard
                   key={item.id}
                   item={item}
-                  isCreatingOrder={creatingOrderId === item.id}
-                  onCreateOrder={() => handleCreateOrder(item)}
+                  onOpen={() =>
+                    item.convertedOrder
+                      ? navigate(orderPath(item.convertedOrder.id))
+                      : navigate(PATHS.cart)
+                  }
                 />
               ) : (
                 <PendingCustomOrderCard key={item.id} item={item} />
@@ -280,12 +267,10 @@ function PendingCustomOrderCard({ item }: { item: CustomOrderRequest }) {
 
 function AcceptedCustomOrderCard({
   item,
-  isCreatingOrder,
-  onCreateOrder,
+  onOpen,
 }: {
   item: CustomOrderRequest;
-  isCreatingOrder: boolean;
-  onCreateOrder: () => void;
+  onOpen: () => void;
 }) {
   return (
     <article className="rs-product-card min-w-0">
@@ -330,13 +315,9 @@ function AcceptedCustomOrderCard({
             {item.adminNote}
           </p>
         ) : null}
-        <Button className="rs-cart-btn mt-auto" onClick={onCreateOrder} disabled={isCreatingOrder}>
-          {isCreatingOrder ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <ShoppingBag className="h-4 w-4" aria-hidden="true" />
-          )}
-          {item.convertedOrderId ? 'Open Order' : 'Add to Checkout'}
+        <Button className="rs-cart-btn mt-auto" onClick={onOpen}>
+          <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+          {item.convertedOrder ? 'Open Order' : 'View in Cart'}
         </Button>
       </div>
     </article>

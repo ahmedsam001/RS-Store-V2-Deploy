@@ -36,6 +36,7 @@ export function AdminCustomOrdersPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   const status = (searchParams.get('status') as CustomOrderStatus | null) ?? 'ALL';
@@ -94,6 +95,7 @@ export function AdminCustomOrdersPage() {
     event.preventDefault();
     setReviewingId(id);
     setError(null);
+    setSuccess(null);
     const form = new FormData(event.currentTarget);
     const file = form.get('adminImage');
     const adminTitle = String(form.get('adminTitle') ?? '').trim();
@@ -123,6 +125,11 @@ export function AdminCustomOrdersPage() {
         { csrfToken },
       );
       setItems((current) => current.map((item) => (item.id === id ? updated : item)));
+      setSuccess(
+        status === 'ACCEPTED'
+          ? 'Custom order accepted and added to the customer cart'
+          : 'Custom order rejected',
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to review custom order');
     } finally {
@@ -202,6 +209,11 @@ export function AdminCustomOrdersPage() {
       </AdminCard>
 
       {error ? <AdminError message={error} onRetry={() => load()} /> : null}
+      {success ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700">
+          {success}
+        </div>
+      ) : null}
       {loading ? <AdminLoading message="Loading custom orders" /> : null}
 
       {!loading && !error ? (
@@ -365,6 +377,10 @@ function CustomOrderAdminCard({
         {item.convertedOrder ? (
           <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">
             Converted to order {item.convertedOrder.orderNumber}
+          </p>
+        ) : item.status === 'ACCEPTED' ? (
+          <p className="rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-700">
+            Added to customer cart
           </p>
         ) : null}
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">

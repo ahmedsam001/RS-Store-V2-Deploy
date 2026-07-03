@@ -81,6 +81,7 @@ describe('CartPage', () => {
       items: [
         {
           id: 'cart-item-1',
+          type: 'PRODUCT',
           quantity: 2,
           product: {
             id: 'product-1',
@@ -115,5 +116,40 @@ describe('CartPage', () => {
     expect(screen.getByText('M / Black')).toBeTruthy();
     expect(screen.getByText('Checkout')).toBeTruthy();
     expect(document.body.textContent).toContain('500.00');
+  });
+
+  it('renders custom order cart items with locked quantity', () => {
+    cartState.value.cart = createMockCart({
+      items: [
+        {
+          id: 'custom-cart-item-1',
+          type: 'CUSTOM_ORDER',
+          quantity: 3,
+          product: null,
+          variant: null,
+          customOrder: {
+            id: 'custom-order-1',
+            productUrl: 'https://example.com/custom-product',
+            title: 'Custom handbag',
+            imageUrl: null,
+            requestedColor: 'Black',
+            requestedSize: 'Large',
+            adminNote: 'Approved by admin',
+          },
+          unitPrice: { amount: '100.00', currency: 'EGP' },
+          originalUnitPrice: null,
+          sale: null,
+          lineTotal: { amount: '300.00', currency: 'EGP' },
+        },
+      ],
+      summary: { itemCount: 3, subtotal: { amount: '300.00', currency: 'EGP' } },
+    });
+
+    renderWithRouter(<CartPage />);
+
+    expect(screen.getByText('Custom handbag')).toBeTruthy();
+    expect(screen.getByText('Custom Order')).toBeTruthy();
+    expect(screen.getByText('Quantity locked: 3')).toBeTruthy();
+    expect(screen.getByText('Original link')).toBeTruthy();
   });
 });
