@@ -1,6 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, ImageIcon, LogOut, MapPin, PackageSearch, Phone, Shield, ShoppingCart, Trash2, User, X } from 'lucide-react';
+import { Camera, LogOut, MapPin, PackageSearch, Phone, Shield, ShoppingCart, Trash2, User, X } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/shared/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
@@ -147,9 +147,14 @@ export function CustomerProfilePage() {
           <div className={`flex flex-col items-center gap-4 ${isArabic ? 'rtl' : 'ltr'}`}>
             <div className="relative">
               <ProfileAvatar user={user} avatarUrl={avatarUrl} className="h-16 w-16 text-xl" />
-              <div className="absolute -bottom-1 -end-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500">
-                <Shield className="h-3 w-3 text-white" />
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="absolute -bottom-1 -end-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                aria-label="Edit avatar"
+              >
+                <Camera className="h-3.5 w-3.5" />
+              </button>
             </div>
             <div className={isArabic ? 'text-center' : 'text-center'}>
               <p className="text-sm font-semibold text-muted-foreground">Welcome back!</p>
@@ -393,17 +398,28 @@ function ProfileAvatar({
   className: string;
 }) {
   const safeAvatarUrl = sanitizeAvatarUrl(avatarUrl);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [safeAvatarUrl]);
+
   const initials = profileInitials(user);
+  const shouldShowImage = Boolean(safeAvatarUrl && !imageFailed);
 
   return (
     <div
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[hsl(var(--brand-rose))] to-[hsl(var(--brand-rose-dark))] font-black text-white shadow-lg ${className}`}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-rs-peach bg-rs-peach-light font-black text-rs-ink shadow-lg ${className}`}
     >
-      {safeAvatarUrl ? (
-        <img src={safeAvatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
+      {shouldShowImage ? (
+        <img
+          src={safeAvatarUrl}
+          alt="Profile avatar"
+          className="h-full w-full object-cover"
+          onError={() => setImageFailed(true)}
+        />
       ) : (
-        <span className="flex items-center gap-1">
-          <ImageIcon className="h-4 w-4" aria-hidden="true" />
+        <span className="select-none leading-none" aria-label="Profile initials">
           {initials}
         </span>
       )}
