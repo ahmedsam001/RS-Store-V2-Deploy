@@ -96,16 +96,28 @@ export function AdminCustomOrdersPage() {
     setError(null);
     const form = new FormData(event.currentTarget);
     const file = form.get('adminImage');
+    const adminTitle = String(form.get('adminTitle') ?? '').trim();
+    const adminPriceAmount = String(form.get('adminPriceAmount') ?? '').trim();
+    const adminShippingAmount = String(form.get('adminShippingAmount') ?? '').trim();
+    const adminTotalAmount = String(form.get('adminTotalAmount') ?? '').trim();
+    const adminNote = String(form.get('adminNote') ?? '').trim();
+
+    if (status === 'ACCEPTED' && (!adminTitle || !adminTotalAmount)) {
+      setError('Accepted custom orders need an admin title and final total amount');
+      setReviewingId(null);
+      return;
+    }
+
     try {
       const updated = await customOrdersApi.review(
         id,
         {
           status,
-          adminTitle: String(form.get('adminTitle') ?? '').trim(),
-          adminPriceAmount: String(form.get('adminPriceAmount') ?? '').trim(),
-          adminShippingAmount: String(form.get('adminShippingAmount') ?? '').trim(),
-          adminTotalAmount: String(form.get('adminTotalAmount') ?? '').trim(),
-          adminNote: String(form.get('adminNote') ?? '').trim(),
+          adminTitle,
+          adminPriceAmount,
+          adminShippingAmount,
+          adminTotalAmount,
+          adminNote,
         },
         file instanceof File && file.size > 0 ? file : null,
         { csrfToken },
