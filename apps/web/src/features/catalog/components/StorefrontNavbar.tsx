@@ -12,7 +12,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useCart } from '@/features/cart';
 import { CatalogLink } from '@/features/catalog/components/CatalogLink';
@@ -34,6 +34,7 @@ export function StorefrontNavbar() {
   const [announcement, setAnnouncement] = useState('Shien delivery order • Delivery in 30–45 days');
   const [storeName, setStoreName] = useState('RS Store');
   const [accountOpen, setAccountOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     settingsApi
@@ -47,6 +48,44 @@ export function StorefrontNavbar() {
       })
       .catch(() => setSettings({}));
   }, []);
+
+  useEffect(() => {
+    setAccountOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('[data-account-menu-root]')) {
+        return;
+      }
+      setAccountOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setAccountOpen(false);
+      }
+    };
+
+    const closeOnScroll = () => {
+      setAccountOpen(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('scroll', closeOnScroll, { passive: true });
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('scroll', closeOnScroll);
+    };
+  }, [accountOpen]);
 
   const isCustomer = status === 'authenticated' && user?.role === 'CUSTOMER';
   const isAdmin = status === 'authenticated' && (user?.role === 'ADMIN' || user?.role === 'OWNER');
@@ -102,7 +141,7 @@ export function StorefrontNavbar() {
             </nav>
             <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3">
               {isAdmin ? (
-                <div className="relative">
+                <div className="relative" data-account-menu-root>
                   <button
                     className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
                     type="button"
@@ -124,7 +163,7 @@ export function StorefrontNavbar() {
                   )}
                 </div>
               ) : isCustomer ? (
-                <div className="relative">
+                <div className="relative" data-account-menu-root>
                   <button
                     className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
                     type="button"
@@ -181,7 +220,7 @@ export function StorefrontNavbar() {
               </CatalogLink>
               <div className="flex items-center gap-1.5">
                 {isAdmin ? (
-                  <div className="relative">
+                  <div className="relative" data-account-menu-root>
                     <button
                       className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
                       type="button"
@@ -203,7 +242,7 @@ export function StorefrontNavbar() {
                     )}
                   </div>
                 ) : isCustomer ? (
-                  <div className="relative">
+                  <div className="relative" data-account-menu-root>
                     <button
                       className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
                       type="button"
