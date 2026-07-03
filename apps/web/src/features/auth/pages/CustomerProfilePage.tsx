@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { User, PackageSearch, LogOut, Phone, MapPin, Shield, ShoppingCart, X } from 'lucide-react';
+import { Camera, ImageIcon, LogOut, MapPin, PackageSearch, Phone, Shield, ShoppingCart, Trash2, User, X } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/shared/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
@@ -19,6 +19,9 @@ export function CustomerProfilePage() {
     phone: formatPhoneDisplay(user?.phone) ?? '',
     address: user?.address ?? '',
   });
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarDraft, setAvatarDraft] = useState('');
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useDocumentMetadata({
@@ -28,11 +31,15 @@ export function CustomerProfilePage() {
 
   useEffect(() => {
     if (user) {
+      const savedAvatarUrl = readProfileAvatar(user.id);
       setEditForm({
         name: user.name ?? '',
         phone: formatPhoneDisplay(user.phone) ?? '',
         address: user.address ?? '',
       });
+      setAvatarUrl(savedAvatarUrl);
+      setAvatarDraft(savedAvatarUrl);
+      setAvatarError(null);
     }
   }, [user]);
 
@@ -53,7 +60,6 @@ export function CustomerProfilePage() {
   }
 
   const displayName = displayProfileName(user);
-  const initials = profileInitials(user);
   const currentPhone = formatPhoneDisplay(user.phone) ?? '';
   const currentAddress = user.address ?? '';
   const currentName = user.name ?? '';
@@ -63,6 +69,18 @@ export function CustomerProfilePage() {
   }
 
   async function handleSave() {
+    const currentUserId = user?.id;
+    if (!currentUserId) {
+      setAvatarError('Sign in required');
+      return;
+    }
+
+    const normalizedAvatarUrl = sanitizeAvatarUrl(avatarDraft);
+    if (avatarDraft.trim() && !normalizedAvatarUrl) {
+      setAvatarError('Use a valid image URL or upload a JPG PNG WEBP or GIF file');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const phoneFormatted = formatPhoneSubmit(editForm.phone);
@@ -71,6 +89,10 @@ export function CustomerProfilePage() {
         phone: phoneFormatted || undefined,
         address: editForm.address || undefined,
       });
+      writeProfileAvatar(currentUserId, normalizedAvatarUrl);
+      setAvatarUrl(normalizedAvatarUrl);
+      setAvatarDraft(normalizedAvatarUrl);
+      setAvatarError(null);
       setIsEditing(false);
     } finally {
       setIsSaving(false);
@@ -84,6 +106,38 @@ export function CustomerProfilePage() {
       phone: currentPhone,
       address: currentAddress,
     });
+    setAvatarDraft(avatarUrl);
+    setAvatarError(null);
+  }
+
+  function handleAvatarFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Please choose an image file');
+      return;
+    }
+
+    if (file.size > MAX_LOCAL_AVATAR_BYTES) {
+      setAvatarError('Avatar image must be 1 MB or smaller');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const normalizedAvatarUrl = sanitizeAvatarUrl(result);
+      if (!normalizedAvatarUrl) {
+        setAvatarError('Could not read this avatar image');
+        return;
+      }
+      setAvatarDraft(normalizedAvatarUrl);
+      setAvatarError(null);
+    };
+    reader.onerror = () => setAvatarError('Could not read this avatar image');
+    reader.readAsDataURL(file);
   }
 
   return (
@@ -92,9 +146,7 @@ export function CustomerProfilePage() {
         <div className="rs-panel p-4 sm:p-5">
           <div className={`flex flex-col items-center gap-4 ${isArabic ? 'rtl' : 'ltr'}`}>
             <div className="relative">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(var(--brand-rose))] to-[hsl(var(--brand-rose-dark))] text-xl font-black text-white shadow-lg">
-                {initials}
-              </div>
+              <ProfileAvatar user={user} avatarUrl={avatarUrl} className="h-16 w-16 text-xl" />
               <div className="absolute -bottom-1 -end-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500">
                 <Shield className="h-3 w-3 text-white" />
               </div>
@@ -155,6 +207,55 @@ export function CustomerProfilePage() {
               </Button>
             </div>
             <div className="space-y-4">
+              <div className="rounded-2xl border border-rs-peach-light bg-rs-cream-warm/30 p-4">
+                <div className="flex flex-col items-center gap-3">
+                  <ProfileAvatar user={user} avatarUrl={avatarDraft} className="h-20 w-20 text-2xl" />
+                  <div className="w-full space-y-2">
+                    <label className="block text-xs font-semibold text-muted-foreground">
+                      Avatar
+                    </label>
+                    <Input
+                      placeholder="Paste image URL or upload an image"
+                      value={avatarDraft}
+                      onChange={(event) => {
+                        setAvatarDraft(event.target.value);
+                        setAvatarError(null);
+                      }}
+                      disabled={isSaving}
+                    />
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <label className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-rs-peach-light bg-background px-3 py-2 text-sm font-bold text-foreground transition hover:bg-rs-cream-warm">
+                        <Camera className="h-4 w-4" />
+                        Upload avatar
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={handleAvatarFileChange}
+                          disabled={isSaving}
+                        />
+                      </label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setAvatarDraft('');
+                          setAvatarError(null);
+                        }}
+                        disabled={isSaving || !avatarDraft}
+                        className="flex-1 gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remove
+                      </Button>
+                    </div>
+                    {avatarError && <p className="text-xs font-semibold text-red-600">{avatarError}</p>}
+                    <p className="text-xs text-muted-foreground">
+                      The avatar is saved on this device and does not change orders or checkout data
+                    </p>
+                  </div>
+                </div>
+              </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
                   Full Name
@@ -277,6 +378,39 @@ export function CustomerProfilePage() {
   );
 }
 
+function ProfileAvatar({
+  user,
+  avatarUrl,
+  className,
+}: {
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  };
+  avatarUrl: string;
+  className: string;
+}) {
+  const safeAvatarUrl = sanitizeAvatarUrl(avatarUrl);
+  const initials = profileInitials(user);
+
+  return (
+    <div
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[hsl(var(--brand-rose))] to-[hsl(var(--brand-rose-dark))] font-black text-white shadow-lg ${className}`}
+    >
+      {safeAvatarUrl ? (
+        <img src={safeAvatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
+      ) : (
+        <span className="flex items-center gap-1">
+          <ImageIcon className="h-4 w-4" aria-hidden="true" />
+          {initials}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function QuickActionCard({
   icon: Icon,
   label,
@@ -354,6 +488,56 @@ function profileInitials(user: {
     .toUpperCase();
 
   return initials || user.id.slice(0, 2).toUpperCase();
+}
+
+const PROFILE_AVATAR_STORAGE_PREFIX = 'rs_profile_avatar:';
+const MAX_LOCAL_AVATAR_BYTES = 1024 * 1024;
+
+function readProfileAvatar(userId: string): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return sanitizeAvatarUrl(window.localStorage.getItem(profileAvatarStorageKey(userId))) || '';
+  } catch {
+    return '';
+  }
+}
+
+function writeProfileAvatar(userId: string, avatarUrl: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const key = profileAvatarStorageKey(userId);
+    if (avatarUrl) {
+      window.localStorage.setItem(key, avatarUrl);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Ignore local storage write failures so profile updates still work.
+  }
+}
+
+function profileAvatarStorageKey(userId: string): string {
+  return `${PROFILE_AVATAR_STORAGE_PREFIX}${userId}`;
+}
+
+function sanitizeAvatarUrl(value: string | null | undefined): string {
+  const trimmed = value?.trim() ?? '';
+  if (!trimmed) return '';
+
+  if (trimmed.startsWith('data:image/')) {
+    return trimmed;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol === 'https:' || url.protocol === 'http:') {
+      return url.toString();
+    }
+  } catch {
+    return '';
+  }
+
+  return '';
 }
 
 function formatPhoneDisplay(phone: string | null | undefined): string | null {
