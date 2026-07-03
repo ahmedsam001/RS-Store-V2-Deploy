@@ -336,7 +336,7 @@ export function validateEnvironment(config: Record<string, unknown>): ValidatedE
   const uploadAllowedFolders = validateFolders(
     optionalString(
       config.UPLOAD_ALLOWED_FOLDERS,
-      'rs-store/products,rs-store/order-proofs,rs-store/categories,rs-store/shein-imports',
+      'rs-store/products,rs-store/categories,rs-store/settings,rs-store/order-proofs,rs-store/shein-imports',
     ),
   );
   const bootstrapConfig = validateBootstrap(config, typedNodeEnvironment);
