@@ -98,12 +98,7 @@ export function AdminShell() {
               </div>
             </div>
 
-            <a
-              href={PATHS.home}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex min-h-11 items-center justify-center rounded-full border border-[#efd6c5] bg-white/80 px-3 sm:px-4 text-sm font-black text-[#241611] transition hover:bg-[#fff6e4] shrink-0"
-            >
+            <a href="/">
               <span className="hidden sm:inline">View store</span>
               <span className="sm:hidden">Store</span>
             </a>
@@ -318,13 +313,7 @@ function MobileDrawer({
           {ADMIN_NAV_LINKS.map((link) => (
             <MobileDrawerLink key={link.to} link={link} onClose={onClose} />
           ))}
-          <a
-            href={PATHS.home}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={onClose}
-            className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/20 px-3 py-2 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
-          >
+          <a href="/">
             <span>View store</span>
           </a>
         </div>
