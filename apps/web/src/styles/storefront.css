@@ -3231,12 +3231,27 @@
   overflow: hidden;
   margin-top: clamp(2rem, 4vw, 3.25rem);
   border-top: 1px solid rgba(240, 201, 173, 0.72);
-  background:
-    url('../assets/brand/branch-left.png') no-repeat left -4rem top 0.75rem / 13rem auto,
-    url('../assets/brand/branch-right.png') no-repeat right -4rem bottom 0.35rem / 14rem auto,
+  background-image:
+    url('../assets/brand/branch-left.png'),
+    url('../assets/brand/branch-right.png'),
     radial-gradient(circle at top left, rgba(247, 218, 195, 0.46), transparent 22rem),
     linear-gradient(180deg, #fffdfb 0%, #fff8f3 100%);
+  background-position:
+    left -4rem top 0.75rem,
+    right -4rem bottom 0.35rem,
+    left top,
+    center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: 13rem auto, 14rem auto, auto, auto;
   padding: clamp(1.25rem, 3vw, 2.75rem) 1rem max(1rem, env(safe-area-inset-bottom));
+}
+
+html[dir='rtl'] .rs-footer {
+  background-position:
+    left -4rem top 0.75rem,
+    right -4rem bottom 0.35rem,
+    left top,
+    center;
 }
 
 .rs-footer::before {
@@ -3363,11 +3378,21 @@
 
   .rs-footer {
     margin-top: 1.6rem;
-    background:
-      url('../assets/brand/branch-left.png') no-repeat left -4.75rem top 0.4rem / 11rem auto,
-      radial-gradient(circle at 100% 0%, rgba(247, 218, 195, 0.48), transparent 12rem),
-      linear-gradient(180deg, #fffdfb 0%, #fff8f3 100%);
+    background-position:
+      left -4.75rem top 0.4rem,
+      right -4.75rem bottom 0.15rem,
+      left top,
+      center;
+    background-size: 11rem auto, 11rem auto, auto, auto;
     padding: 0.9rem 0.75rem max(0.85rem, env(safe-area-inset-bottom));
+  }
+
+  html[dir='rtl'] .rs-footer {
+    background-position:
+      left -4.75rem top 0.4rem,
+      right -4.75rem bottom 0.15rem,
+      left top,
+      center;
   }
 
   .rs-footer-inner {
@@ -3446,6 +3471,24 @@
   }
 
   .rs-footer-bottom-note {
+    justify-content: center;
+  }
+}
+
+@media (min-width: 641px) {
+  .rs-footer-contact,
+  .rs-footer-help,
+  .rs-footer-bottom,
+  .rs-footer-bottom p {
+    text-align: center;
+  }
+
+  .rs-footer-help {
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .rs-footer-bottom {
     justify-content: center;
   }
 }
