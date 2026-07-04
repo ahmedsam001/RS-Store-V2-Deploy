@@ -2664,7 +2664,7 @@
 
 .product-card__title {
   display: -webkit-box;
-  min-height: 2.55rem;
+  min-height: 0;
   margin-top: 0.55rem;
   overflow: hidden;
   color: #211812;
@@ -2777,7 +2777,6 @@
   }
 
   .product-card__title {
-    min-height: 2.35rem;
     font-size: 0.74rem;
   }
 
