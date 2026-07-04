@@ -2,6 +2,7 @@ import { CatalogCategory } from '@/shared/types/CatalogTypes';
 import { getCategoryUrl } from '@/features/catalog/utils/format';
 import { CatalogLink } from '@/features/catalog/components/CatalogLink';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
+import { localizeKnownLabel, localizeProductText, useI18n } from '@/shared/i18n';
 
 type CategoryNavProps = {
   categories: CatalogCategory[];
@@ -9,6 +10,7 @@ type CategoryNavProps = {
 };
 
 export function CategoryNav({ activeSlug, categories }: CategoryNavProps) {
+  const { language, t } = useI18n();
   const visibleCategories = categories
     .map((category) => ({
       ...category,
@@ -22,7 +24,7 @@ export function CategoryNav({ activeSlug, categories }: CategoryNavProps) {
 
   return (
     <nav
-      aria-label="Categories"
+      aria-label={t('catalog.shopByCategory')}
       className="premium-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-2"
     >
       {visibleCategories.map((category) => (
@@ -45,7 +47,7 @@ export function CategoryNav({ activeSlug, categories }: CategoryNavProps) {
                 fallbackVariant="category"
               />
             </span>
-            <span className="rs-category-tile-label">{category.name}</span>
+            <span className="rs-category-tile-label">{localizeKnownLabel(localizeProductText(category.name, language), language)}</span>
           </CatalogLink>
           {category.subCategories && category.subCategories.length > 0 ? (
             <div className="rs-subcategory-list">
@@ -55,7 +57,7 @@ export function CategoryNav({ activeSlug, categories }: CategoryNavProps) {
                   href={`${getCategoryUrl(category.slug)}?subCategorySlug=${encodeURIComponent(sub.slug)}`}
                   className="rs-subcategory-chip"
                 >
-                  {sub.name}
+                  {localizeKnownLabel(localizeProductText(sub.name, language), language)}
                 </CatalogLink>
               ))}
             </div>

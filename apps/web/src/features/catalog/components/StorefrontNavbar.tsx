@@ -23,15 +23,17 @@ import {
   STORE_FOOTER_CATEGORY_LINKS,
 } from '@/features/catalog/navigation/storefront-navigation';
 import { readSetting, settingsApi, StorefrontSettings } from '@/features/settings/settings-api';
+import { LanguageSwitcher, localizeKnownLabel, useI18n } from '@/shared/i18n';
 import { PATHS } from '@/shared/constants/routes';
 import { buildCustomerAuthPath } from '@/shared/lib/return-to';
 import logoUrl from '@/assets/brand/rs-logo-transparent.png';
 
 export function StorefrontNavbar() {
   const { itemCount: cartCount } = useCart();
+  const { language, t } = useI18n();
   const { status, user, logout } = useAuth();
   const [settings, setSettings] = useState<StorefrontSettings | null>(null);
-  const [announcement, setAnnouncement] = useState('Shien delivery order • Delivery in 30–45 days');
+  const [announcement, setAnnouncement] = useState(() => t('store.announcement'));
   const [storeName, setStoreName] = useState('RS Store');
   const [accountOpen, setAccountOpen] = useState(false);
   const location = useLocation();
@@ -41,13 +43,11 @@ export function StorefrontNavbar() {
       .storefront()
       .then((data) => {
         setSettings(data);
-        setAnnouncement(
-          readSetting(data, 'store.announcement', ' Shien delivery order • Delivery in 30–45 days'),
-        );
+        setAnnouncement(readSetting(data, 'store.announcement', t('store.announcement')));
         setStoreName(readSetting(data, 'store.name', 'RS Store'));
       })
       .catch(() => setSettings({}));
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     setAccountOpen(false);
@@ -98,7 +98,7 @@ export function StorefrontNavbar() {
   return (
     <div className="store-shell min-h-screen flex flex-col">
       <a className="skip-link" href="#store-main">
-        Skip to content
+        {t('nav.skipToContent')}
       </a>
 
       {/* Top Announcement Bar */}
@@ -115,12 +115,12 @@ export function StorefrontNavbar() {
               <CatalogLink
                 href={PATHS.home}
                 className="inline-flex items-center"
-                aria-label="RS Store home"
+                aria-label={`${storeName} home`}
               >
                 <img src={logoUrl} alt={storeName} className="h-10 w-auto sm:h-11" />
               </CatalogLink>
             </div>
-            <nav className="overflow-x-auto px-1" aria-label="Primary navigation">
+            <nav className="overflow-x-auto px-1" aria-label={t('nav.primary')}>
               <div className="flex items-center justify-center gap-4 whitespace-nowrap md:gap-8">
                 {primaryNavLinks.map((link) => (
                   <NavLink
@@ -134,19 +134,20 @@ export function StorefrontNavbar() {
                       }`
                     }
                   >
-                    {link.label}
+                    {localizeKnownLabel(link.label, language)}
                   </NavLink>
                 ))}
               </div>
             </nav>
             <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3">
+              <LanguageSwitcher />
               {isAdmin ? (
                 <div className="relative" data-account-menu-root>
                   <button
                     className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
                     type="button"
                     onClick={() => setAccountOpen((open) => !open)}
-                    aria-label="Admin account"
+                    aria-label={t('nav.adminAccount')}
                     aria-expanded={accountOpen}
                   >
                     <UserRound className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -168,7 +169,7 @@ export function StorefrontNavbar() {
                     className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
                     type="button"
                     onClick={() => setAccountOpen((open) => !open)}
-                    aria-label="My account"
+                    aria-label={t('nav.account')}
                     aria-expanded={accountOpen}
                   >
                     <UserRound className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -188,7 +189,7 @@ export function StorefrontNavbar() {
                 <CatalogLink
                   href={buildCustomerAuthPath(PATHS.login, PATHS.profile)}
                   className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                  aria-label="Login"
+                  aria-label={t('nav.login')}
                 >
                   <UserRound className="h-5 w-5 sm:h-6 sm:w-6" />
                 </CatalogLink>
@@ -196,7 +197,7 @@ export function StorefrontNavbar() {
               <CatalogLink
                 href={PATHS.cart}
                 className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                aria-label={`Cart ${cartCount} items`}
+                aria-label={t('nav.cartItems', { count: cartCount })}
               >
                 <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
                 {cartCount > 0 && (
@@ -214,18 +215,19 @@ export function StorefrontNavbar() {
               <CatalogLink
                 href={PATHS.home}
                 className="inline-flex items-center"
-                aria-label="RS Store home"
+                aria-label={`${storeName} home`}
               >
                 <img src={logoUrl} alt={storeName} className="h-10 w-auto" />
               </CatalogLink>
               <div className="flex items-center gap-1.5">
+                <LanguageSwitcher className="px-2" />
                 {isAdmin ? (
                   <div className="relative" data-account-menu-root>
                     <button
                       className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
                       type="button"
                       onClick={() => setAccountOpen((open) => !open)}
-                      aria-label="Admin account"
+                      aria-label={t('nav.adminAccount')}
                       aria-expanded={accountOpen}
                     >
                       <UserRound className="h-5 w-5" />
@@ -247,7 +249,7 @@ export function StorefrontNavbar() {
                       className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
                       type="button"
                       onClick={() => setAccountOpen((open) => !open)}
-                      aria-label="My account"
+                      aria-label={t('nav.account')}
                       aria-expanded={accountOpen}
                     >
                       <UserRound className="h-5 w-5" />
@@ -267,7 +269,7 @@ export function StorefrontNavbar() {
                   <CatalogLink
                     href={buildCustomerAuthPath(PATHS.login, PATHS.profile)}
                     className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                    aria-label="Login"
+                    aria-label={t('nav.login')}
                   >
                     <UserRound className="h-5 w-5" />
                   </CatalogLink>
@@ -275,7 +277,7 @@ export function StorefrontNavbar() {
                 <CatalogLink
                   href={PATHS.cart}
                   className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-[#FFF7F1] hover:text-[#B8860B]"
-                  aria-label={`Cart ${cartCount} items`}
+                  aria-label={t('nav.cartItems', { count: cartCount })}
                 >
                   <ShoppingCart className="h-5 w-5" />
                   {cartCount > 0 && (
@@ -287,7 +289,7 @@ export function StorefrontNavbar() {
               </div>
             </div>
             <div className="h-px bg-[#F5E6E0]" />
-            <nav className="overflow-x-auto px-1 py-2" aria-label="Primary navigation">
+            <nav className="overflow-x-auto px-1 py-2" aria-label={t('nav.primary')}>
               <div className="flex items-center justify-center gap-3 whitespace-nowrap">
                 {primaryNavLinks.map((link) => (
                   <NavLink
@@ -301,7 +303,7 @@ export function StorefrontNavbar() {
                       }`
                     }
                   >
-                    {link.label}
+                    {localizeKnownLabel(link.label, language)}
                   </NavLink>
                 ))}
               </div>
@@ -326,6 +328,7 @@ function StorefrontFooter({
   settings: StorefrontSettings | null;
   isCustomer: boolean;
 }) {
+  const { language, t } = useI18n();
   const storeName = readSetting(settings, 'store.name', 'RS Store');
   const whatsapp = readSetting(settings, 'store.whatsapp', '');
   const phone = readSetting(settings, 'store.phone', '');
@@ -334,7 +337,7 @@ function StorefrontFooter({
   const deliveryDays = readSetting(settings, 'shipping.estimatedDays', '30–45');
   const whatsappHref = buildWhatsAppHref(
     whatsapp || phone,
-    `Hello ${storeName}, I need help with my order.`,
+    t('footer.whatsappMessage', { storeName }),
   );
   const footerAccountLinks = STORE_FOOTER_ACCOUNT_LINKS.filter(
     (link) => !(link.guestOnly && isCustomer),
@@ -351,47 +354,44 @@ function StorefrontFooter({
           >
             <img src={logoUrl} alt={storeName} />
           </CatalogLink>
-          <p className="rs-footer-copy">
-            Curated fashion picks with transparent {currency} pricing, easy custom orders, and clear
-            payment steps from deposit to delivery.
-          </p>
+          <p className="rs-footer-copy">{t('footer.copy', { currency })}</p>
           <div className="rs-footer-trust-grid" aria-label="Store benefits">
             <span>
-              <Truck aria-hidden="true" /> {deliveryDays} days delivery
+              <Truck aria-hidden="true" /> {t('footer.deliveryDays', { days: deliveryDays })}
             </span>
             <span>
-              <CreditCard aria-hidden="true" /> Deposit checkout
+              <CreditCard aria-hidden="true" /> {t('footer.depositCheckout')}
             </span>
             <span>
-              <ShieldCheck aria-hidden="true" /> Reviewed payments
+              <ShieldCheck aria-hidden="true" /> {t('footer.reviewedPayments')}
             </span>
           </div>
         </section>
 
-        <nav className="rs-footer-links" aria-label="Shop links">
-          <p className="rs-footer-title">Shop</p>
-          <CatalogLink href={PATHS.home}>All Products</CatalogLink>
-          <CatalogLink href={PATHS.flashSales}>Flash Sale</CatalogLink>
+        <nav className="rs-footer-links" aria-label={t('footer.shop')}>
+          <p className="rs-footer-title">{t('footer.shop')}</p>
+          <CatalogLink href={PATHS.home}>{t('nav.allProducts')}</CatalogLink>
+          <CatalogLink href={PATHS.flashSales}>{t('nav.flashSale')}</CatalogLink>
           {STORE_FOOTER_CATEGORY_LINKS.map((link) => (
             <CatalogLink key={link.href} href={link.href}>
-              {link.label}
+              {localizeKnownLabel(link.label, language)}
             </CatalogLink>
           ))}
-          <CatalogLink href={PATHS.customOrder}>Custom Order</CatalogLink>
+          <CatalogLink href={PATHS.customOrder}>{t('nav.customOrder')}</CatalogLink>
         </nav>
 
-        <nav className="rs-footer-links" aria-label="Account links">
-          <p className="rs-footer-title">Account</p>
+        <nav className="rs-footer-links" aria-label={t('footer.account')}>
+          <p className="rs-footer-title">{t('footer.account')}</p>
           {footerAccountLinks.map((link) => (
             <CatalogLink key={link.href} href={link.href}>
-              {link.label}
+              {localizeKnownLabel(link.label, language)}
             </CatalogLink>
           ))}
-          <CatalogLink href={PATHS.sheinRequest}>SHEIN Request</CatalogLink>
+          <CatalogLink href={PATHS.sheinRequest}>{t('nav.sheinRequest')}</CatalogLink>
         </nav>
 
-        <section className="rs-footer-contact" aria-label="Contact RS Store">
-          <p className="rs-footer-title">Need help?</p>
+        <section className="rs-footer-contact" aria-label={t('footer.needHelp')}>
+          <p className="rs-footer-title">{t('footer.needHelp')}</p>
           {whatsappHref ? (
             <a
               className="rs-footer-action rs-footer-whatsapp-button"
@@ -399,12 +399,10 @@ function StorefrontFooter({
               target="_blank"
               rel="noreferrer"
             >
-              <MessageCircle aria-hidden="true" /> Contact us on WhatsApp
+              <MessageCircle aria-hidden="true" /> {t('footer.whatsapp')}
             </a>
           ) : null}
-          <p className="rs-footer-help">
-            Ask about sizing, custom SHEIN links, deposits, or order status.
-          </p>
+          <p className="rs-footer-help">{t('footer.helpText')}</p>
           <div className="rs-footer-actions">
             {/* {phoneHref ? (
               <a className="rs-footer-action" href={phoneHref}>
@@ -413,7 +411,7 @@ function StorefrontFooter({
             ) : null} */}
             {instagram ? (
               <a className="rs-footer-action" href={instagram} target="_blank" rel="noreferrer">
-                <Instagram aria-hidden="true" /> Instagram
+                <Instagram aria-hidden="true" /> {t('footer.instagram')}
               </a>
             ) : null}
           </div>
@@ -422,7 +420,7 @@ function StorefrontFooter({
 
       <div className="rs-footer-bottom">
         <p>
-          Developed by{' '}
+          {t('footer.developedBy')}{' '}
           <a
             href="https://wa.me/201152887590"
             target="_blank"
@@ -456,6 +454,9 @@ function normalizeWhatsAppPhone(value: string) {
   return digits;
 }
 
+const accountMenuPanelClass =
+  'fixed inset-x-3 top-28 z-50 max-h-[calc(100vh-8rem)] w-auto overflow-y-auto rounded-lg border border-[#F5E6E0] bg-white shadow-lg sm:absolute sm:inset-x-auto sm:end-0 sm:top-full sm:mt-2 sm:w-72 sm:max-h-[calc(100vh-7rem)]';
+
 function ProfileMenu({
   user,
   onLogout,
@@ -465,8 +466,10 @@ function ProfileMenu({
   onLogout: () => void;
   onNavigate: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
-    <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#F5E6E0] z-50">
+    <div className={accountMenuPanelClass}>
       <div className="p-4 border-b border-[#F5E6E0]">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#B8860B] text-white">
@@ -487,7 +490,7 @@ function ProfileMenu({
           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 text-[#3A2B24]"
         >
           <User className="h-4 w-4" />
-          <span>Profile</span>
+          <span>{t('nav.profile')}</span>
         </CatalogLink>
         <CatalogLink
           href={PATHS.orders}
@@ -495,14 +498,15 @@ function ProfileMenu({
           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 text-[#3A2B24]"
         >
           <PackageSearch className="h-4 w-4" />
-          <span>My Orders</span>
+          <span>{t('nav.myOrders')}</span>
         </CatalogLink>
+        <LanguageSwitcher className="h-auto w-full justify-start rounded-md px-3 py-2 text-sm font-semibold text-[#3A2B24] hover:bg-gray-50 hover:text-[#B8860B]" />
         <button
           onClick={onLogout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-gray-50 text-red-600"
         >
           <LogOut className="h-4 w-4" />
-          <span>Sign Out</span>
+          <span>{t('nav.signOut')}</span>
         </button>
       </div>
     </div>
@@ -518,8 +522,10 @@ function AdminMenu({
   onLogout: () => void;
   onNavigate: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
-    <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#F5E6E0] z-50">
+    <div className={accountMenuPanelClass}>
       <div className="p-4 border-b border-[#F5E6E0]">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#c7831e] text-white">
@@ -540,14 +546,15 @@ function AdminMenu({
           className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 text-[#3A2B24]"
         >
           <LayoutDashboard className="h-4 w-4" />
-          <span>Admin Dashboard</span>
+          <span>{t('nav.adminDashboard')}</span>
         </CatalogLink>
+        <LanguageSwitcher className="h-auto w-full justify-start rounded-md px-3 py-2 text-sm font-semibold text-[#3A2B24] hover:bg-gray-50 hover:text-[#B8860B]" />
         <button
           onClick={onLogout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-gray-50 text-red-600"
         >
           <LogOut className="h-4 w-4" />
-          <span>Sign Out</span>
+          <span>{t('nav.signOut')}</span>
         </button>
       </div>
     </div>

@@ -115,7 +115,7 @@ describe('CartPage', () => {
     expect(screen.getByText('Elegant abaya')).toBeTruthy();
     expect(screen.getByText('M / Black')).toBeTruthy();
     expect(screen.getByText('Checkout')).toBeTruthy();
-    expect(document.body.textContent).toContain('500.00');
+    expect(document.body.textContent).toContain('EGP 500');
   });
 
   it('renders custom order cart items with locked quantity', () => {

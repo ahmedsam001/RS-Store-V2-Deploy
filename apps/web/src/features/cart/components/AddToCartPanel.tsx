@@ -5,13 +5,18 @@ import { Input } from '@/shared/components/ui/Input';
 import { CatalogProductDetail, CatalogVariant } from '@/shared/types/CatalogTypes';
 import { formatPrice } from '@/features/catalog/utils/format';
 import { useAddToCartAction } from '@/features/cart/hooks/use-add-to-cart-action';
+import { localizeProductOption, useI18n } from '@/shared/i18n';
 
 type AddToCartPanelProps = {
   product: CatalogProductDetail;
 };
 
 export function AddToCartPanel({ product }: AddToCartPanelProps) {
-  const { addToCart, clearFeedback, error, isAdding, success } = useAddToCartAction();
+  const { language, t } = useI18n();
+  const { addToCart, clearFeedback, error, isAdding, success } = useAddToCartAction({
+    successMessage: t('cart.added'),
+    errorMessage: t('cart.addFailed'),
+  });
   const [quantityInput, setQuantityInput] = useState('1');
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
@@ -72,34 +77,34 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
     sanitizeQuantity();
 
     if (!isPurchasable) {
-      setValidationError('This product is not configured with purchasable stock yet.');
+      setValidationError(t('cart.notPurchasable'));
       return;
     }
 
     if (requiresSize && !selectedSize) {
-      setValidationError('Please select a size first');
+      setValidationError(t('cart.selectSizeFirst'));
       return;
     }
 
     if (requiresColor && !selectedColor) {
-      setValidationError('Please select a color first');
+      setValidationError(t('cart.selectColorFirst'));
       return;
     }
 
     const selectedVariantId = selectedVariant?.id;
     if (!selectedVariantId) {
-      setValidationError('This option is unavailable');
+      setValidationError(t('cart.optionUnavailable'));
       return;
     }
 
     if (isSelectedVariantOutOfStock) {
-      setValidationError(formatRemainingStockMessage(0));
+      setValidationError(formatRemainingStockMessage(0, t));
       return;
     }
 
     const finalQuantity = Math.max(1, Number(quantityInput) || 1);
     if (typeof selectedAvailableStock === 'number' && finalQuantity > selectedAvailableStock) {
-      setValidationError(formatRemainingStockMessage(selectedAvailableStock));
+      setValidationError(formatRemainingStockMessage(selectedAvailableStock, t));
       return;
     }
 
@@ -111,12 +116,13 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
   }
 
   return (
-    <section className="space-y-4" aria-label="Add product to cart">
+    <section className="space-y-4" aria-label={t('cart.addSection')}>
       {requiresColor ? (
         <ChoiceGroup
-          title="Select Color"
+          title={t('cart.selectColor')}
           options={availableColors}
           selectedValue={selectedColor}
+          language={language}
           onSelect={(value) => {
             setSelectedColor(value);
             resetFeedback();
@@ -126,9 +132,10 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
 
       {requiresSize ? (
         <ChoiceGroup
-          title="Select Size"
+          title={t('cart.selectSize')}
           options={availableSizes}
           selectedValue={selectedSize}
+          language={language}
           onSelect={(value) => {
             setSelectedSize(value);
             resetFeedback();
@@ -138,7 +145,7 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
 
       <div className="grid gap-3 sm:grid-cols-[120px_1fr] sm:items-end">
         <label className="form-label">
-          Quantity
+          {t('common.quantity')}
           <Input
             className="mt-2"
             type="number"
@@ -156,13 +163,13 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
         <div className="rounded-3xl bg-muted/50 px-4 py-3 text-left">
           {sale && originalPrice ? (
             <p className="text-xs font-semibold text-muted-foreground line-through">
-              {formatPrice(originalPrice)}
+              {formatPrice(originalPrice, language)}
             </p>
           ) : null}
-          <p className="text-xl font-black text-primary">{formatPrice(price)}</p>
+          <p className="text-xl font-black text-primary">{formatPrice(price, language)}</p>
           {sale?.discountAmount ? (
             <p className="mt-1 text-xs font-extrabold text-rs-green">
-              Save {formatPrice(sale.discountAmount)}
+              {t('common.save', { amount: formatPrice(sale.discountAmount, language) })}
             </p>
           ) : null}
         </div>
@@ -176,26 +183,26 @@ export function AddToCartPanel({ product }: AddToCartPanelProps) {
       >
         <ShoppingCart className="h-4 w-4" aria-hidden="true" />
         {isAdding
-          ? 'Adding...'
+          ? t('cart.adding')
           : !isPurchasable
-            ? 'Unavailable'
+            ? t('cart.unavailable')
             : productOutOfStock
-              ? 'Out of Stock'
+              ? t('cart.outOfStock')
               : isSelectedVariantOutOfStock
-                ? 'Out of Stock'
-                : 'Add to Cart'}
+                ? t('cart.outOfStock')
+                : t('cart.addToCart')}
       </Button>
       {!isPurchasable ? (
         <p className="text-sm font-semibold leading-6 text-destructive" role="alert">
-          This product is not configured with purchasable stock yet.
+          {t('cart.notPurchasable')}
         </p>
       ) : productOutOfStock ? (
         <p className="text-sm font-semibold leading-6 text-destructive" role="alert">
-          This product is currently out of stock.
+          {t('cart.currentlyOutOfStock')}
         </p>
       ) : isSelectedVariantOutOfStock ? (
         <p className="text-sm font-semibold leading-6 text-destructive" role="alert">
-          {formatRemainingStockMessage(0)}
+          {formatRemainingStockMessage(0, t)}
         </p>
       ) : null}
       {validationError ? (
@@ -221,8 +228,10 @@ function ChoiceGroup({
   onSelect,
   options,
   selectedValue,
+  language,
   title,
 }: {
+  language: ReturnType<typeof useI18n>['language'];
   onSelect: (value: string) => void;
   options: string[];
   selectedValue: string;
@@ -246,7 +255,7 @@ function ChoiceGroup({
                   : 'max-w-full break-words rounded-full border border-rs-peach bg-rs-cream-warm px-3 py-1.5 text-xs font-extrabold text-muted-foreground transition hover:border-rs-ink hover:text-rs-ink'
               }
             >
-              {option}
+              {localizeProductOption(option, language)}
             </button>
           );
         })}
@@ -275,6 +284,9 @@ function uniqueValues(values: Array<string | null>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
 }
 
-function formatRemainingStockMessage(availableStock: number): string {
-  return `Only ${availableStock} left for this option.`;
+function formatRemainingStockMessage(
+  availableStock: number,
+  t: ReturnType<typeof useI18n>['t'],
+): string {
+  return t('cart.onlyLeft', { count: availableStock });
 }

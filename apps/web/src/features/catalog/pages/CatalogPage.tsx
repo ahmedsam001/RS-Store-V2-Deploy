@@ -24,8 +24,10 @@ import { FlashSaleHomeStrip } from '@/features/catalog/components/FlashSaleHomeS
 import { CategoryNavSkeleton } from '@/features/catalog/components/skeletons/CategoryNavSkeleton';
 import { SubcategoryNavSkeleton } from '@/features/catalog/components/skeletons/SubcategoryNavSkeleton';
 import { SearchResultSkeleton } from '@/features/catalog/components/skeletons/SearchResultSkeleton';
+import { localizeKnownLabel, localizeProductText, useI18n } from '@/shared/i18n';
 
 export function CatalogPage() {
+  const { language, t } = useI18n();
   const { categorySlug } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -80,7 +82,7 @@ export function CatalogPage() {
         }
       } catch (caughtError) {
         if (!abortController.signal.aborted) {
-          setError(caughtError instanceof Error ? caughtError.message : 'Failed to load catalog');
+          setError(caughtError instanceof Error ? caughtError.message : t('catalog.emptyMessage'));
         }
       } finally {
         if (!abortController.signal.aborted) {
@@ -91,7 +93,7 @@ export function CatalogPage() {
 
     void loadCatalog();
     return () => abortController.abort();
-  }, [categorySlug, query]);
+  }, [categorySlug, isHomePage, query, t]);
 
   function updateQuery(nextQuery: CatalogProductsQuery) {
     const params = buildSearchParams({ ...query, ...nextQuery });
@@ -99,7 +101,11 @@ export function CatalogPage() {
     navigate(`${path}${params ? `?${params}` : ''}`);
   }
 
-  const pageTitle = activeCategory?.name ?? displayTitleFromSlug(categorySlug) ?? 'All Products';
+  const rawPageTitle = activeCategory?.name ?? displayTitleFromSlug(categorySlug) ?? t('catalog.allProducts');
+  const pageTitle = localizeKnownLabel(localizeProductText(rawPageTitle, language), language) || t('catalog.allProducts');
+  const categoryDescription = activeCategory?.description
+    ? localizeProductText(activeCategory.description, language)
+    : '';
   const categorySubCategories = (activeCategory?.subCategories ?? []).filter(
     (subcategory) => subcategory.productCount > 0,
   );
@@ -114,12 +120,12 @@ export function CatalogPage() {
   useDocumentMetadata({
     title: `${pageTitle} | RS Store`,
     description:
-      activeCategory?.description ?? 'Fashion shoes bags and accessories selected from SHEIN',
+      categoryDescription || t('catalog.metaDescription'),
     canonicalPath: categorySlug ? `/categories/${categorySlug}` : '/',
     robots: 'index,follow',
     openGraph: {
       title: `${pageTitle} | RS Store`,
-      description: activeCategory?.description ?? 'Modern fashion from SHEIN',
+      description: categoryDescription || t('catalog.ogDescription'),
       type: 'website',
     },
     structuredData: buildCatalogStructuredData(),
@@ -128,18 +134,18 @@ export function CatalogPage() {
   if (isLoading && categories.length === 0 && featuredSubCategories.length === 0) {
     return (
       <div className="rs-catalog-redesign">
-        <section className="rs-storefront-showcase-wrap" aria-label="Loading catalog">
+        <section className="rs-storefront-showcase-wrap" aria-label={t('catalog.loading')}>
           <div className="rs-container">
             <div className="rs-storefront-showcase-card">
               <section
                 className="rs-hero rs-storefront-compact-hero"
-                aria-label="Loading catalog heading"
+                aria-label={t('catalog.loadingHeading')}
               >
                 <div className="rs-hero-branch-left" aria-hidden="true" />
                 <div className="rs-hero-branch-right" aria-hidden="true" />
                 <div className="rs-hero-logo-mark" aria-hidden="true" />
                 <div className="relative z-10 mx-auto max-w-3xl">
-                  <span className="rs-section-kicker">NEW SEASON ENDLESS STYLE</span>
+                  <span className="rs-section-kicker">{t('catalog.kicker.loading')}</span>
                   <h1 className="mx-auto mt-3 h-10 w-52 animate-pulse rounded-full bg-rs-ink/10 sm:h-12" />
                   <div className="mx-auto mt-3 h-3 w-64 max-w-full animate-pulse rounded-full bg-rs-ink/8" />
                 </div>
@@ -147,7 +153,7 @@ export function CatalogPage() {
               <div className="rs-subcategory-dock">
                 <div className="rs-subcategory-safe-line" aria-hidden="true">
                   <span />
-                  <b>Shop by style</b>
+                  <b>{t('catalog.shopByStyle')}</b>
                   <span />
                 </div>
                 <CategoryNavSkeleton />
@@ -164,32 +170,32 @@ export function CatalogPage() {
       <section className="rs-storefront-showcase-wrap" aria-labelledby="catalog-title">
         <div className="rs-container">
           <div className="rs-storefront-showcase-card">
-            <section className="rs-hero rs-storefront-compact-hero" aria-label="Catalog heading">
+            <section className="rs-hero rs-storefront-compact-hero" aria-label={t('catalog.heading')}>
               <div className="rs-hero-branch-left" aria-hidden="true" />
               <div className="rs-hero-branch-right" aria-hidden="true" />
               <div className="rs-hero-logo-mark" aria-hidden="true" />
               <div className="relative z-10 mx-auto max-w-3xl px-2">
-                <span className="rs-section-kicker">LITTLE LOOKS BIG SMILES</span>
+                <span className="rs-section-kicker">{t('catalog.kicker.home')}</span>
                 <h1 id="catalog-title" className="rs-heading-1 mt-2">
                   {pageTitle}
                 </h1>
                 {activeCategory?.description ? (
                   <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                    {activeCategory.description}
+                    {categoryDescription}
                   </p>
                 ) : (
                   <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-                    Fresh fashion picks selected for everyday style and quick checkout
+                    {t('catalog.description')}
                   </p>
                 )}
               </div>
             </section>
 
             {isLoading || hasVisibleSubCategories ? (
-              <div className="rs-subcategory-dock" aria-label="Shop by category">
+              <div className="rs-subcategory-dock" aria-label={t('catalog.shopByCategory')}>
                 <div className="rs-subcategory-safe-line" aria-hidden="true">
                   <span />
-                  <b>Shop by style</b>
+                  <b>{t('catalog.shopByStyle')}</b>
                   <span />
                 </div>
                 {isLoading && visibleSubCategories.length === 0 ? (
@@ -220,22 +226,22 @@ export function CatalogPage() {
         {!isLoading && !error && products ? (
           <div className="rs-products-bar">
             <div className="min-w-0">
-              <span className="rs-section-kicker">Curated for you</span>
+              <span className="rs-section-kicker">{t('product.relatedKicker')}</span>
               <h2 className="rs-heading-2 mt-1">{pageTitle}</h2>
             </div>
             <p className="rs-products-count">
-              {products.meta.total} {products.meta.total === 1 ? 'item' : 'items'}
+              {t('catalog.productsFound', { count: products.meta.total })}
             </p>
           </div>
         ) : null}
 
         <section id="products-section" className="mt-3" aria-labelledby="products-heading">
           <div className="sr-only">
-            <h2 id="products-heading">Products</h2>
+            <h2 id="products-heading">{t('nav.allProducts')}</h2>
           </div>
 
           {isLoading ? <SearchResultSkeleton /> : null}
-          {error ? <CatalogState title="Error occurred" message={error} /> : null}
+          {error ? <CatalogState title={t('catalog.emptyTitle')} message={error} /> : null}
           {!isLoading && !error && products ? (
             <>
               <ProductGrid products={products.items} />

@@ -18,6 +18,10 @@ describe('order format helpers', () => {
     expect(formatOrderMoney('٣٬٤٧٨٫٥٠', 'EGP')).toBe('EGP 3,478.50');
   });
 
+  it('formats Egyptian pound values for Arabic customer UI', () => {
+    expect(formatOrderMoney('٣٬٤٧٨٫٥٠', 'EGP', 'ar')).toBe('3,478.50 ج.م');
+  });
+
   it('formats dates, phones, counts, and percents with English digits', () => {
     expect(formatOrderDate('2026-07-01T10:30:00.000Z')).not.toMatch(/[٠-٩۰-۹]/);
     expect(formatOrderPhone('٠١٠٠٠٠٠٠٠٠')).toBe('0100000000');

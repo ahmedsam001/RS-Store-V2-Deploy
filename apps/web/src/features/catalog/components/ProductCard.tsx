@@ -7,6 +7,7 @@ import { formatPrice, getProductUrl } from '@/features/catalog/utils/format';
 import { CatalogLink } from '@/features/catalog/components/CatalogLink';
 import { ResponsiveImage } from '@/features/catalog/components/ResponsiveImage';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
+import { localizeKnownLabel, localizeProductText, useI18n } from '@/shared/i18n';
 
 type ProductCardProps = {
   product: CatalogProductCard;
@@ -107,9 +108,19 @@ function resolveDiscountAmount(
 
 export const ProductCard = memo(function ProductCard({ product, className }: ProductCardProps) {
   const navigate = useNavigate();
+  const { language, t } = useI18n();
   const hasPurchasableVariants = product.variantCount > 0;
   const productUrl = getProductUrl(product.slug);
   const priceDisplay = getProductPriceDisplay(product);
+  const productName = localizeProductText(product.name, language);
+  const productAlt = localizeProductText(product.primaryImage?.altText ?? product.name, language);
+  const categoryName = product.category
+    ? localizeKnownLabel(localizeProductText(product.category.name, language), language)
+    : '';
+  const subCategoryName = product.subCategory
+    ? localizeKnownLabel(localizeProductText(product.subCategory, language), language)
+    : '';
+  const categoryTitle = [categoryName, subCategoryName].filter(Boolean).join(' / ');
 
   function handlePrimaryAction() {
     navigate(productUrl);
@@ -119,14 +130,14 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
     <article
       className={`rs-product-card product-card--polished ${className ?? ''}`}
       tabIndex={-1}
-      aria-label={product.name}
+      aria-label={productName}
     >
       <div className="rs-product-image-wrap product-card__media">
-        <CatalogLink href={productUrl} className="block h-full" aria-label={`View ${product.name}`}>
+        <CatalogLink href={productUrl} className="block h-full" aria-label={t('cart.viewProduct', { name: productName })}>
           {product.primaryImage ? (
             <ResponsiveImage
               src={product.primaryImage.url}
-              alt={product.primaryImage.altText ?? product.name}
+              alt={productAlt}
               className="rs-product-image"
               widths={[280, 400, 520, 640]}
               sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
@@ -136,20 +147,20 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
           ) : (
             <ImageWithFallback
               src={null}
-              alt={product.name}
+              alt={productName}
               className="rs-product-image"
               fallbackVariant="product"
             />
           )}
           <span className="product-card__image-overlay" aria-hidden="true">
-            View item
+            {t('product.viewItem')}
           </span>
         </CatalogLink>
 
         {priceDisplay.hasDiscount ? (
           <span
             className="rs-badge-sale product-card__discount-badge"
-            aria-label={`Discount ${priceDisplay.discountPercentage}%`}
+            aria-label={t('product.discount', { percent: priceDisplay.discountPercentage })}
           >
             -{priceDisplay.discountPercentage}%
           </span>
@@ -160,15 +171,15 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
         {product.category ? (
           <p
             className="product-card__category"
-            title={`${product.category.name}${product.subCategory ? ` / ${product.subCategory}` : ''}`}
+            title={categoryTitle}
           >
-            {product.category.name}
-            {product.subCategory ? ` / ${product.subCategory}` : ''}
+            {categoryName}
+            {subCategoryName ? ` / ${subCategoryName}` : ''}
           </p>
         ) : null}
 
         <CatalogLink href={productUrl} className="product-card__title">
-          {product.name}
+          {productName}
         </CatalogLink>
 
         <div className="product-card__price-stack">
@@ -180,11 +191,11 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
                   : 'text-rs-ink'
               }`}
             >
-              {formatPrice(priceDisplay.currentPrice)}
+              {formatPrice(priceDisplay.currentPrice, language)}
             </span>
             {priceDisplay.hasDiscount && priceDisplay.oldPrice ? (
               <del className="product-card__old-price line-through text-muted-foreground">
-                {formatPrice(priceDisplay.oldPrice)}
+                {formatPrice(priceDisplay.oldPrice, language)}
               </del>
             ) : null}
           </div>
@@ -192,15 +203,15 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
           {priceDisplay.hasDiscount && priceDisplay.discountAmount ? (
             <p
               className="product-card__save-amount"
-              aria-label={`You save ${formatPrice(priceDisplay.discountAmount)}`}
+              aria-label={t('product.youSave', { amount: formatPrice(priceDisplay.discountAmount, language) })}
             >
-              Save {formatPrice(priceDisplay.discountAmount)}
+              {t('common.save', { amount: formatPrice(priceDisplay.discountAmount, language) })}
             </p>
           ) : null}
         </div>
 
         {product.rating ? (
-          <div className="product-card__rating" aria-label={`Rating ${product.rating} out of 5`}>
+          <div className="product-card__rating" aria-label={t('product.ratingAria', { rating: product.rating })}>
             <span aria-hidden="true">★</span>
             <span>{product.rating.toFixed(1)}</span>
           </div>
@@ -211,12 +222,12 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
           onClick={handlePrimaryAction}
           aria-label={
             hasPurchasableVariants
-              ? `Select options for ${product.name}`
-              : `View details for ${product.name}`
+              ? t('product.selectOptionsFor', { name: productName })
+              : t('product.viewDetailsFor', { name: productName })
           }
         >
           <ShoppingBag className="h-4 w-4" aria-hidden="true" />
-          {hasPurchasableVariants ? 'Select Options' : 'View Details'}
+          {hasPurchasableVariants ? t('product.selectOptions') : t('product.viewDetails')}
         </Button>
       </div>
     </article>

@@ -1,10 +1,39 @@
 import { ChangeEvent, useId, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { useI18n } from '@/shared/i18n';
 
 const MAX_PAYMENT_PROOF_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_PAYMENT_PROOF_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const ACCEPTED_PAYMENT_PROOF_LABEL = 'JPG PNG WEBP GIF up to 5MB';
+
+const paymentProofCopy = {
+  ar: {
+    unsupportedFile: 'صيغة الملف غير مدعومة. ارفع صورة JPG أو PNG أو WEBP أو GIF',
+    fileTooLarge: 'حجم الصورة أكبر من 5MB. اختار صورة أصغر',
+    selectFirst: 'اختار صورة إثبات الدفع أولًا',
+    uploadFailed: 'فشل رفع إثبات الدفع',
+    allowedFormats: 'الصيغ المسموحة',
+    uploading: 'جاري الرفع',
+    uploadProof: 'رفع الإثبات',
+    selected: 'تم اختيار',
+    uploadNotRequired: 'الرفع غير مطلوب لحالة الطلب الحالية',
+    uploadClearReceipt: 'ارفع صورة واضحة لإيصال التحويل',
+    proofFormats: 'JPG PNG WEBP GIF حتى 5MB',
+  },
+  en: {
+    unsupportedFile: 'Unsupported file format. Please upload JPG, PNG, WEBP or GIF',
+    fileTooLarge: 'Image size exceeds 5MB. Please choose a smaller image',
+    selectFirst: 'Please select a payment proof image first',
+    uploadFailed: 'Failed to upload payment proof',
+    allowedFormats: 'Allowed formats',
+    uploading: 'Uploading',
+    uploadProof: 'Upload Proof',
+    selected: 'Selected',
+    uploadNotRequired: 'Upload not required for current order status',
+    uploadClearReceipt: 'Upload clear transfer receipt image',
+    proofFormats: 'JPG PNG WEBP GIF up to 5MB',
+  },
+} as const;
 
 type PaymentProofUploaderProps = {
   label: string;
@@ -17,6 +46,8 @@ export function PaymentProofUploader({
   isDisabled = false,
   onUpload,
 }: PaymentProofUploaderProps) {
+  const { language } = useI18n();
+  const copy = paymentProofCopy[language];
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,14 +64,14 @@ export function PaymentProofUploader({
 
     if (!ACCEPTED_PAYMENT_PROOF_TYPES.includes(selectedFile.type)) {
       setFile(null);
-      setError('Unsupported file format. Please upload JPG, PNG, WEBP or GIF');
+      setError(copy.unsupportedFile);
       event.target.value = '';
       return;
     }
 
     if (selectedFile.size > MAX_PAYMENT_PROOF_BYTES) {
       setFile(null);
-      setError('Image size exceeds 5MB. Please choose a smaller image');
+      setError(copy.fileTooLarge);
       event.target.value = '';
       return;
     }
@@ -50,7 +81,7 @@ export function PaymentProofUploader({
 
   async function handleSubmit() {
     if (!file) {
-      setError('Please select a payment proof image first');
+      setError(copy.selectFirst);
       return;
     }
 
@@ -60,9 +91,7 @@ export function PaymentProofUploader({
       await onUpload(file);
       setFile(null);
     } catch (caughtError) {
-      setError(
-        caughtError instanceof Error ? caughtError.message : 'Failed to upload payment proof',
-      );
+      setError(caughtError instanceof Error ? caughtError.message : copy.uploadFailed);
     } finally {
       setIsUploading(false);
     }
@@ -74,12 +103,12 @@ export function PaymentProofUploader({
         <div>
           <h3 className="font-extrabold text-rs-ink">{label}</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Allowed formats: {ACCEPTED_PAYMENT_PROOF_LABEL}
+            {copy.allowedFormats}: {copy.proofFormats}
           </p>
         </div>
         {isUploading ? (
           <span className="rounded-full bg-rs-gold-bg px-2.5 py-1 text-[11px] font-black text-rs-gold">
-            Uploading
+            {copy.uploading}
           </span>
         ) : null}
       </div>
@@ -99,15 +128,15 @@ export function PaymentProofUploader({
           className="min-h-12 w-full sm:w-auto"
         >
           <UploadCloud className="h-4 w-4" aria-hidden="true" />
-          {isUploading ? 'Uploading' : 'Upload Proof'}
+          {isUploading ? copy.uploading : copy.uploadProof}
         </Button>
       </div>
       <p id={hintId} className="mt-2 text-xs text-muted-foreground">
         {file
-          ? `Selected: ${file.name}`
+          ? `${copy.selected}: ${file.name}`
           : isDisabled
-            ? 'Upload not required for current order status'
-            : 'Upload clear transfer receipt image'}
+            ? copy.uploadNotRequired
+            : copy.uploadClearReceipt}
       </p>
       {error ? (
         <p

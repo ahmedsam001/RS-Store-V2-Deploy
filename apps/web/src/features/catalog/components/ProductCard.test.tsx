@@ -49,7 +49,7 @@ describe('ProductCard discount display', () => {
     });
     renderWithRouter(<ProductCard product={product} />);
 
-    const priceElement = screen.getByText(/EGP.*750\.00/);
+    const priceElement = screen.getByText(/EGP\s*750/);
     expect(priceElement).toBeInTheDocument();
     expect(priceElement).toHaveClass('text-rs-ink');
     expect(priceElement).not.toHaveClass('rs-price-primary');
@@ -63,7 +63,7 @@ describe('ProductCard discount display', () => {
     });
     renderWithRouter(<ProductCard product={product} />);
 
-    const priceElement = screen.getByText(/EGP.*750\.00/);
+    const priceElement = screen.getByText(/EGP\s*750/);
     expect(priceElement).toHaveClass('rs-price-primary');
   });
 
@@ -75,7 +75,7 @@ describe('ProductCard discount display', () => {
     });
     renderWithRouter(<ProductCard product={product} />);
 
-    const oldPriceElement = screen.getByText(/EGP.*1[,.]000\.00/);
+    const oldPriceElement = screen.getByText(/EGP\s*1[,.]000/);
     expect(oldPriceElement).toBeInTheDocument();
     expect(oldPriceElement).toHaveClass('line-through');
     expect(oldPriceElement).toHaveClass('text-muted-foreground');
@@ -102,7 +102,7 @@ describe('ProductCard discount display', () => {
     });
     renderWithRouter(<ProductCard product={product} />);
 
-    expect(screen.queryByText(/EGP.*1[,.]000\.00/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/EGP\s*1[,.]000/)).not.toBeInTheDocument();
   });
 
   it('uses effective flash sale discount percentage when product discount also exists', () => {
@@ -139,8 +139,8 @@ describe('ProductCard discount display', () => {
     });
     renderWithRouter(<ProductCard product={product} />);
 
-    expect(screen.getByText(/EGP.*800\.00/)).toBeInTheDocument();
-    expect(screen.getByText(/EGP.*1[,.]000\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/EGP\s*800/)).toBeInTheDocument();
+    expect(screen.getByText(/EGP\s*1[,.]000/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Discount 20%/i)).toHaveTextContent('-20%');
   });
 
@@ -159,7 +159,7 @@ describe('ProductCard discount display', () => {
     });
     renderWithRouter(<ProductCard product={product} />);
 
-    expect(screen.getByText(/Save.*EGP.*200\.00/i)).toBeInTheDocument();
+    expect(screen.getByText(/Save.*EGP\s*200/i)).toBeInTheDocument();
   });
 
   it('does not show discount badge for products without discount', () => {

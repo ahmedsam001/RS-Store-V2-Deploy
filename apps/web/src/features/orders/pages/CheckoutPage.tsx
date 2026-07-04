@@ -13,13 +13,138 @@ import { CatalogState } from '@/features/catalog/components/CatalogState';
 import { formatPrice } from '@/features/catalog/utils/format';
 import { settingsApi, readSetting, StorefrontSettings } from '@/features/settings/settings-api';
 import { ordersApi } from '@/features/orders/api/orders-api';
+import { localizeProductText, useI18n, type Language } from '@/shared/i18n';
 import type { Cart } from '@/shared/types/CartTypes';
 import type { CheckoutInput } from '@/shared/types/OrderTypes';
 
+const checkoutCopy = {
+  ar: {
+    metaTitle: 'إتمام الشراء | RS Store',
+    metaDescription: 'أدخل بيانات الشحن وأكد طلبك بأمان',
+    signInCheckout: 'يرجى تسجيل الدخول أو إنشاء حساب لإتمام الشراء',
+    uploadProofRequired: 'يرجى رفع إثبات الدفع قبل تأكيد الطلب',
+    createdSuccess: 'تم إنشاء الطلب ورفع إثبات العربون بنجاح، بانتظار مراجعة الأدمن',
+    failedCheckout: 'فشل إتمام الشراء',
+    preparingPayment: 'جاري تجهيز الدفع',
+    loadingCart: 'جاري تحميل السلة',
+    failedLoadCart: 'فشل تحميل السلة',
+    tryAgain: 'حاول مرة أخرى',
+    signInRequired: 'تسجيل الدخول مطلوب',
+    signInMessage: 'يرجى تسجيل الدخول لإتمام الشراء',
+    signIn: 'تسجيل الدخول',
+    kicker: 'الخطوة الأخيرة',
+    title: 'إتمام الشراء',
+    subtitle: 'أدخل بيانات التواصل والعنوان لإنشاء طلبك',
+    deliveryTime: 'مدة التوصيل المتوقعة',
+    days: 'يوم',
+    customerDetails: 'بيانات العميل',
+    customerHint: 'اكتب الاسم ورقم الموبايل والعنوان بوضوح لتأكيد الطلب بسرعة',
+    fullName: 'الاسم بالكامل',
+    phoneNumber: 'رقم الموبايل',
+    deliveryAddress: 'عنوان التوصيل',
+    deposit: 'العربون',
+    depositHint: 'اختار نسبة العربون قبل الإرسال',
+    depositAria: 'نسبة العربون',
+    depositAmount: 'قيمة العربون',
+    paymentMethod: 'طريقة الدفع',
+    paymentHint: 'اختار طريقة الدفع وارفع صورة الإثبات',
+    paymentMethodAria: 'طريقة دفع العربون',
+    transferNumber: 'رقم التحويل',
+    vodafoneFee: 'فودافون كاش يضيف {percent}% رسوم على قيمة العربون',
+    notes: 'ملاحظات (اختياري)',
+    orderSummary: 'ملخص الطلب',
+    summaryHint: 'مراجعة سريعة قبل التأكيد',
+    customOrder: 'طلب خاص',
+    customOrderFallback: 'طلب خاص',
+    qty: 'الكمية',
+    total: 'الإجمالي',
+    depositLine: 'عربون {percent}%',
+    vodafoneFeeLine: 'رسوم فودافون كاش {percent}%',
+    payNow: 'ادفع الآن',
+    remainingAfterDeposit: 'المتبقي بعد العربون',
+    paymentProof: 'إثبات الدفع',
+    paymentProofHint: 'ارفع صورة واضحة لتحويل العربون لمراجعة الأدمن',
+    creating: 'جاري إنشاء الطلب ورفع الإثبات...',
+    confirm: 'تأكيد الطلب ورفع العربون',
+    emptyTitle: 'السلة فارغة',
+    emptyMessage: 'أضف منتجات إلى السلة قبل متابعة إتمام الشراء',
+    browseProducts: 'تصفح المنتجات',
+    previewBlocked: 'إتمام الشراء متاح فقط لمنتجات المتجر الحقيقية. احذف منتجات المعاينة من السلة وأضف منتجات من الكتالوج الفعلي.',
+    staticBlocked: 'إتمام الشراء متوقف لأن السلة تحتوي على منتجات بدون معرفات قاعدة بيانات حقيقية. احذف منتجات المعاينة وأضف منتجات من الكتالوج الفعلي.',
+    unsupportedProof: 'صيغة الملف غير مدعومة. ارفع JPG أو PNG أو WEBP أو GIF',
+    proofTooLarge: 'الصورة أكبر من 5MB، اختار صورة أصغر',
+    chooseProof: 'اضغط لاختيار صورة إثبات الدفع',
+    proofFormats: 'JPG PNG WEBP GIF حتى 5MB',
+  },
+  en: {
+    metaTitle: 'Checkout | RS Store',
+    metaDescription: 'Enter shipping details and confirm your order securely',
+    signInCheckout: 'Please sign in or create an account to complete your purchase',
+    uploadProofRequired: 'Please upload payment proof before confirming order',
+    createdSuccess: 'Order created and deposit proof uploaded successfully, awaiting admin review',
+    failedCheckout: 'Failed to complete checkout',
+    preparingPayment: 'Preparing payment',
+    loadingCart: 'Loading cart',
+    failedLoadCart: 'Failed to load cart',
+    tryAgain: 'Try Again',
+    signInRequired: 'Sign in required',
+    signInMessage: 'Please sign in to complete your purchase',
+    signIn: 'Sign In',
+    kicker: 'Final Step',
+    title: 'Checkout',
+    subtitle: 'Enter contact and address details to create your order',
+    deliveryTime: 'Estimated delivery time',
+    days: 'days',
+    customerDetails: 'Customer Details',
+    customerHint: 'Enter your name, phone, and address clearly for faster order confirmation',
+    fullName: 'Full Name',
+    phoneNumber: 'Phone Number',
+    deliveryAddress: 'Delivery Address',
+    deposit: 'Deposit',
+    depositHint: 'Select deposit percentage before submitting',
+    depositAria: 'Deposit percentage',
+    depositAmount: 'Deposit amount',
+    paymentMethod: 'Payment Method',
+    paymentHint: 'Choose payment method and upload proof image',
+    paymentMethodAria: 'Deposit payment method',
+    transferNumber: 'Transfer Number',
+    vodafoneFee: 'Vodafone Cash adds {percent}% fee on deposit amount',
+    notes: 'Notes (optional)',
+    orderSummary: 'Order Summary',
+    summaryHint: 'Snapshot before confirmation',
+    customOrder: 'Custom Order',
+    customOrderFallback: 'Custom order',
+    qty: 'Qty',
+    total: 'Total',
+    depositLine: 'Deposit {percent}%',
+    vodafoneFeeLine: 'Vodafone Cash fee {percent}%',
+    payNow: 'Pay now',
+    remainingAfterDeposit: 'Remaining after deposit',
+    paymentProof: 'Payment Proof',
+    paymentProofHint: 'Upload a clear image of your deposit transfer for admin review',
+    creating: 'Creating order and uploading proof...',
+    confirm: 'Confirm Order & Upload Deposit',
+    emptyTitle: 'Your cart is empty',
+    emptyMessage: 'Add products to your cart before proceeding to checkout',
+    browseProducts: 'Browse Products',
+    previewBlocked: 'Checkout is only available for real store products. Remove preview products from your cart and add products from the live catalog.',
+    staticBlocked: 'Checkout is blocked because the cart contains products without real database IDs. Remove static preview products and add live catalog products.',
+    unsupportedProof: 'Unsupported file format. Please upload JPG, PNG, WEBP, or GIF',
+    proofTooLarge: 'Image exceeds 5MB, please choose a smaller image',
+    chooseProof: 'Click to select payment proof image',
+    proofFormats: 'JPG PNG WEBP GIF up to 5MB',
+  },
+} as const;
+
+type CheckoutCopy = (typeof checkoutCopy)[keyof typeof checkoutCopy];
+
 export function CheckoutPage() {
+  const { language } = useI18n();
+  const copy = checkoutCopy[language];
+
   useDocumentMetadata({
-    title: 'Checkout | RS Store',
-    description: 'Enter shipping details and confirm your order securely',
+    title: copy.metaTitle,
+    description: copy.metaDescription,
     canonicalPath: '/checkout',
     robots: 'noindex,follow',
   });
@@ -77,11 +202,12 @@ export function CheckoutPage() {
       state: {
         returnTo,
         reason: 'checkout',
-        message: 'Please sign in or create an account to complete your purchase',
+        message: copy.signInCheckout,
       },
     });
   }, [
     cart?.items.length,
+    copy.signInCheckout,
     isLoading,
     location.hash,
     location.pathname,
@@ -94,9 +220,9 @@ export function CheckoutPage() {
     () =>
       Boolean(
         cart?.items.length &&
-        form.customerName.trim() &&
-        form.customerPhone.trim() &&
-        form.shippingAddress.trim(),
+          form.customerName.trim() &&
+          form.customerPhone.trim() &&
+          form.shippingAddress.trim(),
       ),
     [cart, form],
   );
@@ -127,13 +253,13 @@ export function CheckoutPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const staticCartReason = staticCartBlockReason(cart);
+    const staticCartReason = staticCartBlockReason(cart, copy);
     if (staticCartReason) {
       setSubmitError(staticCartReason);
       return;
     }
     if (!depositProofFile) {
-      setDepositProofError('Please upload payment proof before confirming order');
+      setDepositProofError(copy.uploadProofRequired);
       return;
     }
     if (!canSubmit) return;
@@ -168,13 +294,11 @@ export function CheckoutPage() {
       navigate(orderPath(orderWithDepositProof.id), {
         replace: true,
         state: {
-          message: 'Order created and deposit proof uploaded successfully, awaiting admin review',
+          message: copy.createdSuccess,
         },
       });
     } catch (caughtError) {
-      setSubmitError(
-        caughtError instanceof Error ? caughtError.message : 'Failed to complete checkout',
-      );
+      setSubmitError(caughtError instanceof Error ? caughtError.message : copy.failedCheckout);
     } finally {
       setIsSubmitting(false);
     }
@@ -183,28 +307,28 @@ export function CheckoutPage() {
   if (isLoading || status === 'loading')
     return (
       <div className="rs-page-stack">
-        <CatalogState title="Preparing payment" message="Loading cart" />
+        <CatalogState title={copy.preparingPayment} message={copy.loadingCart} />
       </div>
     );
   if (error)
     return (
       <div className="rs-page-stack">
         <CatalogState
-          title="Failed to load cart"
+          title={copy.failedLoadCart}
           message={error}
-          ctaLabel="Try Again"
+          ctaLabel={copy.tryAgain}
           ctaHref={PATHS.cart}
         />
       </div>
     );
-  if (!cart || cart.items.length === 0) return <EmptyCheckoutCart />;
+  if (!cart || cart.items.length === 0) return <EmptyCheckoutCart copy={copy} />;
   if (status !== 'authenticated')
     return (
       <div className="rs-page-stack">
         <CatalogState
-          title="Sign in required"
-          message="Please sign in to complete your purchase"
-          ctaLabel="Sign In"
+          title={copy.signInRequired}
+          message={copy.signInMessage}
+          ctaLabel={copy.signIn}
           ctaHref={PATHS.login}
         />
       </div>
@@ -213,10 +337,10 @@ export function CheckoutPage() {
   return (
     <div className="rs-page-stack">
       <div className="rs-section-heading text-start">
-        <span className="rs-section-kicker">Final Step</span>
-        <h1 className="rs-heading-1 mt-2">Checkout</h1>
+        <span className="rs-section-kicker">{copy.kicker}</span>
+        <h1 className="rs-heading-1 mt-2">{copy.title}</h1>
         <p className="mt-2 max-w-lg text-sm leading-7 text-muted-foreground">
-          Enter contact and address details to create your order
+          {copy.subtitle}
         </p>
       </div>
 
@@ -233,25 +357,25 @@ export function CheckoutPage() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
           <div className="space-y-5 p-4 sm:p-6">
             <div className="rounded-2xl border border-rs-peach bg-rs-cream-warm p-4 text-sm leading-7 text-muted-foreground">
-              Estimated delivery time{' '}
-              <span className="font-extrabold text-rs-ink">{shippingDays} days</span>
+              {copy.deliveryTime}{' '}
+              <span className="font-extrabold text-rs-ink">
+                {shippingDays} {copy.days}
+              </span>
             </div>
 
             <section className="rounded-2xl border border-rs-peach-light bg-card p-3 shadow-sm sm:rounded-3xl sm:p-4">
-              <h2 className="text-base font-black text-rs-ink">Customer Details</h2>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Enter your name, phone, and address clearly for faster order confirmation
-              </p>
+              <h2 className="text-base font-black text-rs-ink">{copy.customerDetails}</h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy.customerHint}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <Field
-                  label="Full Name"
+                  label={copy.fullName}
                   value={form.customerName}
                   autoComplete="name"
                   required
                   onChange={(value) => setForm((c) => ({ ...c, customerName: value }))}
                 />
                 <Field
-                  label="Phone Number"
+                  label={copy.phoneNumber}
                   value={form.customerPhone}
                   inputMode="tel"
                   autoComplete="tel"
@@ -261,7 +385,7 @@ export function CheckoutPage() {
               </div>
               <label className="mt-4 block">
                 <span className="block text-sm font-extrabold text-rs-ink mb-1.5">
-                  Delivery Address
+                  {copy.deliveryAddress}
                 </span>
                 <textarea
                   value={form.shippingAddress}
@@ -278,14 +402,12 @@ export function CheckoutPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-2xl border border-rs-peach-light bg-card p-3 shadow-sm sm:rounded-3xl sm:p-4">
-                <h2 className="text-base font-black text-rs-ink">Deposit</h2>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Select deposit percentage before submitting
-                </p>
+                <h2 className="text-base font-black text-rs-ink">{copy.deposit}</h2>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy.depositHint}</p>
                 <div
                   className="mt-4 grid grid-cols-3 gap-2"
                   role="radiogroup"
-                  aria-label="Deposit percentage"
+                  aria-label={copy.depositAria}
                 >
                   {depositChoices.map((choice) => (
                     <button
@@ -305,22 +427,20 @@ export function CheckoutPage() {
                   ))}
                 </div>
                 <div className="mt-4 rounded-2xl bg-rs-cream-warm p-3 text-xs leading-6 text-muted-foreground">
-                  Deposit amount:{' '}
+                  {copy.depositAmount}:{' '}
                   <span className="font-black text-rs-ink">
-                    {formatCheckoutMoney(checkoutTotals.depositAmount, checkoutTotals.currency)}
+                    {formatCheckoutMoney(checkoutTotals.depositAmount, checkoutTotals.currency, language)}
                   </span>
                 </div>
               </section>
 
               <section className="rounded-2xl border border-rs-peach-light bg-card p-3 shadow-sm sm:rounded-3xl sm:p-4">
-                <h2 className="text-base font-black text-rs-ink">Payment Method</h2>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Choose payment method and upload proof image
-                </p>
+                <h2 className="text-base font-black text-rs-ink">{copy.paymentMethod}</h2>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy.paymentHint}</p>
                 <div
                   className="mt-4 grid gap-2"
                   role="radiogroup"
-                  aria-label="Deposit payment method"
+                  aria-label={copy.paymentMethodAria}
                 >
                   <PaymentMethodButton
                     label="Instapay"
@@ -340,13 +460,13 @@ export function CheckoutPage() {
                   />
                 </div>
                 <div className="mt-4 rounded-2xl border border-rs-peach bg-rs-cream-warm p-3 text-sm leading-7">
-                  <p className="font-extrabold text-rs-ink">Transfer Number</p>
+                  <p className="font-extrabold text-rs-ink">{copy.transferNumber}</p>
                   <p className="mt-1 font-black text-rs-gold" dir="ltr">
                     {paymentReceiver}
                   </p>
                   {form.paymentMethod === 'vodafone' ? (
                     <p className="mt-2 text-xs font-semibold text-muted-foreground">
-                      Vodafone Cash adds {vodafoneFeePercent}% fee on deposit amount
+                      {copy.vodafoneFee.replace('{percent}', vodafoneFeePercent)}
                     </p>
                   ) : null}
                 </div>
@@ -355,7 +475,7 @@ export function CheckoutPage() {
 
             <label className="block">
               <span className="block text-sm font-extrabold text-rs-ink mb-1.5">
-                Notes (optional)
+                {copy.notes}
               </span>
               <textarea
                 value={form.notes ?? ''}
@@ -374,8 +494,8 @@ export function CheckoutPage() {
                 <ShieldCheck className="h-5 w-5" aria-hidden="true" />
               </div>
               <div>
-                <h2 className="text-lg font-black text-rs-ink">Order Summary</h2>
-                <p className="text-[11px] text-muted-foreground">Snapshot before confirmation</p>
+                <h2 className="text-lg font-black text-rs-ink">{copy.orderSummary}</h2>
+                <p className="text-[11px] text-muted-foreground">{copy.summaryHint}</p>
               </div>
             </div>
 
@@ -392,22 +512,24 @@ export function CheckoutPage() {
                           href={productPath(item.product.slug)}
                           className="line-clamp-2 font-extrabold transition hover:text-rs-gold"
                         >
-                          {item.product.name}
+                          {localizeProductText(item.product.name, language)}
                         </CatalogLink>
                       ) : (
                         <div>
                           <p className="line-clamp-2 font-extrabold">
-                            {item.customOrder?.title ?? 'Custom order'}
+                            {localizeProductText(item.customOrder?.title ?? copy.customOrderFallback, language)}
                           </p>
                           <span className="mt-1 inline-flex rounded-full bg-rs-gold-bg px-2 py-0.5 text-[11px] font-black text-rs-gold">
-                            Custom Order
+                            {copy.customOrder}
                           </span>
                         </div>
                       )}
-                      <p className="mt-1 text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {copy.qty}: {item.quantity}
+                      </p>
                     </div>
                     <span className="shrink-0 break-words text-end font-black rs-price-primary">
-                      {formatPrice(item.lineTotal)}
+                      {formatPrice(item.lineTotal, language)}
                     </span>
                   </div>
                 </div>
@@ -419,36 +541,39 @@ export function CheckoutPage() {
               style={{ borderColor: 'hsl(var(--rs-peach-light))' }}
             >
               <div className="flex items-center justify-between text-lg font-black">
-                <span>Total</span>
-                <span className="rs-price-primary">{formatPrice(cart.summary.subtotal)}</span>
+                <span>{copy.total}</span>
+                <span className="rs-price-primary">{formatPrice(cart.summary.subtotal, language)}</span>
               </div>
               <div className="mt-3 space-y-2 rounded-2xl border border-rs-peach bg-rs-cream-warm p-3 text-xs leading-5">
                 <SummaryLine
-                  label={`Deposit ${form.depositPercent}%`}
+                  label={copy.depositLine.replace('{percent}', String(form.depositPercent))}
                   value={formatCheckoutMoney(
                     checkoutTotals.depositBaseAmount,
                     checkoutTotals.currency,
+                    language,
                   )}
                 />
                 {form.paymentMethod === 'vodafone' ? (
                   <SummaryLine
-                    label={`Vodafone Cash fee ${vodafoneFeePercent}%`}
+                    label={copy.vodafoneFeeLine.replace('{percent}', vodafoneFeePercent)}
                     value={formatCheckoutMoney(
                       checkoutTotals.vodafoneFeeAmount,
                       checkoutTotals.currency,
+                      language,
                     )}
                   />
                 ) : null}
                 <SummaryLine
-                  label="Pay now"
-                  value={formatCheckoutMoney(checkoutTotals.depositAmount, checkoutTotals.currency)}
+                  label={copy.payNow}
+                  value={formatCheckoutMoney(checkoutTotals.depositAmount, checkoutTotals.currency, language)}
                   isStrong
                 />
                 <SummaryLine
-                  label="Remaining after deposit"
+                  label={copy.remainingAfterDeposit}
                   value={formatCheckoutMoney(
                     checkoutTotals.remainingAmount,
                     checkoutTotals.currency,
+                    language,
                   )}
                   isStrong
                 />
@@ -456,13 +581,14 @@ export function CheckoutPage() {
             </div>
 
             <section className="mt-6 rounded-2xl border border-rs-peach-light bg-card p-3 shadow-sm sm:rounded-3xl sm:p-4">
-              <h2 className="text-base font-black text-rs-ink">Payment Proof</h2>
+              <h2 className="text-base font-black text-rs-ink">{copy.paymentProof}</h2>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Upload a clear image of your deposit transfer for admin review
+                {copy.paymentProofHint}
               </p>
               <CheckoutPaymentProofField
                 file={depositProofFile}
                 error={depositProofError}
+                copy={copy}
                 onChange={(file) => {
                   setDepositProofFile(file);
                   setDepositProofError(null);
@@ -486,9 +612,7 @@ export function CheckoutPage() {
               size="lg"
               disabled={!canSubmit || isSubmitting}
             >
-              {isSubmitting
-                ? 'Creating order and uploading proof...'
-                : 'Confirm Order & Upload Deposit'}
+              {isSubmitting ? copy.creating : copy.confirm}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           </aside>
@@ -498,10 +622,10 @@ export function CheckoutPage() {
   );
 }
 
-function staticCartBlockReason(cart: Cart | null): string | null {
+function staticCartBlockReason(cart: Cart | null, copy: CheckoutCopy): string | null {
   if (!cart?.items.length) return null;
   if (cart.id === 'preview-cart') {
-    return 'Checkout is only available for real store products. Remove preview products from your cart and add products from the live catalog.';
+    return copy.previewBlocked;
   }
 
   const hasStaticProduct = cart.items.some(
@@ -510,31 +634,29 @@ function staticCartBlockReason(cart: Cart | null): string | null {
       (!isDatabaseId(item.product?.id) ||
         (item.variant?.id ? !isDatabaseId(item.variant.id) : false)),
   );
-  return hasStaticProduct
-    ? 'Checkout is blocked because the cart contains products without real database IDs. Remove static preview products and add live catalog products.'
-    : null;
+  return hasStaticProduct ? copy.staticBlocked : null;
 }
 
 function isDatabaseId(value: string | null | undefined): boolean {
   return Boolean(
     value &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
   );
 }
 
-function EmptyCheckoutCart() {
+function EmptyCheckoutCart({ copy }: { copy: CheckoutCopy }) {
   return (
     <div className="rs-page-stack">
       <div className="rs-panel-soft flex min-h-72 flex-col items-center justify-center p-8 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
           <ShoppingCart className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
         </div>
-        <h2 className="mt-4 text-xl font-black text-rs-ink">Your cart is empty</h2>
+        <h2 className="mt-4 text-xl font-black text-rs-ink">{copy.emptyTitle}</h2>
         <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-          Add products to your cart before proceeding to checkout
+          {copy.emptyMessage}
         </p>
         <CatalogLink href={PATHS.home} className="rs-btn-primary mt-6">
-          Browse Products
+          {copy.browseProducts}
         </CatalogLink>
       </div>
     </div>
@@ -581,11 +703,13 @@ function PaymentMethodButton({ label, value, currentValue, onSelect }: PaymentMe
 function CheckoutPaymentProofField({
   file,
   error,
+  copy,
   onChange,
   onError,
 }: {
   file: File | null;
   error: string | null;
+  copy: CheckoutCopy;
   onChange: (file: File | null) => void;
   onError: (message: string) => void;
 }) {
@@ -599,14 +723,14 @@ function CheckoutPaymentProofField({
 
     if (!ACCEPTED_CHECKOUT_PAYMENT_PROOF_TYPES.includes(selectedFile.type)) {
       onChange(null);
-      onError('Unsupported file format. Please upload JPG, PNG, WEBP, or GIF');
+      onError(copy.unsupportedProof);
       event.target.value = '';
       return;
     }
 
     if (selectedFile.size > MAX_CHECKOUT_PAYMENT_PROOF_BYTES) {
       onChange(null);
-      onError('Image exceeds 5MB, please choose a smaller image');
+      onError(copy.proofTooLarge);
       event.target.value = '';
       return;
     }
@@ -619,9 +743,9 @@ function CheckoutPaymentProofField({
       <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-rs-peach bg-rs-cream-warm px-4 py-5 text-center transition hover:border-rs-gold-light">
         <UploadCloud className="h-6 w-6 text-rs-gold" aria-hidden="true" />
         <span className="mt-2 max-w-full break-all text-sm font-extrabold text-rs-ink">
-          {file ? file.name : 'Click to select payment proof image'}
+          {file ? file.name : copy.chooseProof}
         </span>
-        <span className="mt-1 text-xs text-muted-foreground">JPG PNG WEBP GIF up to 5MB</span>
+        <span className="mt-1 text-xs text-muted-foreground">{copy.proofFormats}</span>
         <input
           type="file"
           accept={ACCEPTED_CHECKOUT_PAYMENT_PROOF_TYPES.join(',')}
@@ -711,8 +835,8 @@ function roundMoney(amount: number): number {
   return Math.round(amount * 100) / 100;
 }
 
-function formatCheckoutMoney(amount: number, currency: string): string {
-  return formatPrice({ amount: amount.toFixed(2), currency });
+function formatCheckoutMoney(amount: number, currency: string, language: Language): string {
+  return formatPrice({ amount: amount.toFixed(2), currency }, language);
 }
 
 type FieldProps = {

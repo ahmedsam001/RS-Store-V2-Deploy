@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CatalogImage } from '@/shared/types/CatalogTypes';
 import { ResponsiveImage } from '@/features/catalog/components/ResponsiveImage';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
+import { localizeProductText, useI18n } from '@/shared/i18n';
 
 type ProductGalleryProps = {
   images: CatalogImage[];
@@ -10,6 +11,7 @@ type ProductGalleryProps = {
 };
 
 export function ProductGallery({ images, productName }: ProductGalleryProps) {
+  const { language } = useI18n();
   const [activeImage, setActiveImage] = useState(() => images[0]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -174,7 +176,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
       >
         <ResponsiveImage
           src={selectedImage.url}
-          alt={selectedImage.altText ?? productName}
+          alt={localizeProductText(selectedImage.altText ?? productName, language)}
           className="aspect-square sm:aspect-[4/5] w-full object-cover lg:max-h-[720px] transition-opacity duration-300"
           widths={[480, 720, 960, 1280]}
           sizes="(min-width: 1280px) 640px, (min-width: 1024px) 52vw, 100vw"
@@ -231,7 +233,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
               >
                 <ResponsiveImage
                   src={image.url}
-                  alt={image.altText ?? productName}
+                  alt={localizeProductText(image.altText ?? productName, language)}
                   className="aspect-square w-12 sm:w-16 md:w-20 rounded-md sm:rounded-lg object-cover"
                   widths={[96, 144, 192]}
                   sizes="80px"

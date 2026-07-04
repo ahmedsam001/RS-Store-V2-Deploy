@@ -18,25 +18,27 @@ import { formatPrice, getProductUrl } from '@/features/catalog/utils/format';
 import { useCart } from '@/features/cart/CartContext';
 import { useAuth } from '@/features/auth/AuthContext';
 import type { CartItem } from '@/shared/types/CartTypes';
+import { localizeProductOption, localizeProductText, useI18n } from '@/shared/i18n';
 
 export function CartPage() {
+  const { language, t } = useI18n();
   const { cart, isLoading, error, updateItem, removeItem, clearCart } = useCart();
   const { status, user } = useAuth();
   const navigate = useNavigate();
 
   useDocumentMetadata({
-    title: 'Shopping Cart | RS Store',
-    description: 'Review cart products and quantities before checkout',
+    title: `${t('cart.title')} | RS Store`,
+    description: t('cart.metaDescription'),
     canonicalPath: '/cart',
     robots: 'noindex,follow',
   });
 
   if (isLoading) {
-    return <CatalogState title="Loading cart" message="Preparing saved products" />;
+    return <CatalogState title={t('cart.loading')} message={t('cart.loadingMessage')} />;
   }
 
   if (error) {
-    return <CatalogState title="Failed to load cart" message={error} />;
+    return <CatalogState title={t('cart.failedLoad')} message={error} />;
   }
 
   if (!cart || cart.items.length === 0) {
@@ -50,10 +52,10 @@ export function CartPage() {
   return (
     <div className="rs-page-stack">
       <div className="rs-section-heading text-start">
-        <span className="rs-section-kicker">Review Your Order</span>
-        <h1 className="rs-heading-1 mt-2">Shopping Cart</h1>
+        <span className="rs-section-kicker">{t('cart.reviewKicker')}</span>
+        <h1 className="rs-heading-1 mt-2">{t('cart.title')}</h1>
         <p className="mt-2 max-w-lg text-sm leading-7 text-muted-foreground">
-          Review products and quantities before creating your order
+          {t('cart.reviewMessage')}
         </p>
       </div>
 
@@ -75,19 +77,19 @@ export function CartPage() {
               <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-rs-ink">Cart Summary</h2>
-              <p className="text-[11px] text-muted-foreground">Quick confirmation before payment</p>
+              <h2 className="text-lg font-black text-rs-ink">{t('cart.summary')}</h2>
+              <p className="text-[11px] text-muted-foreground">{t('cart.summaryMessage')}</p>
             </div>
           </div>
           <div className="mt-5 space-y-2.5 rounded-2xl border border-rs-peach-light bg-rs-cream-warm p-4">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm font-semibold">
-              <span>Items</span>
+              <span>{t('common.items')}</span>
               <span>{cart.summary.itemCount}</span>
             </div>
             <div className="h-px bg-rs-peach-light" />
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-lg font-black">
-              <span>Total</span>
-              <span className="rs-price-primary">{formatPrice(cart.summary.subtotal)}</span>
+              <span>{t('common.total')}</span>
+              <span className="rs-price-primary">{formatPrice(cart.summary.subtotal, language)}</span>
             </div>
           </div>
           <Button
@@ -106,18 +108,18 @@ export function CartPage() {
               });
             }}
           >
-            {status === 'loading' ? 'Checking account...' : 'Checkout'}
+            {status === 'loading' ? t('cart.checkingAccount') : t('cart.checkout')}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Button>
           <Button asChild className="mt-2.5 w-full" variant="outline">
-            <CatalogLink href={PATHS.home}>Continue Shopping</CatalogLink>
+            <CatalogLink href={PATHS.home}>{t('cart.continueShopping')}</CatalogLink>
           </Button>
           <Button
             variant="ghost"
             className="mt-1 w-full text-xs font-semibold text-destructive"
             onClick={clearCart}
           >
-            Clear Cart
+            {t('cart.clearCart')}
           </Button>
         </aside>
       </div>
@@ -134,14 +136,18 @@ function CartLineItem({
   onUpdateQuantity: (itemId: string, quantity: number) => void;
   onRemove: (itemId: string) => void;
 }) {
+  const { language, t } = useI18n();
   const isCustomOrder = item.type === 'CUSTOM_ORDER';
   const customOrder = item.customOrder ?? null;
   const product = item.product;
-  const title = isCustomOrder
-    ? (customOrder?.title ?? 'Custom order')
-    : (product?.name ?? 'Product');
+  const rawTitle = isCustomOrder
+    ? (customOrder?.title ?? t('cart.customOrderFallback'))
+    : (product?.name ?? t('cart.productFallback'));
+  const title = localizeProductText(rawTitle, language);
   const imageUrl = isCustomOrder ? customOrder?.imageUrl : product?.primaryImage?.url;
-  const imageAlt = isCustomOrder ? title : (product?.primaryImage?.altText ?? title);
+  const imageAlt = isCustomOrder
+    ? title
+    : localizeProductText(product?.primaryImage?.altText ?? title, language);
 
   return (
     <article className="rs-panel p-3 sm:p-4">
@@ -161,7 +167,7 @@ function CartLineItem({
           <CatalogLink
             href={getProductUrl(product.slug)}
             className="rs-cart-item-image"
-            aria-label={`View ${product.name}`}
+            aria-label={t('cart.viewProduct', { name: title })}
           >
             <ImageWithFallback
               src={imageUrl ?? null}
@@ -183,7 +189,7 @@ function CartLineItem({
                     {title}
                   </h3>
                   <span className="rounded-full bg-rs-gold-bg px-2 py-0.5 text-[11px] font-extrabold text-rs-gold">
-                    Custom Order
+                    {t('cart.customOrder')}
                   </span>
                 </div>
                 {customOrder?.productUrl ? (
@@ -193,7 +199,7 @@ function CartLineItem({
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 text-xs font-bold text-rs-gold"
                   >
-                    Original link <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                    {t('cart.originalLink')} <ExternalLink className="h-3 w-3" aria-hidden="true" />
                   </a>
                 ) : null}
               </div>
@@ -202,19 +208,19 @@ function CartLineItem({
                 href={getProductUrl(product.slug)}
                 className="line-clamp-2 text-sm font-extrabold leading-5 text-foreground transition hover:text-rs-gold"
               >
-                {product.name}
+                {title}
               </CatalogLink>
             ) : null}
             {item.variant ? (
-              <p className="mt-1 text-xs text-muted-foreground">{item.variant.name}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{localizeProductText(item.variant.name, language)}</p>
             ) : null}
             {isCustomOrder ? (
               <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
                 {customOrder?.requestedColor ? (
-                  <span>Color {customOrder.requestedColor}</span>
+                  <span>{t('common.color')} {localizeProductOption(customOrder.requestedColor, language)}</span>
                 ) : null}
-                {customOrder?.requestedSize ? <span>Size {customOrder.requestedSize}</span> : null}
-                <span>Qty {item.quantity}</span>
+                {customOrder?.requestedSize ? <span>{t('common.size')} {localizeProductOption(customOrder.requestedSize, language)}</span> : null}
+                <span>{t('common.qty')} {item.quantity}</span>
               </div>
             ) : null}
           </div>
@@ -222,20 +228,20 @@ function CartLineItem({
           <div className="flex flex-wrap items-center gap-2">
             {item.originalUnitPrice ? (
               <span className="text-xs font-semibold text-muted-foreground line-through">
-                {formatPrice(item.originalUnitPrice)}
+                {formatPrice(item.originalUnitPrice, language)}
               </span>
             ) : null}
             <span className="text-sm font-black rs-price-primary">
-              {formatPrice(item.unitPrice)}
+              {formatPrice(item.unitPrice, language)}
             </span>
             {item.sale ? (
               <span className="rounded-full bg-rs-rose-bg px-2 py-0.5 text-[11px] font-extrabold text-rs-rose-dark">
-                Discount {item.sale.discountPercent}%
+                {t('common.discountPercent', { percent: item.sale.discountPercent })}
               </span>
             ) : null}
             {item.sale?.discountAmount ? (
               <span className="text-[11px] font-extrabold text-rs-green">
-                Save {formatPrice(item.sale.discountAmount)} each
+                {t('common.save', { amount: formatPrice(item.sale.discountAmount, language) })}
               </span>
             ) : null}
           </div>
@@ -243,7 +249,7 @@ function CartLineItem({
           <div className="flex items-center gap-2">
             {isCustomOrder ? (
               <span className="rounded-full border border-rs-peach bg-rs-cream-warm px-3 py-2 text-xs font-black">
-                Quantity locked: {item.quantity}
+                {t('cart.quantityLocked', { quantity: item.quantity })}
               </span>
             ) : (
               <>
@@ -251,7 +257,7 @@ function CartLineItem({
                   variant="outline"
                   size="icon"
                   onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                  aria-label="Decrease quantity"
+                  aria-label={t('cart.decreaseQuantity')}
                   className="h-9 w-9 rounded-full touch-target"
                 >
                   <Minus className="h-3 w-3" aria-hidden="true" />
@@ -263,7 +269,7 @@ function CartLineItem({
                   variant="outline"
                   size="icon"
                   onClick={() => onUpdateQuantity(item.id, Math.min(99, item.quantity + 1))}
-                  aria-label="Increase quantity"
+                  aria-label={t('cart.increaseQuantity')}
                   className="h-9 w-9 rounded-full touch-target"
                 >
                   <Plus className="h-3 w-3" aria-hidden="true" />
@@ -274,7 +280,7 @@ function CartLineItem({
               variant="ghost"
               size="icon"
               onClick={() => onRemove(item.id)}
-              aria-label={isCustomOrder ? 'Remove custom order' : 'Remove product'}
+              aria-label={isCustomOrder ? t('cart.removeCustomOrder') : t('cart.removeProduct')}
               className="h-9 w-9 text-destructive touch-target"
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -283,9 +289,9 @@ function CartLineItem({
         </div>
 
         <div className="col-span-2 rounded-xl bg-rs-cream-warm p-3 text-left sm:col-span-1 sm:min-w-28 sm:self-center sm:bg-transparent sm:p-0">
-          <p className="text-[11px] font-semibold text-muted-foreground">Total</p>
+          <p className="text-[11px] font-semibold text-muted-foreground">{t('common.total')}</p>
           <p className="break-words text-lg font-black rs-price-primary">
-            {formatPrice(item.lineTotal)}
+            {formatPrice(item.lineTotal, language)}
           </p>
         </div>
       </div>
@@ -294,21 +300,23 @@ function CartLineItem({
 }
 
 function EmptyCartContent() {
+  const { t } = useI18n();
+
   return (
     <div className="rs-panel-soft flex min-h-80 flex-col items-center justify-center p-8 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rs-gold-bg text-rs-gold">
         <ShoppingBag className="h-8 w-8" aria-hidden="true" />
       </div>
-      <h2 className="mt-4 text-xl font-extrabold text-rs-ink">Your cart is empty</h2>
+      <h2 className="mt-4 text-xl font-extrabold text-rs-ink">{t('cart.emptyTitle')}</h2>
       <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-        Browse our collection and add your favorite products to get started
+        {t('cart.emptyMessage')}
       </p>
       <div className="mt-6 flex flex-col gap-3 w-full max-w-sm">
         <CatalogLink href={PATHS.home} className="rs-btn-primary">
-          Shop Now
+          {t('cart.shopNow')}
         </CatalogLink>
         <CatalogLink href={PATHS.home} className="rs-btn-secondary">
-          Continue Shopping
+          {t('cart.continueShopping')}
         </CatalogLink>
       </div>
     </div>

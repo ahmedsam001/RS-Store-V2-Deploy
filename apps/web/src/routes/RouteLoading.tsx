@@ -1,4 +1,13 @@
+import { useI18n } from '@/shared/i18n';
+
+const routeLoadingCopy = {
+  ar: 'جاري التحميل...',
+  en: 'Loading...',
+} as const;
+
 export function RouteLoading() {
+  const { language } = useI18n();
+
   return (
     <div
       className="flex min-h-[280px] items-center justify-center px-4 py-10"
@@ -10,7 +19,7 @@ export function RouteLoading() {
           className="inline-flex h-9 w-9 animate-pulse rounded-full bg-rs-gold-bg"
           aria-hidden="true"
         />
-        <p className="mt-3 text-sm font-extrabold text-rs-ink">Loading...</p>
+        <p className="mt-3 text-sm font-extrabold text-rs-ink">{routeLoadingCopy[language]}</p>
       </div>
     </div>
   );

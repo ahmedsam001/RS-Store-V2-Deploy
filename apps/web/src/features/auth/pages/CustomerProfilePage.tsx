@@ -1,6 +1,17 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, LogOut, MapPin, PackageSearch, Phone, Shield, ShoppingCart, Trash2, User, X } from 'lucide-react';
+import {
+  Camera,
+  LogOut,
+  MapPin,
+  PackageSearch,
+  Phone,
+  Shield,
+  ShoppingCart,
+  Trash2,
+  User,
+  X,
+} from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/shared/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
@@ -9,10 +20,104 @@ import { CatalogState } from '@/features/catalog/components/CatalogState';
 import { PATHS } from '@/shared/constants/routes';
 import { normalizeEgyptianPhoneNumber } from '@/shared/lib/validation';
 import { useDocumentMetadata } from '@/shared/seo/use-document-metadata';
+import { useI18n, type Language } from '@/shared/i18n';
+
+const profileCopy = {
+  ar: {
+    metaTitle: 'حسابي | RS Store',
+    metaDescription: 'بيانات الحساب وروابط الطلبات في RS Store',
+    loadingTitle: 'جاري تحميل الملف الشخصي',
+    loadingMessage: 'جاري تحميل بيانات الحساب',
+    signInRequired: 'تسجيل الدخول مطلوب',
+    signInMessage: 'يرجى تسجيل الدخول لعرض حسابك',
+    signInRequiredShort: 'تسجيل الدخول مطلوب',
+    invalidAvatar: 'استخدم رابط صورة صحيح أو ارفع ملف JPG أو PNG أو WEBP أو GIF',
+    chooseImage: 'اختار ملف صورة',
+    avatarTooLarge: 'صورة الحساب يجب أن تكون 1MB أو أقل',
+    avatarReadFailed: 'تعذر قراءة صورة الحساب',
+    editAvatar: 'تعديل صورة الحساب',
+    welcomeBack: 'أهلًا بعودتك!',
+    notSet: 'غير محدد',
+    myOrders: 'طلباتي',
+    myOrdersDescription: 'تابع وإدارة الطلبات',
+    myCart: 'سلتي',
+    myCartDescription: 'عرض منتجات السلة',
+    editProfile: 'تعديل الملف الشخصي',
+    logout: 'تسجيل الخروج',
+    avatar: 'صورة الحساب',
+    avatarPlaceholder: 'الصق رابط الصورة أو ارفع صورة',
+    uploadAvatar: 'رفع صورة',
+    remove: 'حذف',
+    avatarLocalNote: 'صورة الحساب محفوظة على هذا الجهاز ولا تغيّر بيانات الطلب أو الدفع',
+    fullName: 'الاسم بالكامل',
+    fullNamePlaceholder: 'اكتب اسمك بالكامل',
+    phone: 'رقم الموبايل',
+    address: 'العنوان',
+    addressPlaceholder: 'اكتب عنوانك',
+    cancel: 'إلغاء',
+    saving: 'جاري الحفظ...',
+    save: 'حفظ',
+    personalInformation: 'البيانات الشخصية',
+    preferences: 'التفضيلات',
+    language: 'اللغة',
+    arabic: 'العربية',
+    english: 'الإنجليزية',
+    profileAvatarAlt: 'صورة الحساب',
+    profileInitials: 'أحرف الاسم',
+    customerFallback: 'عميل',
+  },
+  en: {
+    metaTitle: 'My Account | RS Store',
+    metaDescription: 'Account information and order links in RS Store',
+    loadingTitle: 'Loading profile',
+    loadingMessage: 'Loading account data',
+    signInRequired: 'Sign in required',
+    signInMessage: 'Please sign in to view your account',
+    signInRequiredShort: 'Sign in required',
+    invalidAvatar: 'Use a valid image URL or upload a JPG PNG WEBP or GIF file',
+    chooseImage: 'Please choose an image file',
+    avatarTooLarge: 'Avatar image must be 1 MB or smaller',
+    avatarReadFailed: 'Could not read this avatar image',
+    editAvatar: 'Edit avatar',
+    welcomeBack: 'Welcome back!',
+    notSet: 'Not set',
+    myOrders: 'My Orders',
+    myOrdersDescription: 'Track & manage orders',
+    myCart: 'My Cart',
+    myCartDescription: 'View cart items',
+    editProfile: 'Edit Profile',
+    logout: 'Logout',
+    avatar: 'Avatar',
+    avatarPlaceholder: 'Paste image URL or upload an image',
+    uploadAvatar: 'Upload avatar',
+    remove: 'Remove',
+    avatarLocalNote: 'The avatar is saved on this device and does not change orders or checkout data',
+    fullName: 'Full Name',
+    fullNamePlaceholder: 'Enter your full name',
+    phone: 'Phone',
+    address: 'Address',
+    addressPlaceholder: 'Enter your address',
+    cancel: 'Cancel',
+    saving: 'Saving...',
+    save: 'Save',
+    personalInformation: 'Personal Information',
+    preferences: 'Preferences',
+    language: 'Language',
+    arabic: 'Arabic',
+    english: 'English',
+    profileAvatarAlt: 'Profile avatar',
+    profileInitials: 'Profile initials',
+    customerFallback: 'Customer',
+  },
+} as const;
+
+type ProfileCopy = (typeof profileCopy)[keyof typeof profileCopy];
 
 export function CustomerProfilePage() {
+  const { language, setLanguage } = useI18n();
+  const copy = profileCopy[language];
   const { status, user, logout, updateProfile } = useAuth();
-  const isArabic = user?.language === 'ar';
+  const isArabic = language === 'ar';
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: user?.name ?? '',
@@ -25,8 +130,8 @@ export function CustomerProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useDocumentMetadata({
-    title: 'My Account | RS Store',
-    description: 'Account information and order links in RS Store',
+    title: copy.metaTitle,
+    description: copy.metaDescription,
   });
 
   useEffect(() => {
@@ -52,32 +157,33 @@ export function CustomerProfilePage() {
   }, [status]);
 
   if (isLoading || status === 'loading') {
-    return <CatalogState title="Loading profile" message="Loading account data" />;
+    return <CatalogState title={copy.loadingTitle} message={copy.loadingMessage} />;
   }
 
   if (status !== 'authenticated' || !user) {
-    return <CatalogState title="Sign in required" message="Please sign in to view your account" />;
+    return <CatalogState title={copy.signInRequired} message={copy.signInMessage} />;
   }
 
-  const displayName = displayProfileName(user);
+  const displayName = displayProfileName(user, copy.customerFallback);
   const currentPhone = formatPhoneDisplay(user.phone) ?? '';
   const currentAddress = user.address ?? '';
   const currentName = user.name ?? '';
 
-  function handleLanguageChange(lang: 'ar' | 'en') {
+  function handleLanguageChange(lang: Language) {
+    setLanguage(lang);
     void updateProfile({ language: lang });
   }
 
   async function handleSave() {
     const currentUserId = user?.id;
     if (!currentUserId) {
-      setAvatarError('Sign in required');
+      setAvatarError(copy.signInRequiredShort);
       return;
     }
 
     const normalizedAvatarUrl = sanitizeAvatarUrl(avatarDraft);
     if (avatarDraft.trim() && !normalizedAvatarUrl) {
-      setAvatarError('Use a valid image URL or upload a JPG PNG WEBP or GIF file');
+      setAvatarError(copy.invalidAvatar);
       return;
     }
 
@@ -116,12 +222,12 @@ export function CustomerProfilePage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setAvatarError('Please choose an image file');
+      setAvatarError(copy.chooseImage);
       return;
     }
 
     if (file.size > MAX_LOCAL_AVATAR_BYTES) {
-      setAvatarError('Avatar image must be 1 MB or smaller');
+      setAvatarError(copy.avatarTooLarge);
       return;
     }
 
@@ -130,13 +236,13 @@ export function CustomerProfilePage() {
       const result = typeof reader.result === 'string' ? reader.result : '';
       const normalizedAvatarUrl = sanitizeAvatarUrl(result);
       if (!normalizedAvatarUrl) {
-        setAvatarError('Could not read this avatar image');
+        setAvatarError(copy.avatarReadFailed);
         return;
       }
       setAvatarDraft(normalizedAvatarUrl);
       setAvatarError(null);
     };
-    reader.onerror = () => setAvatarError('Could not read this avatar image');
+    reader.onerror = () => setAvatarError(copy.avatarReadFailed);
     reader.readAsDataURL(file);
   }
 
@@ -146,23 +252,28 @@ export function CustomerProfilePage() {
         <div className="rs-panel p-4 sm:p-5">
           <div className={`flex flex-col items-center gap-4 ${isArabic ? 'rtl' : 'ltr'}`}>
             <div className="relative">
-              <ProfileAvatar user={user} avatarUrl={avatarUrl} className="h-16 w-16 text-xl" />
+              <ProfileAvatar
+                user={user}
+                avatarUrl={avatarUrl}
+                className="h-16 w-16 text-xl"
+                copy={copy}
+              />
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
                 className="absolute -bottom-1 -end-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-                aria-label="Edit avatar"
+                aria-label={copy.editAvatar}
               >
                 <Camera className="h-3.5 w-3.5" />
               </button>
             </div>
-            <div className={isArabic ? 'text-center' : 'text-center'}>
-              <p className="text-sm font-semibold text-muted-foreground">Welcome back!</p>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-muted-foreground">{copy.welcomeBack}</p>
               <h1 className="mt-1 text-xl font-extrabold text-foreground sm:text-2xl">
                 {displayName}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                {formatPhoneDisplay(user.phone) ?? 'Not set'}
+                {formatPhoneDisplay(user.phone) ?? copy.notSet}
               </p>
             </div>
           </div>
@@ -172,15 +283,15 @@ export function CustomerProfilePage() {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <QuickActionCard
           icon={PackageSearch}
-          label="My Orders"
+          label={copy.myOrders}
           href={PATHS.orders}
-          description="Track & manage orders"
+          description={copy.myOrdersDescription}
         />
         <QuickActionCard
           icon={ShoppingCart}
-          label="My Cart"
+          label={copy.myCart}
           href={PATHS.cart}
-          description="View cart items"
+          description={copy.myCartDescription}
         />
         <Button
           variant="outline"
@@ -189,7 +300,7 @@ export function CustomerProfilePage() {
           className="h-auto justify-start gap-3 px-4 py-3"
         >
           <User className="h-5 w-5" />
-          <span className="text-sm font-bold">Edit Profile</span>
+          <span className="text-sm font-bold">{copy.editProfile}</span>
         </Button>
         <Button
           variant="outline"
@@ -198,7 +309,7 @@ export function CustomerProfilePage() {
           className="h-auto justify-start gap-3 px-4 py-3"
         >
           <LogOut className="h-5 w-5" />
-          <span className="text-sm font-bold">Logout</span>
+          <span className="text-sm font-bold">{copy.logout}</span>
         </Button>
       </section>
 
@@ -206,7 +317,7 @@ export function CustomerProfilePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-card p-5 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-extrabold text-foreground">Edit Profile</h2>
+              <h2 className="text-lg font-extrabold text-foreground">{copy.editProfile}</h2>
               <Button variant="ghost" size="icon" onClick={handleCancel} disabled={isSaving}>
                 <X className="h-5 w-5" />
               </Button>
@@ -214,13 +325,18 @@ export function CustomerProfilePage() {
             <div className="space-y-4">
               <div className="rounded-2xl border border-rs-peach-light bg-rs-cream-warm/30 p-4">
                 <div className="flex flex-col items-center gap-3">
-                  <ProfileAvatar user={user} avatarUrl={avatarDraft} className="h-20 w-20 text-2xl" />
+                  <ProfileAvatar
+                    user={user}
+                    avatarUrl={avatarDraft}
+                    className="h-20 w-20 text-2xl"
+                    copy={copy}
+                  />
                   <div className="w-full space-y-2">
                     <label className="block text-xs font-semibold text-muted-foreground">
-                      Avatar
+                      {copy.avatar}
                     </label>
                     <Input
-                      placeholder="Paste image URL or upload an image"
+                      placeholder={copy.avatarPlaceholder}
                       value={avatarDraft}
                       onChange={(event) => {
                         setAvatarDraft(event.target.value);
@@ -231,7 +347,7 @@ export function CustomerProfilePage() {
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <label className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-rs-peach-light bg-background px-3 py-2 text-sm font-bold text-foreground transition hover:bg-rs-cream-warm">
                         <Camera className="h-4 w-4" />
-                        Upload avatar
+                        {copy.uploadAvatar}
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/gif"
@@ -251,22 +367,20 @@ export function CustomerProfilePage() {
                         className="flex-1 gap-2"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Remove
+                        {copy.remove}
                       </Button>
                     </div>
                     {avatarError && <p className="text-xs font-semibold text-red-600">{avatarError}</p>}
-                    <p className="text-xs text-muted-foreground">
-                      The avatar is saved on this device and does not change orders or checkout data
-                    </p>
+                    <p className="text-xs text-muted-foreground">{copy.avatarLocalNote}</p>
                   </div>
                 </div>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-                  Full Name
+                  {copy.fullName}
                 </label>
                 <Input
-                  placeholder="Enter your full name"
+                  placeholder={copy.fullNamePlaceholder}
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   disabled={isSaving}
@@ -274,7 +388,7 @@ export function CustomerProfilePage() {
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-                  Phone
+                  {copy.phone}
                 </label>
                 <Input
                   placeholder="01xxxxxxxxx"
@@ -286,10 +400,10 @@ export function CustomerProfilePage() {
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-                  Address
+                  {copy.address}
                 </label>
                 <Input
-                  placeholder="Enter your address"
+                  placeholder={copy.addressPlaceholder}
                   value={editForm.address}
                   onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
                   disabled={isSaving}
@@ -302,7 +416,7 @@ export function CustomerProfilePage() {
                   disabled={isSaving}
                   className="flex-1"
                 >
-                  Cancel
+                  {copy.cancel}
                 </Button>
                 <Button
                   variant="default"
@@ -310,7 +424,7 @@ export function CustomerProfilePage() {
                   disabled={isSaving}
                   className="flex-1"
                 >
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving ? copy.saving : copy.save}
                 </Button>
               </div>
             </div>
@@ -323,17 +437,13 @@ export function CustomerProfilePage() {
           <CardHeader className="border-b border-rs-peach-light bg-rs-cream-warm/30">
             <CardTitle className="flex items-center gap-2 text-base">
               <User className="h-5 w-5 text-[hsl(var(--brand-gold))]" />
-              Personal Information
+              {copy.personalInformation}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 bg-card p-4 sm:p-5">
-            <InfoRow icon={User} label="Full Name" value={user.name ?? 'Not set'} />
-            <InfoRow
-              icon={Phone}
-              label="Phone"
-              value={formatPhoneDisplay(user.phone) ?? 'Not set'}
-            />
-            <InfoRow icon={MapPin} label="Address" value={user.address ?? 'Not set'} />
+            <InfoRow icon={User} label={copy.fullName} value={user.name ?? copy.notSet} />
+            <InfoRow icon={Phone} label={copy.phone} value={formatPhoneDisplay(user.phone) ?? copy.notSet} />
+            <InfoRow icon={MapPin} label={copy.address} value={user.address ?? copy.notSet} />
           </CardContent>
         </Card>
 
@@ -341,7 +451,7 @@ export function CustomerProfilePage() {
           <CardHeader className="border-b border-rs-peach-light bg-rs-cream-warm/30">
             <CardTitle className="flex items-center gap-2 text-base">
               <Shield className="h-5 w-5 text-[hsl(var(--brand-gold))]" />
-              Preferences
+              {copy.preferences}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 bg-card p-4 sm:p-5">
@@ -351,15 +461,15 @@ export function CustomerProfilePage() {
                   <Shield className="h-4 w-4 text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-muted-foreground">Language</p>
+                  <p className="text-xs font-semibold text-muted-foreground">{copy.language}</p>
                   <p className="truncate text-sm font-bold text-foreground">
-                    {user.language === 'ar' ? 'Arabic' : 'English'}
+                    {language === 'ar' ? copy.arabic : copy.english}
                   </p>
                 </div>
               </div>
               <div className="flex gap-1">
                 <Button
-                  variant={user.language === 'en' ? 'default' : 'outline'}
+                  variant={language === 'en' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handleLanguageChange('en')}
                   className="text-xs"
@@ -367,7 +477,7 @@ export function CustomerProfilePage() {
                   EN
                 </Button>
                 <Button
-                  variant={user.language === 'ar' ? 'default' : 'outline'}
+                  variant={language === 'ar' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handleLanguageChange('ar')}
                   className="text-xs"
@@ -387,6 +497,7 @@ function ProfileAvatar({
   user,
   avatarUrl,
   className,
+  copy,
 }: {
   user: {
     id: string;
@@ -396,6 +507,7 @@ function ProfileAvatar({
   };
   avatarUrl: string;
   className: string;
+  copy: ProfileCopy;
 }) {
   const safeAvatarUrl = sanitizeAvatarUrl(avatarUrl);
   const [imageFailed, setImageFailed] = useState(false);
@@ -404,7 +516,7 @@ function ProfileAvatar({
     setImageFailed(false);
   }, [safeAvatarUrl]);
 
-  const initials = profileInitials(user);
+  const initials = profileInitials(user, copy.customerFallback);
   const shouldShowImage = Boolean(safeAvatarUrl && !imageFailed);
 
   return (
@@ -414,12 +526,12 @@ function ProfileAvatar({
       {shouldShowImage ? (
         <img
           src={safeAvatarUrl}
-          alt="Profile avatar"
+          alt={copy.profileAvatarAlt}
           className="h-full w-full object-cover"
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <span className="select-none leading-none" aria-label="Profile initials">
+        <span className="select-none leading-none" aria-label={copy.profileInitials}>
           {initials}
         </span>
       )}
@@ -476,23 +588,29 @@ function InfoRow({
   );
 }
 
-function displayProfileName(user: {
-  name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-}): string {
+function displayProfileName(
+  user: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  },
+  fallback: string,
+): string {
   const name = user.name?.trim();
   if (name) return name;
-  return user.email?.trim() || user.phone?.trim() || 'Customer';
+  return user.email?.trim() || user.phone?.trim() || fallback;
 }
 
-function profileInitials(user: {
-  id: string;
-  name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-}): string {
-  const source = displayProfileName(user);
+function profileInitials(
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  },
+  fallback: string,
+): string {
+  const source = displayProfileName(user, fallback);
   const parts = source
     .split(/[\s@._+-]+/)
     .map((part) => part.trim())

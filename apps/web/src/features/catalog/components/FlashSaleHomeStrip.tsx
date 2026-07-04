@@ -3,12 +3,14 @@ import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 import type { CatalogFlashSale } from '@/features/catalog/api/catalog-api';
 import { formatPrice, getProductUrl } from '@/features/catalog/utils/format';
 import { PATHS } from '@/shared/constants/routes';
+import { localizeProductText, useI18n } from '@/shared/i18n';
 
 type FlashSaleHomeStripProps = {
   sales: CatalogFlashSale[];
 };
 
 export function FlashSaleHomeStrip({ sales }: FlashSaleHomeStripProps) {
+  const { language } = useI18n();
   const activeSales = sales.filter((sale) => sale.products.length > 0);
 
   if (activeSales.length === 0) {
@@ -17,7 +19,9 @@ export function FlashSaleHomeStrip({ sales }: FlashSaleHomeStripProps) {
 
   const sale = activeSales[0];
   const products = sale.products.slice(0, 5);
-  const title = sale.titleEn || sale.titleAr || 'Flash Sale';
+  const title = language === 'ar'
+    ? sale.titleAr || localizeProductText(sale.titleEn, language) || 'عروض سريعة'
+    : sale.titleEn || sale.titleAr || 'Flash Sale';
   const discount = sale.discountPercent || 0;
   const countdownText = formatSaleEnd(sale.endsAt);
 
@@ -26,16 +30,16 @@ export function FlashSaleHomeStrip({ sales }: FlashSaleHomeStripProps) {
       <div className="rs-flash-compact-info">
         <div className="rs-flash-compact-header">
           <div className="rs-flash-compact-heading">
-            <span className="rs-flash-compact-kicker">Flash Sale</span>
-            <span className="rs-flash-compact-live">Limited time</span>
-            <span className="rs-flash-compact-countdown">Ends in {countdownText}</span>
+            <span className="rs-flash-compact-kicker">{language === 'ar' ? 'عروض سريعة' : 'Flash Sale'}</span>
+            <span className="rs-flash-compact-live">{language === 'ar' ? 'لفترة محدودة' : 'Limited time'}</span>
+            <span className="rs-flash-compact-countdown">{language === 'ar' ? 'ينتهي خلال' : 'Ends in'} {countdownText}</span>
           </div>
           <CatalogLink
             href={PATHS.flashSales}
             className="rs-flash-compact-cta"
-            aria-label="Shop flash sale products"
+            aria-label={language === 'ar' ? 'تسوق منتجات العروض السريعة' : 'Shop flash sale products'}
           >
-            View deals
+            {language === 'ar' ? 'عرض العروض' : 'View deals'}
             <span aria-hidden="true">→</span>
           </CatalogLink>
         </div>
@@ -44,12 +48,12 @@ export function FlashSaleHomeStrip({ sales }: FlashSaleHomeStripProps) {
             {title}
           </h2>
           <p className="rs-flash-compact-meta">
-            <span>Up to {discount}% off</span>
+            <span>{language === 'ar' ? 'حتى' : 'Up to'} {discount}% {language === 'ar' ? 'خصم' : 'off'}</span>
           </p>
         </div>
       </div>
 
-      <div className="rs-flash-compact-products" aria-label="Flash sale products">
+      <div className="rs-flash-compact-products" aria-label={language === 'ar' ? 'منتجات العروض السريعة' : 'Flash sale products'}>
         {products.map((product) => (
           <CatalogLink
             key={product.id}
@@ -59,7 +63,7 @@ export function FlashSaleHomeStrip({ sales }: FlashSaleHomeStripProps) {
             <div className="rs-flash-compact-image">
               <ImageWithFallback
                 src={product.primaryImage?.url}
-                alt={product.name}
+                alt={localizeProductText(product.name, language)}
                 loading="lazy"
                 className="h-full w-full object-cover"
                 fallbackVariant="product"
@@ -69,14 +73,14 @@ export function FlashSaleHomeStrip({ sales }: FlashSaleHomeStripProps) {
               </span>
             </div>
             <div className="rs-flash-compact-card-body">
-              <span className="rs-flash-compact-product-name">{product.name}</span>
+              <span className="rs-flash-compact-product-name">{localizeProductText(product.name, language)}</span>
               <div className="rs-flash-compact-prices">
                 {product.originalPrice ? (
                   <span className="rs-flash-compact-old-price">
-                    {formatPrice(product.originalPrice)}
+                    {formatPrice(product.originalPrice, language)}
                   </span>
                 ) : null}
-                <span className="rs-flash-compact-sale-price">{formatPrice(product.price)}</span>
+                <span className="rs-flash-compact-sale-price">{formatPrice(product.price, language)}</span>
               </div>
             </div>
           </CatalogLink>

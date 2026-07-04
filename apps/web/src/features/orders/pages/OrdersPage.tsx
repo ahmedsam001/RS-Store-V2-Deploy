@@ -14,11 +14,14 @@ import {
   OrderStatusBadge,
   PaymentStatusBadge,
 } from '@/features/orders/components/OrderStatusBadge';
+import { useI18n } from '@/shared/i18n';
 
 export function OrdersPage() {
+  const { language, t } = useI18n();
+
   useDocumentMetadata({
-    title: 'My Orders | RS Store',
-    description: 'Track your order history and shipping/payment status',
+    title: `${t('orders.title')} | RS Store`,
+    description: t('orders.metaDescription'),
   });
   const { status } = useAuth();
   const navigate = useNavigate();
@@ -59,7 +62,7 @@ export function OrdersPage() {
         setOrders(await ordersApi.listMyOrders({ signal: controller.signal }));
       } catch (caughtError) {
         if (!controller.signal.aborted) {
-          setError(caughtError instanceof Error ? caughtError.message : 'Failed to load orders');
+          setError(caughtError instanceof Error ? caughtError.message : t('orders.failedLoad'));
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -70,21 +73,21 @@ export function OrdersPage() {
 
     void loadOrders();
     return () => controller.abort();
-  }, [status]);
+  }, [status, t]);
 
   if (isLoading || status === 'loading')
     return (
       <div className="rs-page-stack">
-        <CatalogState title="Loading orders" message="Preparing your order history" />
+        <CatalogState title={t('orders.loadingTitle')} message={t('orders.loadingMessage')} />
       </div>
     );
   if (status !== 'authenticated')
     return (
       <div className="rs-page-stack">
         <CatalogState
-          title="Sign in required"
-          message="Please sign in to view your order history"
-          ctaLabel="Sign In"
+          title={t('orders.signInRequired')}
+          message={t('orders.signInMessage')}
+          ctaLabel={t('common.signIn')}
           ctaHref={PATHS.login}
         />
       </div>
@@ -93,9 +96,9 @@ export function OrdersPage() {
     return (
       <div className="rs-page-stack">
         <CatalogState
-          title="Failed to load orders"
+          title={t('orders.failedLoad')}
           message={error}
-          ctaLabel="Try Again"
+          ctaLabel={t('common.tryAgain')}
           ctaHref={PATHS.orders}
         />
       </div>
@@ -110,8 +113,8 @@ export function OrdersPage() {
   return (
     <div className="rs-page-stack">
       <div className="rs-section-heading text-start">
-        <span className="rs-section-kicker">Your Purchase History</span>
-        <h1 className="rs-heading-1 mt-2">My Orders</h1>
+        <span className="rs-section-kicker">{t('orders.kicker')}</span>
+        <h1 className="rs-heading-1 mt-2">{t('orders.title')}</h1>
       </div>
       <div className="grid gap-3 sm:gap-4">
         {orders.map((order) => (
@@ -123,7 +126,7 @@ export function OrdersPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-extrabold text-muted-foreground uppercase tracking-wider">
-                  Order Number
+                  {t('orders.orderNumber')}
                 </p>
                 <p className="mt-1 font-black text-lg text-rs-ink">{order.orderNumber}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -139,10 +142,10 @@ export function OrdersPage() {
             <div className="mt-4 flex items-center justify-between text-sm">
               <span className="inline-flex items-center gap-2 text-muted-foreground">
                 <PackageSearch className="h-4 w-4" aria-hidden="true" />
-                {order.items.length} items
+                {t('orders.itemCount', { count: order.items.length })}
               </span>
               <span className="font-black text-base rs-price-primary">
-                {formatOrderMoney(order.totalAmount, order.currency)}
+                {formatOrderMoney(order.totalAmount, order.currency, language)}
               </span>
             </div>
           </CatalogLink>
@@ -153,17 +156,19 @@ export function OrdersPage() {
 }
 
 function EmptyOrders() {
+  const { t } = useI18n();
+
   return (
     <div className="rs-panel-soft flex min-h-72 flex-col items-center justify-center p-8 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
         <PackageSearch className="h-7 w-7" aria-hidden="true" />
       </div>
-      <h2 className="mt-4 text-xl font-extrabold text-rs-ink">No orders yet</h2>
+      <h2 className="mt-4 text-xl font-extrabold text-rs-ink">{t('orders.emptyTitle')}</h2>
       <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-        Your order history will appear here after you complete your first purchase
+        {t('orders.emptyMessage')}
       </p>
       <CatalogLink href={PATHS.home} className="rs-btn-primary mt-6">
-        Start Shopping
+        {t('orders.startShopping')}
       </CatalogLink>
     </div>
   );

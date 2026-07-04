@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react';
 import { render, type RenderOptions } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { I18nProvider } from '@/shared/i18n';
 import type { CatalogProductCard } from '@/shared/types/CatalogTypes';
 import type { Cart } from '@/shared/types/CartTypes';
 
@@ -8,7 +9,14 @@ export function renderWithRouter(
   ui: ReactElement,
   { route = '/', ...options }: RenderOptions & { route?: string } = {},
 ) {
-  return render(<MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>, options);
+  window.localStorage.setItem('rs_language', 'en');
+
+  return render(
+    <I18nProvider>
+      <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
+    </I18nProvider>,
+    options,
+  );
 }
 
 export function createMockProduct(overrides: Partial<CatalogProductCard> = {}): CatalogProductCard {

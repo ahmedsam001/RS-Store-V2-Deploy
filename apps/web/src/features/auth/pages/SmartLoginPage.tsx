@@ -10,6 +10,7 @@ import { PATHS } from '@/shared/constants/routes';
 import { sanitizeReturnTo } from '@/shared/lib/return-to';
 import { normalizeEgyptianPhoneNumber } from '@/shared/lib/validation';
 import { useDocumentMetadata } from '@/shared/seo/use-document-metadata';
+import { useI18n } from '@/shared/i18n';
 import logoUrl from '@/assets/brand/rs-logo-transparent.png';
 
 type SmartLoginMode = 'customer-login' | 'customer-register' | 'admin-login';
@@ -25,8 +26,91 @@ type LocationState = {
   reason?: 'checkout' | 'auth';
 };
 
+const authCopy = {
+  ar: {
+    phoneInvalid: 'اكتب رقم موبايل مصري صحيح مثل 01xxxxxxxxx',
+    loginSuccessCheckout: 'تم تسجيل الدخول بنجاح. كمّل طلبك الآن.',
+    welcomeBack: 'أهلًا بعودتك!',
+    accountCreatedCheckout: 'تم إنشاء الحساب بنجاح. كمّل طلبك الآن.',
+    accountCreated: 'تم إنشاء الحساب بنجاح.',
+    phoneLabel: 'رقم الموبايل',
+    editPhone: 'تعديل الرقم',
+    passwordLabel: 'كلمة المرور',
+    passwordPlaceholder: 'كلمة مرور الأدمن',
+    fullNameLabel: 'الاسم بالكامل',
+    fullNamePlaceholder: 'اكتب اسمك بالكامل',
+    addressLabel: 'عنوان التوصيل',
+    addressPlaceholder: 'العنوان بالكامل مع المنطقة أو المدينة',
+    rememberMe: 'تذكرني على هذا الجهاز',
+    returnToStore: 'الرجوع للمتجر',
+    adminKicker: 'لوحة الأدمن',
+    adminHeading: 'تسجيل دخول الأدمن',
+    adminChecking: 'جاري التحقق من بيانات الأدمن...',
+    adminDescription: 'اكتب كلمة المرور للدخول إلى لوحة التحكم',
+    registerKicker: 'حساب العميل',
+    registerHeading: 'إنشاء حساب',
+    registerDescription: 'هذا الرقم جديد. أضف الاسم والعنوان لإنشاء الحساب',
+    phoneKicker: 'حساب RS Store',
+    phoneHeading: 'تسجيل الدخول',
+    phoneDescription: 'اكتب رقم الموبايل للمتابعة',
+    signingIn: 'جاري الدخول...',
+    adminLogin: 'دخول الأدمن',
+    creating: 'جاري الإنشاء...',
+    createAccount: 'إنشاء حساب',
+    checking: 'جاري التحقق...',
+    continue: 'متابعة',
+    invalidAdminCredentials: 'بيانات الأدمن غير صحيحة. حاول مرة أخرى.',
+    signInFailed: 'تعذر تسجيل الدخول. حاول مرة أخرى.',
+    accountDisabled: 'هذا الحساب غير مفعل. تواصل مع الدعم.',
+    alreadyRegistered: 'هذا الرقم مسجل بالفعل. سجل الدخول.',
+    authFailed: 'فشل تسجيل الدخول. راجع البيانات وحاول مرة أخرى.',
+  },
+  en: {
+    phoneInvalid: 'Please enter an Egyptian mobile number like 01xxxxxxxxx',
+    loginSuccessCheckout: 'Login successful. Complete your order now.',
+    welcomeBack: 'Welcome back!',
+    accountCreatedCheckout: 'Account created successfully. Complete your order now.',
+    accountCreated: 'Account created successfully.',
+    phoneLabel: 'Phone Number',
+    editPhone: 'Edit phone',
+    passwordLabel: 'Password',
+    passwordPlaceholder: 'Admin password',
+    fullNameLabel: 'Full Name',
+    fullNamePlaceholder: 'Your full name',
+    addressLabel: 'Delivery Address',
+    addressPlaceholder: 'Full address with area or city',
+    rememberMe: 'Remember me on this device',
+    returnToStore: 'Return to Store',
+    adminKicker: 'Admin Panel',
+    adminHeading: 'Admin Login',
+    adminChecking: 'Checking admin credentials...',
+    adminDescription: 'Enter your password to access the dashboard',
+    registerKicker: 'Customer Account',
+    registerHeading: 'Create Account',
+    registerDescription: 'This phone is new. Add your name and address to create an account',
+    phoneKicker: 'RS Store Account',
+    phoneHeading: 'Sign In',
+    phoneDescription: 'Enter your phone number to continue',
+    signingIn: 'Signing in...',
+    adminLogin: 'Admin Login',
+    creating: 'Creating...',
+    createAccount: 'Create Account',
+    checking: 'Checking...',
+    continue: 'Continue',
+    invalidAdminCredentials: 'Invalid admin credentials. Please try again.',
+    signInFailed: 'Unable to sign in. Please try again.',
+    accountDisabled: 'This account is not active. Please contact support.',
+    alreadyRegistered: 'This phone number is already registered. Please sign in.',
+    authFailed: 'Authentication failed. Please check your details.',
+  },
+} as const;
+
+type AuthCopy = (typeof authCopy)[keyof typeof authCopy];
+
 export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
   void mode;
+  const { language } = useI18n();
+  const copy = authCopy[language];
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,7 +133,7 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
     [locationState?.returnTo, searchParams],
   );
   const isCheckoutFlow = returnTo === PATHS.checkout || locationState?.reason === 'checkout';
-  const content = stepContent(step, isSubmitting);
+  const content = stepContent(step, isSubmitting, copy);
 
   useDocumentMetadata({
     title: `${content.heading} | RS Store`,
@@ -62,7 +146,7 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
 
     const phone = normalizeEgyptianPhoneNumber(phoneValue);
     if (!phone) {
-      setError('Please enter an Egyptian mobile number like 01xxxxxxxxx');
+      setError(copy.phoneInvalid);
       return;
     }
 
@@ -82,9 +166,7 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
         navigate(returnTo, {
           replace: true,
           state: {
-            message: isCheckoutFlow
-              ? 'Login successful. Complete your order now.'
-              : 'Welcome back!',
+            message: isCheckoutFlow ? copy.loginSuccessCheckout : copy.welcomeBack,
           },
         });
         return;
@@ -92,7 +174,7 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
 
       setStep('register');
     } catch (err) {
-      setError(normalizeAuthError(err));
+      setError(normalizeAuthError(err, copy));
     } finally {
       setIsSubmitting(false);
     }
@@ -111,7 +193,7 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
       });
       navigate(PATHS.adminRoot, { replace: true });
     } catch (err) {
-      setError(normalizeAuthError(err, 'admin'));
+      setError(normalizeAuthError(err, copy, 'admin'));
     } finally {
       setIsSubmitting(false);
     }
@@ -133,13 +215,11 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
       navigate(returnTo, {
         replace: true,
         state: {
-          message: isCheckoutFlow
-            ? 'Account created successfully. Complete your order now.'
-            : 'Account created successfully.',
+          message: isCheckoutFlow ? copy.accountCreatedCheckout : copy.accountCreated,
         },
       });
     } catch (err) {
-      setError(normalizeAuthError(err));
+      setError(normalizeAuthError(err, copy));
     } finally {
       setIsSubmitting(false);
     }
@@ -185,7 +265,9 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
 
         <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           <label className="block">
-            <span className="block text-sm font-extrabold text-rs-ink mb-1.5">Phone Number</span>
+            <span className="block text-sm font-extrabold text-rs-ink mb-1.5">
+              {copy.phoneLabel}
+            </span>
             <Input
               name="phone"
               type="tel"
@@ -214,17 +296,19 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
               disabled={isSubmitting}
               className="text-sm font-extrabold text-rs-gold transition hover:text-rs-gold-dark disabled:opacity-60"
             >
-              Edit phone
+              {copy.editPhone}
             </button>
           ) : null}
 
           {step === 'admin-password' ? (
             <label className="block">
-              <span className="block text-sm font-extrabold text-rs-ink mb-1.5">Password</span>
+              <span className="block text-sm font-extrabold text-rs-ink mb-1.5">
+                {copy.passwordLabel}
+              </span>
               <Input
                 name="password"
                 type="password"
-                placeholder="Admin password"
+                placeholder={copy.passwordPlaceholder}
                 required
                 autoComplete="current-password"
                 className="border-rs-peach hover:border-rs-gold-light focus:border-rs-gold focus:ring-rs-gold/20"
@@ -235,11 +319,13 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
           {step === 'register' ? (
             <>
               <label className="block">
-                <span className="block text-sm font-extrabold text-rs-ink mb-1.5">Full Name</span>
+                <span className="block text-sm font-extrabold text-rs-ink mb-1.5">
+                  {copy.fullNameLabel}
+                </span>
                 <Input
                   name="name"
                   type="text"
-                  placeholder="Your full name"
+                  placeholder={copy.fullNamePlaceholder}
                   minLength={2}
                   required
                   autoComplete="name"
@@ -248,11 +334,11 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
               </label>
               <label className="block">
                 <span className="block text-sm font-extrabold text-rs-ink mb-1.5">
-                  Delivery Address
+                  {copy.addressLabel}
                 </span>
                 <textarea
                   name="address"
-                  placeholder="Full address with area or city"
+                  placeholder={copy.addressPlaceholder}
                   rows={3}
                   required
                   minLength={5}
@@ -263,7 +349,7 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
             </>
           ) : null}
 
-          {step !== 'phone' ? <RememberMe defaultChecked={isCheckoutFlow} /> : null}
+          {step !== 'phone' ? <RememberMe defaultChecked={isCheckoutFlow} label={copy.rememberMe} /> : null}
           <AuthError message={error} />
 
           <button
@@ -278,7 +364,7 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
             ) : (
               <Phone className="h-4 w-4" aria-hidden="true" />
             )}
-            {submitLabel(step, isSubmitting)}
+            {submitLabel(step, isSubmitting, copy)}
           </button>
         </form>
 
@@ -287,7 +373,7 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
             href={PATHS.home}
             className="inline-flex items-center gap-1 transition hover:text-rs-gold"
           >
-            Return to Store <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            {copy.returnToStore} <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           </CatalogLink>
         </div>
       </div>
@@ -295,33 +381,31 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
   );
 }
 
-function stepContent(step: AuthStep, isSubmitting: boolean) {
+function stepContent(step: AuthStep, isSubmitting: boolean, copy: AuthCopy) {
   if (step === 'admin-password') {
     return {
-      kicker: 'Admin Panel',
-      heading: 'Admin Login',
-      description: isSubmitting
-        ? 'Checking admin credentials...'
-        : 'Enter your password to access the dashboard',
+      kicker: copy.adminKicker,
+      heading: copy.adminHeading,
+      description: isSubmitting ? copy.adminChecking : copy.adminDescription,
     };
   }
 
   if (step === 'register') {
     return {
-      kicker: 'Customer Account',
-      heading: 'Create Account',
-      description: 'This phone is new. Add your name and address to create an account',
+      kicker: copy.registerKicker,
+      heading: copy.registerHeading,
+      description: copy.registerDescription,
     };
   }
 
   return {
-    kicker: 'RS Store Account',
-    heading: 'Sign In',
-    description: 'Enter your phone number to continue',
+    kicker: copy.phoneKicker,
+    heading: copy.phoneHeading,
+    description: copy.phoneDescription,
   };
 }
 
-function RememberMe({ defaultChecked }: { defaultChecked: boolean }) {
+function RememberMe({ defaultChecked, label }: { defaultChecked: boolean; label: string }) {
   return (
     <label className="flex items-center gap-2.5 cursor-pointer">
       <input
@@ -330,15 +414,15 @@ function RememberMe({ defaultChecked }: { defaultChecked: boolean }) {
         defaultChecked={defaultChecked}
         className="h-4.5 w-4.5 rounded border-rs-peach accent-rs-gold"
       />
-      <span className="text-sm font-extrabold text-rs-ink">Remember me on this device</span>
+      <span className="text-sm font-extrabold text-rs-ink">{label}</span>
     </label>
   );
 }
 
-function submitLabel(step: AuthStep, isSubmitting: boolean): string {
-  if (step === 'admin-password') return isSubmitting ? 'Signing in...' : 'Admin Login';
-  if (step === 'register') return isSubmitting ? 'Creating...' : 'Create Account';
-  return isSubmitting ? 'Checking...' : 'Continue';
+function submitLabel(step: AuthStep, isSubmitting: boolean, copy: AuthCopy): string {
+  if (step === 'admin-password') return isSubmitting ? copy.signingIn : copy.adminLogin;
+  if (step === 'register') return isSubmitting ? copy.creating : copy.createAccount;
+  return isSubmitting ? copy.checking : copy.continue;
 }
 
 function AuthError({ message }: { message: string }) {
@@ -352,21 +436,23 @@ function AuthError({ message }: { message: string }) {
   ) : null;
 }
 
-function normalizeAuthError(error: unknown, context: 'admin' | 'customer' = 'customer'): string {
+function normalizeAuthError(
+  error: unknown,
+  copy: AuthCopy,
+  context: 'admin' | 'customer' = 'customer',
+): string {
   const message = error instanceof Error ? error.message : '';
   if (/password|credentials|unauthorized/i.test(message)) {
-    return context === 'admin'
-      ? 'Invalid admin credentials. Please try again.'
-      : 'Unable to sign in. Please try again.';
+    return context === 'admin' ? copy.invalidAdminCredentials : copy.signInFailed;
   }
   if (/phone/i.test(message)) {
-    return 'Please enter an Egyptian mobile number like 01xxxxxxxxx';
+    return copy.phoneInvalid;
   }
   if (/disabled/i.test(message)) {
-    return 'This account is not active. Please contact support.';
+    return copy.accountDisabled;
   }
   if (/duplicate|already/i.test(message)) {
-    return 'This phone number is already registered. Please sign in.';
+    return copy.alreadyRegistered;
   }
-  return message || 'Authentication failed. Please check your details.';
+  return message || copy.authFailed;
 }

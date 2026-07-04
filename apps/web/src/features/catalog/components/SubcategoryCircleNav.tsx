@@ -1,8 +1,8 @@
-import { useAuth } from '@/features/auth/AuthContext';
 import { CatalogLink } from '@/features/catalog/components/CatalogLink';
 import { categoryPath } from '@/shared/constants/routes';
 import type { CatalogSubCategory, FeaturedSubCategory } from '@/shared/types/CatalogTypes';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
+import { localizeKnownLabel, localizeProductText, useI18n } from '@/shared/i18n';
 
 type SubcategoryNavItem =
   | FeaturedSubCategory
@@ -25,8 +25,8 @@ export function SubcategoryCircleNav({
   parentCategorySlug,
   subcategories,
 }: SubcategoryCircleNavProps) {
-  const { user } = useAuth();
-  const locale = user?.language ?? 'ar';
+  const { language, t } = useI18n();
+  const locale = language;
   const visibleSubcategories = subcategories.filter(
     (subcategory) => getProductCount(subcategory) > 0,
   );
@@ -36,9 +36,12 @@ export function SubcategoryCircleNav({
   }
 
   return (
-    <nav aria-label="Subcategories with available products" className="rs-subcategory-circle-nav">
+    <nav aria-label={t('catalog.shopByCategory')} className="rs-subcategory-circle-nav">
       {visibleSubcategories.map((subcategory) => {
-        const name = getSubcategoryName(subcategory, locale);
+        const name = localizeKnownLabel(
+          localizeProductText(getSubcategoryName(subcategory, locale), language),
+          language,
+        );
         const productCount = getProductCount(subcategory);
         const resolvedParentSlug =
           'parentCategorySlug' in subcategory && subcategory.parentCategorySlug
@@ -56,7 +59,7 @@ export function SubcategoryCircleNav({
                   : 'rs-subcategory-circle-link'
               }
               aria-current={isActive ? 'page' : undefined}
-              aria-label={`${name} ${productCount} products`}
+              aria-label={t('catalog.productsFound', { count: productCount }) + `: ${name}`}
             >
               <span className="rs-subcategory-circle-image" aria-hidden="true">
                 <ImageWithFallback

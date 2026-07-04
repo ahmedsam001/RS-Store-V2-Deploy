@@ -4,6 +4,7 @@ import { ExternalLink } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { PATHS } from '@/shared/constants/routes';
 import { useDocumentMetadata } from '@/shared/seo/use-document-metadata';
+import { localizeProductOption, localizeProductText, useI18n, type Language } from '@/shared/i18n';
 import { useAuth } from '@/features/auth';
 import { buildCustomerAuthPath, currentPathWithSearch } from '@/shared/lib/return-to';
 import { CatalogState } from '@/features/catalog/components/CatalogState';
@@ -43,10 +44,266 @@ type FinalPaymentPreview = {
   isOnline: boolean;
 };
 
+
+const orderDetailCopy = {
+  ar: {
+    metaTitle: 'تفاصيل الطلب | RS Store',
+    metaDescription: 'حالة الطلب وتفاصيل إثبات الدفع',
+    failedLoadOrder: 'فشل تحميل الطلب',
+    cashFailed: 'فشل اختيار الدفع نقدًا',
+    loadingOrder: 'جاري تحميل الطلب',
+    preparingDetails: 'جاري تجهيز تفاصيل تتبع الطلب',
+    signInRequired: 'تسجيل الدخول مطلوب',
+    signInMessage: 'يرجى تسجيل الدخول لتتبع طلبك',
+    signIn: 'تسجيل الدخول',
+    failedLoadTitle: 'فشل تحميل الطلب',
+    tryAgain: 'حاول مرة أخرى',
+    orderNotFound: 'الطلب غير موجود',
+    verifyOrder: 'راجع رابط الطلب أو سجل الطلبات',
+    viewOrders: 'عرض الطلبات',
+    orderDetails: 'تفاصيل الطلب',
+    order: 'طلب',
+    created: 'تم الإنشاء',
+    allOrders: 'كل الطلبات',
+    continueShopping: 'متابعة التسوق',
+    viewTransferImage: 'عرض صورة التحويل',
+    products: 'المنتجات',
+    orderProducts: 'منتجات الطلب',
+    items: 'منتجات',
+    qty: 'الكمية',
+    depositPayment: 'دفع العربون',
+    uploadDepositAgain: 'رفع إثبات العربون مرة أخرى',
+    uploadDepositHint: 'ارفع صورة تحويل أوضح حتى يراجع الأدمن العربون مرة أخرى.',
+    depositRejectedFallback: 'تم رفض إثبات العربون. يرجى رفع صورة جديدة واضحة.',
+    depositProof: 'إثبات العربون',
+    rejectedByAdmin: 'تم الرفض من الأدمن',
+    reason: 'السبب',
+    rejectedUploaded: 'تم رفع الإثبات المرفوض في',
+    sheinTracking: 'تتبع شحنة SHEIN',
+    insideShipment: 'طلبك داخل الشحنة {batch}',
+    currentState: 'الحالة الحالية {status} · آخر تحديث {date}',
+    shipment: 'الشحنة',
+    sheinShipment: 'شحنة SHEIN',
+    shipmentPreparing: 'الشحنة يتم تجهيزها بواسطة الأدمن',
+    shipmentCancelled: 'تم إلغاء شحنة SHEIN هذه',
+    sheinStatuses: {
+      DRAFT: 'جاري تجهيز الشحنة',
+      ORDERED_FROM_SHEIN: 'تم الطلب من SHEIN',
+      SHIPPING: 'قيد الشحن',
+      CUSTOMS: 'في الجمارك',
+      ARRIVED_EGYPT: 'وصلت مصر',
+      ARRIVED_STORE: 'وصلت المتجر',
+      READY_FOR_PICKUP: 'جاهزة للاستلام',
+      DELIVERED: 'تم التسليم',
+      CANCELLED: 'ملغاة',
+    },
+    nextAction: 'الإجراء التالي',
+    finalPayment: 'الدفع النهائي',
+    payRemaining: 'ادفع المبلغ المتبقي',
+    finalPaymentHint: 'اختار طريقة واحدة. المبلغ بالأسفل يتحدث قبل رفع الإثبات.',
+    finalRejectedFallback: 'تم رفض الدفعة النهائية. يرجى اختيار طريقة الدفع مرة أخرى أو رفع صورة تحويل صحيحة.',
+    noExtraFee: 'بدون رسوم إضافية',
+    addsFee: 'رسوم فودافون كاش {percent}%',
+    cashAtStore: 'نقدًا في المتجر',
+    payWhenPickup: 'ادفع عند الاستلام',
+    amountToTransfer: 'المبلغ المطلوب تحويله',
+    remainingBeforeFee: 'المتبقي قبل الرسوم',
+    finalPaymentFee: 'رسوم الدفعة النهائية',
+    selectedMethod: 'طريقة الدفع المختارة',
+    noTransferProofNeeded: 'لا تحتاج لرفع إثبات تحويل. أكد الاختيار وادفع عند وصولك للمتجر.',
+    uploadFinalAgain: 'رفع إثبات الدفعة النهائية مرة أخرى',
+    uploadFinalProof: 'رفع إثبات الدفعة النهائية',
+    transferExactly: 'حوّل بالضبط {amount} باستخدام {method}، ثم ارفع صورة الإيصال.',
+    selectCash: 'اختيار الدفع نقدًا في المتجر',
+    paymentSummary: 'ملخص الدفع',
+    subtotal: 'المجموع الفرعي',
+    discount: 'الخصم',
+    depositLine: 'عربون {percent}%',
+    depositFee: 'رسوم العربون',
+    depositMethod: 'طريقة العربون',
+    remainingBeforeFinalFees: 'المتبقي قبل رسوم الدفع النهائي',
+    finalMethod: 'طريقة الدفع النهائي',
+    finalAmountToPay: 'المبلغ النهائي المطلوب دفعه',
+    orderTotal: 'إجمالي الطلب',
+    deliveryAddress: 'عنوان التوصيل',
+    paymentProofs: 'إثباتات الدفع',
+    firstPayment: 'الدفعة الأولى',
+    finalPaymentProofName: 'الدفعة النهائية',
+    viewImage: 'عرض الصورة',
+    orderHistory: 'سجل الطلب',
+    productImageFallback: 'صورة المنتج',
+    methods: {
+      vodafone: 'فودافون كاش',
+      instapay: 'Instapay',
+      cashAtStore: 'نقدًا في المتجر',
+      notSelected: 'غير محدد',
+      vodafoneNumber: 'رقم فودافون كاش',
+      instapayAccount: 'حساب Instapay',
+      payAtPickup: 'الدفع عند الاستلام',
+    },
+    actions: {
+      depositNeededTitle: 'مطلوب إثبات العربون',
+      depositNeededMessage: 'ارفع إثبات الدفعة الأولى من صفحة الدفع لبدء تأكيد الطلب.',
+      depositAmount: 'قيمة العربون',
+      depositReviewTitle: 'العربون قيد المراجعة',
+      depositReviewMessage: 'استلمنا صورة التحويل. الأدمن سيوافق عليها قبل بدء الشراء من SHEIN.',
+      submittedDeposit: 'العربون المرسل',
+      uploadDepositAgainTitle: 'ارفع إثبات العربون مرة أخرى',
+      uploadDepositAgainMessage: 'تم رفض إثبات العربون السابق. ارفع صورة إيصال أوضح بالأسفل.',
+      depositApprovedTitle: 'تم قبول العربون',
+      depositApprovedMessage: 'تم تأكيد طلبك. سيتم فتح الدفع النهائي عند وصول المنتجات إلى المتجر.',
+      remainingBeforeFees: 'المتبقي قبل الرسوم',
+      finalRejectedTitle: 'تم رفض إثبات الدفعة النهائية',
+      finalRequiredTitle: 'الدفع النهائي مطلوب',
+      finalVodafoneMessage: 'رسوم فودافون كاش مضافة إلى المبلغ المطلوب تحويله قبل رفع الإثبات.',
+      finalUploadMessage: 'اختار طريقة الدفع بالأسفل وارفع إثبات التحويل النهائي.',
+      amountToPayNow: 'المبلغ المطلوب دفعه الآن',
+      finalReviewTitle: 'الدفعة النهائية قيد المراجعة',
+      finalReviewMessage: 'استلمنا إثبات الدفعة النهائية. الأدمن سيوافق عليه قريبًا.',
+      submittedFinalAmount: 'المبلغ النهائي المرسل',
+      paymentCompleteTitle: 'الدفع مكتمل',
+      paymentCompleteMessage: 'طلبك مدفوع بالكامل. تابع تحديثات الشحن أو الاستلام من هذه الصفحة.',
+      finalPaid: 'الدفعة النهائية المدفوعة',
+    },
+  },
+  en: {
+    metaTitle: 'Order Details | RS Store',
+    metaDescription: 'Order status and payment proof details',
+    failedLoadOrder: 'Failed to load order',
+    cashFailed: 'Failed to select cash payment',
+    loadingOrder: 'Loading order',
+    preparingDetails: 'Preparing order tracking details',
+    signInRequired: 'Sign in required',
+    signInMessage: 'Please sign in to track your order',
+    signIn: 'Sign In',
+    failedLoadTitle: 'Failed to load order',
+    tryAgain: 'Try Again',
+    orderNotFound: 'Order not found',
+    verifyOrder: 'Verify your order link or check your order history',
+    viewOrders: 'View Orders',
+    orderDetails: 'Order Details',
+    order: 'Order',
+    created: 'Created',
+    allOrders: 'All Orders',
+    continueShopping: 'Continue Shopping',
+    viewTransferImage: 'View transfer image',
+    products: 'Products',
+    orderProducts: 'Order Products',
+    items: 'items',
+    qty: 'Qty',
+    depositPayment: 'Deposit Payment',
+    uploadDepositAgain: 'Upload Deposit Proof Again',
+    uploadDepositHint: 'Upload a clearer transfer image so admin can review your deposit again.',
+    depositRejectedFallback: 'Deposit proof was rejected. Please upload a new clear image.',
+    depositProof: 'Deposit proof',
+    rejectedByAdmin: 'Rejected by admin',
+    reason: 'Reason',
+    rejectedUploaded: 'Rejected proof uploaded',
+    sheinTracking: 'SHEIN Shipment Tracking',
+    insideShipment: 'Your order is inside shipment {batch}',
+    currentState: 'Current state {status} · Updated {date}',
+    shipment: 'Shipment',
+    sheinShipment: 'SHEIN shipment',
+    shipmentPreparing: 'Shipment is being prepared by the admin',
+    shipmentCancelled: 'This SHEIN shipment was cancelled',
+    sheinStatuses: {
+      DRAFT: 'Preparing shipment',
+      ORDERED_FROM_SHEIN: 'Ordered from SHEIN',
+      SHIPPING: 'Shipping',
+      CUSTOMS: 'At customs',
+      ARRIVED_EGYPT: 'Arrived Egypt',
+      ARRIVED_STORE: 'Arrived at store',
+      READY_FOR_PICKUP: 'Ready for pickup',
+      DELIVERED: 'Delivered',
+      CANCELLED: 'Cancelled',
+    },
+    nextAction: 'Next Action',
+    finalPayment: 'Final Payment',
+    payRemaining: 'Pay the remaining amount',
+    finalPaymentHint: 'Choose one method. The amount below updates before you upload the proof.',
+    finalRejectedFallback: 'Final payment was rejected. Please choose the payment method again or upload a corrected transfer image.',
+    noExtraFee: 'No extra fee',
+    addsFee: 'Vodafone Cash fee {percent}%',
+    cashAtStore: 'Cash at store',
+    payWhenPickup: 'Pay when pickup',
+    amountToTransfer: 'Amount to transfer',
+    remainingBeforeFee: 'Remaining before fee',
+    finalPaymentFee: 'Final payment fee',
+    selectedMethod: 'Selected method',
+    noTransferProofNeeded: 'No transfer proof needed. Confirm this choice and pay when you reach the store.',
+    uploadFinalAgain: 'Upload Final Payment Proof Again',
+    uploadFinalProof: 'Upload final payment proof',
+    transferExactly: 'Transfer exactly {amount} using {method}, then upload the receipt image.',
+    selectCash: 'Select cash at store payment',
+    paymentSummary: 'Payment Summary',
+    subtotal: 'Subtotal',
+    discount: 'Discount',
+    depositLine: 'Deposit {percent}%',
+    depositFee: 'Deposit fee',
+    depositMethod: 'Deposit method',
+    remainingBeforeFinalFees: 'Remaining before final fees',
+    finalMethod: 'Final method',
+    finalAmountToPay: 'Final amount to pay',
+    orderTotal: 'Order total',
+    deliveryAddress: 'Delivery Address',
+    paymentProofs: 'Payment Proofs',
+    firstPayment: 'First payment',
+    finalPaymentProofName: 'Final payment',
+    viewImage: 'View image',
+    orderHistory: 'Order History',
+    productImageFallback: 'Product image',
+    methods: {
+      vodafone: 'Vodafone Cash',
+      instapay: 'Instapay',
+      cashAtStore: 'Cash at store',
+      notSelected: 'Not selected',
+      vodafoneNumber: 'Vodafone Cash number',
+      instapayAccount: 'Instapay account',
+      payAtPickup: 'Pay at pickup',
+    },
+    actions: {
+      depositNeededTitle: 'Deposit proof needed',
+      depositNeededMessage: 'Upload the first payment proof from checkout to start order confirmation.',
+      depositAmount: 'Deposit amount',
+      depositReviewTitle: 'Deposit under review',
+      depositReviewMessage: 'We received your transfer image. Admin will approve it before SHEIN purchasing starts.',
+      submittedDeposit: 'Submitted deposit',
+      uploadDepositAgainTitle: 'Upload deposit proof again',
+      uploadDepositAgainMessage: 'The previous deposit proof was rejected. Upload a clearer receipt image below.',
+      depositApprovedTitle: 'Deposit approved',
+      depositApprovedMessage: 'Your order is confirmed. Final payment will open when the items arrive at the store.',
+      remainingBeforeFees: 'Remaining before fees',
+      finalRejectedTitle: 'Final payment proof rejected',
+      finalRequiredTitle: 'Final payment required',
+      finalVodafoneMessage: 'Vodafone Cash fee is included in the amount to transfer before you upload the proof.',
+      finalUploadMessage: 'Choose the payment method below and upload the final transfer proof.',
+      amountToPayNow: 'Amount to pay now',
+      finalReviewTitle: 'Final payment under review',
+      finalReviewMessage: 'We received your final payment proof. Admin will approve it soon.',
+      submittedFinalAmount: 'Submitted final amount',
+      paymentCompleteTitle: 'Payment complete',
+      paymentCompleteMessage: 'Your order is fully paid. Follow shipment or pickup updates on this page.',
+      finalPaid: 'Final paid',
+    },
+  },
+} as const;
+
+type OrderDetailCopy = (typeof orderDetailCopy)[keyof typeof orderDetailCopy];
+
+function interpolateCopy(template: string, values: Record<string, string | number>) {
+  return Object.entries(values).reduce(
+    (text, [key, value]) => text.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
+}
+
 export function OrderDetailPage() {
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
+
   useDocumentMetadata({
-    title: 'Order Details | RS Store',
-    description: 'Order status and payment proof details',
+    title: copy.metaTitle,
+    description: copy.metaDescription,
   });
   const { id } = useParams();
   const navigate = useNavigate();
@@ -92,9 +349,10 @@ export function OrderDetailPage() {
             vodafoneFeePercent,
             vodafoneCash,
             instapay,
+            copy,
           })
         : null,
-    [finalPaymentMethod, instapay, order, vodafoneCash, vodafoneFeePercent],
+    [copy, finalPaymentMethod, instapay, order, vodafoneCash, vodafoneFeePercent],
   );
   const pageNotice =
     typeof (location.state as { message?: unknown } | null)?.message === 'string'
@@ -138,7 +396,7 @@ export function OrderDetailPage() {
         setOrder(await ordersApi.getMyOrder(orderId, { signal: controller.signal }));
       } catch (caughtError) {
         if (!controller.signal.aborted) {
-          setError(caughtError instanceof Error ? caughtError.message : 'Failed to load order');
+          setError(caughtError instanceof Error ? caughtError.message : copy.failedLoadOrder);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -149,7 +407,7 @@ export function OrderDetailPage() {
 
     void loadOrder();
     return () => controller.abort();
-  }, [id, status]);
+  }, [copy.failedLoadOrder, id, status]);
 
   async function uploadDeposit(file: File) {
     if (!order) return;
@@ -170,7 +428,7 @@ export function OrderDetailPage() {
       setOrder(await ordersApi.submitCashFinalPayment(order.id, { csrfToken }));
     } catch (caughtError) {
       setCashSubmitError(
-        caughtError instanceof Error ? caughtError.message : 'Failed to select cash payment',
+        caughtError instanceof Error ? caughtError.message : copy.cashFailed,
       );
     }
   }
@@ -178,16 +436,16 @@ export function OrderDetailPage() {
   if (isLoading || status === 'loading')
     return (
       <div className="rs-page-stack">
-        <CatalogState title="Loading order" message="Preparing order tracking details" />
+        <CatalogState title={copy.loadingOrder} message={copy.preparingDetails} />
       </div>
     );
   if (status !== 'authenticated')
     return (
       <div className="rs-page-stack">
         <CatalogState
-          title="Sign in required"
-          message="Please sign in to track your order"
-          ctaLabel="Sign In"
+          title={copy.signInRequired}
+          message={copy.signInMessage}
+          ctaLabel={copy.signIn}
           ctaHref={PATHS.login}
         />
       </div>
@@ -196,9 +454,9 @@ export function OrderDetailPage() {
     return (
       <div className="rs-page-stack">
         <CatalogState
-          title="Failed to load order"
+          title={copy.failedLoadTitle}
           message={error}
-          ctaLabel="Try Again"
+          ctaLabel={copy.tryAgain}
           ctaHref={PATHS.orders}
         />
       </div>
@@ -207,9 +465,9 @@ export function OrderDetailPage() {
     return (
       <div className="rs-page-stack">
         <CatalogState
-          title="Order not found"
-          message="Verify your order link or check your order history"
-          ctaLabel="View Orders"
+          title={copy.orderNotFound}
+          message={copy.verifyOrder}
+          ctaLabel={copy.viewOrders}
           ctaHref={PATHS.orders}
         />
       </div>
@@ -222,13 +480,13 @@ export function OrderDetailPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-rs-gold">
-                Order Details
+                {copy.orderDetails}
               </p>
               <h1 className="mt-2 text-2xl font-black text-rs-ink tracking-tight sm:text-3xl">
-                Order {order.orderNumber}
+                {copy.order} {order.orderNumber}
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Created {formatOrderDate(order.createdAt)}
+                {copy.created} {formatOrderDate(order.createdAt)}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -239,15 +497,15 @@ export function OrderDetailPage() {
 
           <div className="mt-5 flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link to={PATHS.orders}>All Orders</Link>
+              <Link to={PATHS.orders}>{copy.allOrders}</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
-              <Link to={PATHS.home}>Continue Shopping</Link>
+              <Link to={PATHS.home}>{copy.continueShopping}</Link>
             </Button>
             {depositProof?.secureUrl ? (
               <Button asChild variant="outline" size="sm">
                 <a href={depositProof.secureUrl} target="_blank" rel="noreferrer">
-                  View transfer image <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  {copy.viewTransferImage} <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
               </Button>
             ) : null}
@@ -287,12 +545,12 @@ export function OrderDetailPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-rs-gold">
-                  Products
+                  {copy.products}
                 </p>
-                <h2 className="mt-1 text-lg font-black text-rs-ink">Order Products</h2>
+                <h2 className="mt-1 text-lg font-black text-rs-ink">{copy.orderProducts}</h2>
               </div>
               <span className="rounded-full bg-rs-cream-warm px-3 py-1 text-xs font-extrabold text-muted-foreground">
-                {order.items.length} items
+                {order.items.length} {copy.items}
               </span>
             </div>
 
@@ -303,7 +561,7 @@ export function OrderDetailPage() {
                     <div className="rs-order-product-thumb">
                       <ImageWithFallback
                         src={resolveOrderItemImageUrl(item)}
-                        alt={resolveOrderItemImageAlt(item)}
+                        alt={resolveOrderItemImageAlt(item, language)}
                         loading="lazy"
                         className="rs-order-product-thumb-media"
                         fallbackVariant="product"
@@ -311,22 +569,20 @@ export function OrderDetailPage() {
                     </div>
 
                     <div className="rs-order-product-info">
-                      <h3 className="rs-order-product-title">{item.productNameSnapshot}</h3>
+                      <h3 className="rs-order-product-title">{resolveOrderItemName(item, language)}</h3>
                       {item.productVariantNameSnapshot ? (
                         <p className="rs-order-product-variant">
-                          {item.productVariantNameSnapshot}
+                          {resolveOrderItemVariantName(item, language)}
                         </p>
                       ) : null}
                       {item.productVariantSizeSnapshot || item.productVariantColorSnapshot ? (
                         <p className="rs-order-product-options">
-                          {[item.productVariantSizeSnapshot, item.productVariantColorSnapshot]
-                            .filter(Boolean)
-                            .join(' • ')}
+                          {resolveOrderItemOptions(item, language).join(' • ')}
                         </p>
                       ) : null}
 
                       <div className="rs-order-product-meta">
-                        <span>Qty {item.quantity}</span>
+                        <span>{copy.qty} {item.quantity}</span>
                         <span className="rs-order-product-store-badge">
                           <OrderItemStatusLabel status={item.status} />
                         </span>
@@ -345,20 +601,20 @@ export function OrderDetailPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-rs-gold">
-                    Deposit Payment
+                    {copy.depositPayment}
                   </p>
                   <h2 className="mt-1 text-lg font-black text-rs-ink">
-                    Upload Deposit Proof Again
+                    {copy.uploadDepositAgain}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Upload a clearer transfer image so admin can review your deposit again.
+                    {copy.uploadDepositHint}
                   </p>
                 </div>
               </div>
 
               <RejectionNotice
                 proof={rejectedDepositProof}
-                fallback="Deposit proof was rejected. Please upload a new clear image."
+                fallback={copy.depositRejectedFallback}
               />
 
               <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -373,7 +629,7 @@ export function OrderDetailPage() {
               </div>
 
               <div className="mt-3">
-                <PaymentProofUploader label="Deposit proof" onUpload={uploadDeposit} />
+                <PaymentProofUploader label={copy.depositProof} onUpload={uploadDeposit} />
               </div>
             </section>
           ) : null}
@@ -403,15 +659,32 @@ function resolveOrderItemImageUrl(item: OrderItem): string | null {
   );
 }
 
-function resolveOrderItemImageAlt(item: OrderItem): string {
-  return (
-    item.product?.images?.[0]?.altText ||
-    item.product?.images?.[0]?.altTextEn ||
-    item.product?.images?.[0]?.altTextAr ||
-    item.productNameSnapshot ||
-    item.product?.nameEn ||
-    item.product?.nameAr ||
-    'Product image'
+function resolveOrderItemName(item: OrderItem, language: Language): string {
+  const localizedName = language === 'ar'
+    ? item.product?.nameAr || item.productNameSnapshot
+    : item.product?.nameEn || item.productNameSnapshot;
+  return localizeProductText(localizedName, language);
+}
+
+function resolveOrderItemVariantName(item: OrderItem, language: Language): string {
+  return localizeProductText(item.productVariantNameSnapshot, language);
+}
+
+function resolveOrderItemOptions(item: OrderItem, language: Language): string[] {
+  return [item.productVariantSizeSnapshot, item.productVariantColorSnapshot]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => localizeProductOption(value, language));
+}
+
+function resolveOrderItemImageAlt(item: OrderItem, language: Language): string {
+  const image = item.product?.images?.[0];
+  const altText = language === 'ar'
+    ? image?.altTextAr || image?.altText || image?.altTextEn
+    : image?.altTextEn || image?.altText || image?.altTextAr;
+
+  return localizeProductText(
+    altText || resolveOrderItemName(item, language) || orderDetailCopy.en.productImageFallback,
+    language,
   );
 }
 
@@ -422,14 +695,16 @@ function RejectionNotice({
   proof: OrderPaymentProof | null;
   fallback: string;
 }) {
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
   const reason = proof?.rejectionReason?.trim();
   return (
     <div className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-sm leading-6 text-destructive">
-      <p className="font-extrabold">Rejected by admin</p>
-      <p className="mt-1 font-semibold">{reason ? `Reason: ${reason}` : fallback}</p>
+      <p className="font-extrabold">{copy.rejectedByAdmin}</p>
+      <p className="mt-1 font-semibold">{reason ? `${copy.reason}: ${reason}` : fallback}</p>
       {proof?.createdAt ? (
         <p className="mt-1 text-xs font-semibold opacity-80">
-          Rejected proof uploaded {formatOrderDate(proof.createdAt)}
+          {copy.rejectedUploaded} {formatOrderDate(proof.createdAt)}
         </p>
       ) : null}
     </div>
@@ -437,6 +712,8 @@ function RejectionNotice({
 }
 
 function SheinBatchTracking({ order }: { order: Order }) {
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
   const trackedItems = order.items
     .map((item) => ({ item, tracking: item.sheinBatchItems?.[0] ?? null }))
     .filter((entry) => entry.tracking?.batch);
@@ -451,18 +728,20 @@ function SheinBatchTracking({ order }: { order: Order }) {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-rs-gold">
-              SHEIN Shipment Tracking
+              {copy.sheinTracking}
             </p>
             <h2 className="mt-1 text-lg font-black text-rs-ink">
-              Your order is inside shipment {primaryBatch.batchCode}
+              {interpolateCopy(copy.insideShipment, { batch: primaryBatch.batchCode })}
             </h2>
             <p className="mt-1 text-sm font-semibold text-muted-foreground">
-              Current state {sheinStatusLabel(primaryBatch.status)} · Updated{' '}
-              {formatOrderDate(primaryBatch.updatedAt)}
+              {interpolateCopy(copy.currentState, {
+                status: sheinStatusLabel(primaryBatch.status, copy),
+                date: formatOrderDate(primaryBatch.updatedAt),
+              })}
             </p>
           </div>
           <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-rs-gold shadow-sm">
-            {sheinStatusLabel(primaryBatch.status)}
+            {sheinStatusLabel(primaryBatch.status, copy)}
           </span>
         </div>
 
@@ -477,15 +756,15 @@ function SheinBatchTracking({ order }: { order: Order }) {
               key={`${item.id}-${tracking!.id}`}
               className="rounded-2xl border border-rs-peach-light bg-white/85 p-3 shadow-sm"
             >
-              <p className="text-sm font-black text-rs-ink">{item.productNameSnapshot}</p>
+              <p className="text-sm font-black text-rs-ink">{resolveOrderItemName(item, language)}</p>
               {item.productVariantNameSnapshot ? (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {item.productVariantNameSnapshot}
+                  {resolveOrderItemVariantName(item, language)}
                 </p>
               ) : null}
               <p className="mt-2 text-xs font-bold text-muted-foreground">
-                Qty {tracking!.quantity} · Shipment {tracking!.batch.batchCode} ·{' '}
-                {sheinStatusLabel(tracking!.batch.status)}
+                {copy.qty} {tracking!.quantity} · {copy.shipment} {tracking!.batch.batchCode} ·{' '}
+                {sheinStatusLabel(tracking!.batch.status, copy)}
               </p>
             </article>
           ))}
@@ -496,12 +775,14 @@ function SheinBatchTracking({ order }: { order: Order }) {
 }
 
 function OrderItemSheinBadge({ item }: { item: OrderItem }) {
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
   const tracking = item.sheinBatchItems?.[0];
   if (!tracking?.batch) return null;
   return (
     <div className="rs-order-product-shipment">
-      SHEIN shipment <strong>{tracking.batch.batchCode}</strong> ·{' '}
-      <span>{sheinStatusLabel(tracking.batch.status)}</span>
+      {copy.sheinShipment} <strong>{tracking.batch.batchCode}</strong> ·{' '}
+      <span>{sheinStatusLabel(tracking.batch.status, copy)}</span>
     </div>
   );
 }
@@ -523,24 +804,26 @@ function SheinStatusTimeline({
   status: CustomerSheinBatchStatus;
   history: Array<{ toStatus: CustomerSheinBatchStatus; createdAt: string }>;
 }) {
+  const { direction, language } = useI18n();
+  const copy = orderDetailCopy[language];
   if (status === 'DRAFT') {
     return (
       <p className="mt-4 rounded-2xl bg-white/75 p-3 text-sm font-bold text-muted-foreground">
-        Shipment is being prepared by the admin
+        {copy.shipmentPreparing}
       </p>
     );
   }
   if (status === 'CANCELLED') {
     return (
       <p className="mt-4 rounded-2xl bg-destructive/10 p-3 text-sm font-bold text-destructive">
-        This SHEIN shipment was cancelled
+        {copy.shipmentCancelled}
       </p>
     );
   }
 
   const currentIndex = SHEIN_TRACKING_STEPS.indexOf(status);
   return (
-    <div className="mt-5 grid gap-2 md:grid-cols-3 xl:grid-cols-6" dir="ltr">
+    <div className="mt-5 grid gap-2 md:grid-cols-3 xl:grid-cols-6" dir={direction}>
       {SHEIN_TRACKING_STEPS.map((step, index) => {
         const completed = currentIndex >= index;
         const historyEvent = history.find((item) => item.toStatus === step);
@@ -554,7 +837,7 @@ function SheinStatusTimeline({
             >
               {completed ? '✓' : index + 1}
             </div>
-            <p className="text-xs font-black leading-5">{sheinStatusLabel(step)}</p>
+            <p className="text-xs font-black leading-5">{sheinStatusLabel(step, copy)}</p>
             {historyEvent ? (
               <p className="mt-1 text-[10px] font-semibold opacity-75">
                 {formatOrderDate(historyEvent.createdAt)}
@@ -567,19 +850,8 @@ function SheinStatusTimeline({
   );
 }
 
-function sheinStatusLabel(status: CustomerSheinBatchStatus): string {
-  const labels: Record<CustomerSheinBatchStatus, string> = {
-    DRAFT: 'Preparing shipment',
-    ORDERED_FROM_SHEIN: 'Ordered from SHEIN',
-    SHIPPING: 'Shipping',
-    CUSTOMS: 'At customs',
-    ARRIVED_EGYPT: 'Arrived Egypt',
-    ARRIVED_STORE: 'Arrived at store',
-    READY_FOR_PICKUP: 'Ready for pickup',
-    DELIVERED: 'Delivered',
-    CANCELLED: 'Cancelled',
-  };
-  return labels[status];
+function sheinStatusLabel(status: CustomerSheinBatchStatus, copy: OrderDetailCopy): string {
+  return copy.sheinStatuses[status];
 }
 
 function NextActionCard({
@@ -589,7 +861,9 @@ function NextActionCard({
   order: Order;
   finalPaymentPreview: FinalPaymentPreview | null;
 }) {
-  const action = getNextAction(order, finalPaymentPreview);
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
+  const action = getNextAction(order, finalPaymentPreview, copy, language);
   if (!action) return null;
 
   return (
@@ -597,7 +871,7 @@ function NextActionCard({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-rs-gold">
-            Next Action
+            {copy.nextAction}
           </p>
           <h2 className="mt-1 text-xl font-black text-rs-ink">{action.title}</h2>
           <p className="mt-1 text-sm font-semibold leading-6 text-muted-foreground">
@@ -636,17 +910,20 @@ function FinalPaymentActionPanel({
   onCashSubmit: () => Promise<void>;
   onUpload: (file: File) => Promise<void>;
 }) {
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
+
   return (
     <section className="rs-panel overflow-hidden p-0">
       <div className="bg-gradient-to-l from-rs-cream-warm via-card to-rs-cream p-4 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-rs-gold">
-              Final Payment
+              {copy.finalPayment}
             </p>
-            <h2 className="mt-1 text-xl font-black text-rs-ink">Pay the remaining amount</h2>
+            <h2 className="mt-1 text-xl font-black text-rs-ink">{copy.payRemaining}</h2>
             <p className="mt-1 text-sm font-semibold leading-6 text-muted-foreground">
-              Choose one method. The amount below updates before you upload the proof.
+              {copy.finalPaymentHint}
             </p>
           </div>
           <PaymentStatusBadge status={order.paymentStatus} />
@@ -655,29 +932,29 @@ function FinalPaymentActionPanel({
         {order.paymentStatus === 'FINAL_PAYMENT_REJECTED' ? (
           <RejectionNotice
             proof={rejectedProof}
-            fallback="Final payment was rejected. Please choose the payment method again or upload a corrected transfer image."
+            fallback={copy.finalRejectedFallback}
           />
         ) : null}
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <FinalPaymentMethodButton
             value="instapay"
-            label="Instapay"
-            hint="No extra fee"
+            label={copy.methods.instapay}
+            hint={copy.noExtraFee}
             selected={finalPaymentMethod === 'instapay'}
             onSelect={onMethodChange}
           />
           <FinalPaymentMethodButton
             value="vodafone"
-            label="Vodafone Cash"
-            hint={`Adds ${preview.feePercent}% fee`}
+            label={copy.methods.vodafone}
+            hint={interpolateCopy(copy.addsFee, { percent: preview.feePercent })}
             selected={finalPaymentMethod === 'vodafone'}
             onSelect={onMethodChange}
           />
           <FinalPaymentMethodButton
             value="cash_at_shop"
-            label="Cash at store"
-            hint="Pay when pickup"
+            label={copy.cashAtStore}
+            hint={copy.payWhenPickup}
             selected={finalPaymentMethod === 'cash_at_shop'}
             onSelect={onMethodChange}
           />
@@ -686,30 +963,30 @@ function FinalPaymentActionPanel({
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.55fr)]">
           <div className="rounded-2xl border border-rs-peach-light bg-card p-4 shadow-sm">
             <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-muted-foreground">
-              Amount to transfer
+              {copy.amountToTransfer}
             </p>
             <p className="mt-2 text-3xl font-black rs-price-primary">
-              {formatOrderMoney(preview.amountDue, order.currency)}
+              {formatOrderMoney(preview.amountDue, order.currency, language)}
             </p>
             <div className="mt-4 space-y-2 text-sm">
               <SummaryRow
-                label="Remaining before fee"
-                value={formatOrderMoney(preview.baseAmount, order.currency)}
+                label={copy.remainingBeforeFee}
+                value={formatOrderMoney(preview.baseAmount, order.currency, language)}
               />
               <SummaryRow
                 label={
                   preview.method === 'vodafone'
-                    ? `Vodafone Cash fee ${preview.feePercent}%`
-                    : 'Final payment fee'
+                    ? interpolateCopy(copy.addsFee, { percent: preview.feePercent })
+                    : copy.finalPaymentFee
                 }
-                value={formatOrderMoney(preview.feeAmount, order.currency)}
+                value={formatOrderMoney(preview.feeAmount, order.currency, language)}
               />
             </div>
           </div>
 
           <div className="rounded-2xl border border-rs-peach-light bg-card p-4 shadow-sm">
             <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-muted-foreground">
-              Selected method
+              {copy.selectedMethod}
             </p>
             <p className="mt-2 text-lg font-black text-rs-ink">{preview.methodLabel}</p>
             {preview.receiverValue ? (
@@ -723,7 +1000,7 @@ function FinalPaymentActionPanel({
               </>
             ) : (
               <p className="mt-3 text-sm font-semibold leading-6 text-muted-foreground">
-                No transfer proof needed. Confirm this choice and pay when you reach the store.
+                {copy.noTransferProofNeeded}
               </p>
             )}
           </div>
@@ -734,19 +1011,21 @@ function FinalPaymentActionPanel({
             <PaymentProofUploader
               label={
                 finalPaymentProof?.status === 'REJECTED'
-                  ? 'Upload Final Payment Proof Again'
-                  : 'Upload final payment proof'
+                  ? copy.uploadFinalAgain
+                  : copy.uploadFinalProof
               }
               onUpload={onUpload}
             />
             <p className="mt-2 rounded-2xl bg-rs-cream-warm p-3 text-xs font-semibold leading-5 text-muted-foreground">
-              Transfer exactly {formatOrderMoney(preview.amountDue, order.currency)} using{' '}
-              {preview.methodLabel}, then upload the receipt image.
+              {interpolateCopy(copy.transferExactly, {
+                amount: formatOrderMoney(preview.amountDue, order.currency, language),
+                method: preview.methodLabel,
+              })}
             </p>
           </div>
         ) : (
           <Button type="button" className="rs-btn-secondary mt-4 w-full" onClick={onCashSubmit}>
-            Select cash at store payment
+            {copy.selectCash}
           </Button>
         )}
 
@@ -806,6 +1085,8 @@ function PaymentSummary({
   order: Order;
   finalPaymentPreview: FinalPaymentPreview | null;
 }) {
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
   const savedFinalDue = toOrderRawAmount(order.finalAmountDue);
   const displayFinalDue =
     finalPaymentPreview?.amountDue ??
@@ -813,50 +1094,51 @@ function PaymentSummary({
   return (
     <div className="rs-panel p-4 sm:p-5">
       <h2 className="text-sm font-extrabold uppercase tracking-[0.22em] text-rs-gold mb-3">
-        Payment Summary
+        {copy.paymentSummary}
       </h2>
       <div className="mt-4 space-y-2 text-sm">
         <SummaryRow
-          label="Subtotal"
-          value={formatOrderMoney(order.subtotalAmount, order.currency)}
+          label={copy.subtotal}
+          value={formatOrderMoney(order.subtotalAmount, order.currency, language)}
         />
         <SummaryRow
-          label="Discount"
-          value={formatOrderMoney(order.discountAmount, order.currency)}
+          label={copy.discount}
+          value={formatOrderMoney(order.discountAmount, order.currency, language)}
         />
         <SummaryRow
-          label={`Deposit ${order.depositPercent}%`}
-          value={formatOrderMoney(order.depositAmount, order.currency)}
+          label={interpolateCopy(copy.depositLine, { percent: order.depositPercent })}
+          value={formatOrderMoney(order.depositAmount, order.currency, language)}
         />
         <SummaryRow
-          label="Deposit fee"
-          value={formatOrderMoney(order.depositPaymentFeeAmount, order.currency)}
+          label={copy.depositFee}
+          value={formatOrderMoney(order.depositPaymentFeeAmount, order.currency, language)}
         />
-        <SummaryRow label="Deposit method" value={paymentMethodLabel(order.depositPaymentMethod)} />
+        <SummaryRow label={copy.depositMethod} value={paymentMethodLabel(order.depositPaymentMethod, copy)} />
         <SummaryRow
-          label="Remaining before final fees"
-          value={formatOrderMoney(order.remainingAmount, order.currency)}
+          label={copy.remainingBeforeFinalFees}
+          value={formatOrderMoney(order.remainingAmount, order.currency, language)}
         />
         <SummaryRow
-          label="Final payment fee"
+          label={copy.finalPaymentFee}
           value={formatOrderMoney(
             finalPaymentPreview?.feeAmount ?? order.finalPaymentFeeAmount,
             order.currency,
+            language,
           )}
         />
         <SummaryRow
-          label="Final method"
-          value={finalPaymentPreview?.methodLabel ?? paymentMethodLabel(order.finalPaymentMethod)}
+          label={copy.finalMethod}
+          value={finalPaymentPreview?.methodLabel ?? paymentMethodLabel(order.finalPaymentMethod, copy)}
         />
         <SummaryRow
-          label="Final amount to pay"
-          value={formatOrderMoney(displayFinalDue, order.currency)}
+          label={copy.finalAmountToPay}
+          value={formatOrderMoney(displayFinalDue, order.currency, language)}
           isStrong
         />
         <div className="h-px bg-rs-peach-light mt-2" />
         <SummaryRow
-          label="Order total"
-          value={formatOrderMoney(order.totalAmount, order.currency)}
+          label={copy.orderTotal}
+          value={formatOrderMoney(order.totalAmount, order.currency, language)}
         />
       </div>
     </div>
@@ -864,10 +1146,13 @@ function PaymentSummary({
 }
 
 function ShippingSummary({ order }: { order: Order }) {
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
+
   return (
     <div className="rs-panel p-4 sm:p-5">
       <h2 className="text-sm font-extrabold uppercase tracking-[0.22em] text-rs-gold mb-3">
-        Delivery Address
+        {copy.deliveryAddress}
       </h2>
       <p className="mt-3 text-sm font-extrabold text-rs-ink">{order.customerNameSnapshot}</p>
       <p className="mt-1 text-sm text-muted-foreground">{order.customerPhoneSnapshot}</p>
@@ -908,19 +1193,22 @@ function SummaryRow({
 }
 
 function ProofList({ proofs }: { proofs: OrderPaymentProof[] }) {
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
+
   if (proofs.length === 0) return null;
 
   return (
     <div className="rs-panel p-4 sm:p-5">
       <h2 className="text-sm font-extrabold uppercase tracking-[0.22em] text-rs-gold mb-3">
-        Payment Proofs
+        {copy.paymentProofs}
       </h2>
       <div className="mt-4 space-y-2.5">
         {proofs.map((proof) => (
           <div key={proof.id} className="rounded-2xl border border-rs-peach-light bg-card p-3.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-extrabold">
-                {proof.type === 'DEPOSIT' ? 'First payment' : 'Final payment'}
+                {proof.type === 'DEPOSIT' ? copy.firstPayment : copy.finalPaymentProofName}
               </span>
               <PaymentProofStatusBadge status={proof.status} />
             </div>
@@ -933,7 +1221,7 @@ function ProofList({ proofs }: { proofs: OrderPaymentProof[] }) {
             {proof.secureUrl ? (
               <Button asChild variant="ghost" size="sm" className="mt-2 px-0 text-xs font-semibold">
                 <a href={proof.secureUrl} target="_blank" rel="noreferrer">
-                  View image <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                  {copy.viewImage} <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 </a>
               </Button>
             ) : null}
@@ -945,13 +1233,15 @@ function ProofList({ proofs }: { proofs: OrderPaymentProof[] }) {
 }
 
 function CustomerTimeline({ order }: { order: Order }) {
+  const { language } = useI18n();
+  const copy = orderDetailCopy[language];
   const timeline = order.timeline ?? [];
   if (timeline.length === 0) return null;
 
   return (
     <details className="rs-panel p-4 sm:p-5">
       <summary className="cursor-pointer text-sm font-extrabold uppercase tracking-[0.22em] text-rs-gold">
-        Order History
+        {copy.orderHistory}
       </summary>
       <div className="mt-4 space-y-2.5">
         {timeline.map((event) => (
@@ -969,52 +1259,55 @@ function CustomerTimeline({ order }: { order: Order }) {
   );
 }
 
-function paymentMethodLabel(method: Order['depositPaymentMethod'] | null | undefined): string {
-  if (method === 'VODAFONE') return 'Vodafone Cash';
-  if (method === 'INSTAPAY') return 'Instapay';
-  if (method === 'CASH_AT_SHOP') return 'Cash at store';
-  return 'Not selected';
+function paymentMethodLabel(
+  method: Order['depositPaymentMethod'] | null | undefined,
+  copy: OrderDetailCopy,
+): string {
+  if (method === 'VODAFONE') return copy.methods.vodafone;
+  if (method === 'INSTAPAY') return copy.methods.instapay;
+  if (method === 'CASH_AT_SHOP') return copy.methods.cashAtStore;
+  return copy.methods.notSelected;
 }
 
 function getNextAction(
   order: Order,
   finalPaymentPreview: FinalPaymentPreview | null,
+  copy: OrderDetailCopy,
+  language: Language,
 ): { title: string; message: string; amount?: string; amountLabel?: string } | null {
   if (order.paymentStatus === 'DEPOSIT_PENDING') {
     return {
-      title: 'Deposit proof needed',
-      message: 'Upload the first payment proof from checkout to start order confirmation.',
-      amount: formatOrderMoney(order.depositAmount, order.currency),
-      amountLabel: 'Deposit amount',
+      title: copy.actions.depositNeededTitle,
+      message: copy.actions.depositNeededMessage,
+      amount: formatOrderMoney(order.depositAmount, order.currency, language),
+      amountLabel: copy.actions.depositAmount,
     };
   }
 
   if (order.paymentStatus === 'DEPOSIT_SUBMITTED') {
     return {
-      title: 'Deposit under review',
-      message:
-        'We received your transfer image. Admin will approve it before SHEIN purchasing starts.',
-      amount: formatOrderMoney(order.depositAmount, order.currency),
-      amountLabel: 'Submitted deposit',
+      title: copy.actions.depositReviewTitle,
+      message: copy.actions.depositReviewMessage,
+      amount: formatOrderMoney(order.depositAmount, order.currency, language),
+      amountLabel: copy.actions.submittedDeposit,
     };
   }
 
   if (order.paymentStatus === 'DEPOSIT_REJECTED') {
     return {
-      title: 'Upload deposit proof again',
-      message: 'The previous deposit proof was rejected. Upload a clearer receipt image below.',
-      amount: formatOrderMoney(order.depositAmount, order.currency),
-      amountLabel: 'Deposit amount',
+      title: copy.actions.uploadDepositAgainTitle,
+      message: copy.actions.uploadDepositAgainMessage,
+      amount: formatOrderMoney(order.depositAmount, order.currency, language),
+      amountLabel: copy.actions.depositAmount,
     };
   }
 
   if (order.paymentStatus === 'DEPOSIT_APPROVED') {
     return {
-      title: 'Deposit approved',
-      message:
-        'Your order is confirmed. Final payment will open when the items arrive at the store.',
-      amount: formatOrderMoney(order.remainingAmount, order.currency),
-      amountLabel: 'Remaining before fees',
+      title: copy.actions.depositApprovedTitle,
+      message: copy.actions.depositApprovedMessage,
+      amount: formatOrderMoney(order.remainingAmount, order.currency, language),
+      amountLabel: copy.actions.remainingBeforeFees,
     };
   }
 
@@ -1026,32 +1319,32 @@ function getNextAction(
     return {
       title:
         order.paymentStatus === 'FINAL_PAYMENT_REJECTED'
-          ? 'Final payment proof rejected'
-          : 'Final payment required',
+          ? copy.actions.finalRejectedTitle
+          : copy.actions.finalRequiredTitle,
       message:
         finalPaymentPreview.method === 'vodafone'
-          ? 'Vodafone Cash fee is included in the amount to transfer before you upload the proof.'
-          : 'Choose the payment method below and upload the final transfer proof.',
-      amount: formatOrderMoney(finalPaymentPreview.amountDue, order.currency),
-      amountLabel: 'Amount to pay now',
+          ? copy.actions.finalVodafoneMessage
+          : copy.actions.finalUploadMessage,
+      amount: formatOrderMoney(finalPaymentPreview.amountDue, order.currency, language),
+      amountLabel: copy.actions.amountToPayNow,
     };
   }
 
   if (order.paymentStatus === 'FINAL_PAYMENT_SUBMITTED') {
     return {
-      title: 'Final payment under review',
-      message: 'We received your final payment proof. Admin will approve it soon.',
-      amount: formatOrderMoney(order.finalAmountDue, order.currency),
-      amountLabel: 'Submitted final amount',
+      title: copy.actions.finalReviewTitle,
+      message: copy.actions.finalReviewMessage,
+      amount: formatOrderMoney(order.finalAmountDue, order.currency, language),
+      amountLabel: copy.actions.submittedFinalAmount,
     };
   }
 
   if (order.paymentStatus === 'PAID') {
     return {
-      title: 'Payment complete',
-      message: 'Your order is fully paid. Follow shipment or pickup updates on this page.',
-      amount: formatOrderMoney(order.finalPaidAmount, order.currency),
-      amountLabel: 'Final paid',
+      title: copy.actions.paymentCompleteTitle,
+      message: copy.actions.paymentCompleteMessage,
+      amount: formatOrderMoney(order.finalPaidAmount, order.currency, language),
+      amountLabel: copy.actions.finalPaid,
     };
   }
 
@@ -1064,12 +1357,14 @@ function buildFinalPaymentPreview({
   vodafoneFeePercent,
   vodafoneCash,
   instapay,
+  copy,
 }: {
   order: Order;
   method: FinalPaymentMethodChoice;
   vodafoneFeePercent: number;
   vodafoneCash: string;
   instapay: string;
+  copy: OrderDetailCopy;
 }): FinalPaymentPreview {
   const baseAmount = toOrderRawAmount(order.remainingAmount);
   const feeAmount = method === 'vodafone' ? calculatePercentRaw(baseAmount, vodafoneFeePercent) : 0;
@@ -1078,8 +1373,8 @@ function buildFinalPaymentPreview({
   if (method === 'vodafone') {
     return {
       method,
-      methodLabel: 'Vodafone Cash',
-      receiverLabel: 'Vodafone Cash number',
+      methodLabel: copy.methods.vodafone,
+      receiverLabel: copy.methods.vodafoneNumber,
       receiverValue: vodafoneCash,
       baseAmount,
       feeAmount,
@@ -1092,8 +1387,8 @@ function buildFinalPaymentPreview({
   if (method === 'cash_at_shop') {
     return {
       method,
-      methodLabel: 'Cash at store',
-      receiverLabel: 'Pay at pickup',
+      methodLabel: copy.methods.cashAtStore,
+      receiverLabel: copy.methods.payAtPickup,
       receiverValue: null,
       baseAmount,
       feeAmount: 0,
@@ -1105,8 +1400,8 @@ function buildFinalPaymentPreview({
 
   return {
     method,
-    methodLabel: 'Instapay',
-    receiverLabel: 'Instapay account',
+    methodLabel: copy.methods.instapay,
+    receiverLabel: copy.methods.instapayAccount,
     receiverValue: instapay,
     baseAmount,
     feeAmount: 0,

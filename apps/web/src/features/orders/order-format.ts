@@ -13,17 +13,36 @@ export function toEnglishDigits(value: string | number | null | undefined): stri
     );
 }
 
-export function formatOrderMoney(amount: string | number, currency: string): string {
+export function formatOrderMoney(
+  amount: string | number,
+  currency: string,
+  language?: 'ar' | 'en',
+): string {
   const value = typeof amount === 'number' ? amount / 100 : parseOrderAmount(amount);
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const normalizedCurrency = toEnglishDigits(currency || 'EGP').toUpperCase();
+
+  if (language && normalizedCurrency === 'EGP') {
+    const formattedAmount = toEnglishDigits(
+      new Intl.NumberFormat('en-US', {
+        maximumFractionDigits: Number.isInteger(safeValue) ? 0 : 2,
+        minimumFractionDigits: Number.isInteger(safeValue) ? 0 : 2,
+        numberingSystem: 'latn',
+      }).format(safeValue),
+    );
+
+    return language === 'ar' ? `${formattedAmount} ج.م` : `EGP ${formattedAmount}`;
+  }
+
   return toEnglishDigits(
     new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: toEnglishDigits(currency || 'EGP'),
+      currency: normalizedCurrency,
       currencyDisplay: 'code',
       maximumFractionDigits: 2,
       numberingSystem: 'latn',
     })
-      .format(Number.isFinite(value) ? value : 0)
+      .format(safeValue)
       .replace(/\u00a0/g, ' '),
   );
 }
