@@ -461,10 +461,14 @@ function ProfileMenu({
   onLogout: () => void;
   onNavigate: () => void;
 }) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
+  const accountMenuPanelClass = [
+    'absolute mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#F5E6E0] z-50',
+    language === 'ar' ? 'left-0 right-auto' : 'right-0 left-auto',
+  ].join(' ');
 
   return (
-    <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#F5E6E0] z-50">
+    <div className={accountMenuPanelClass}>
       <div className="p-4 border-b border-[#F5E6E0]">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#B8860B] text-white">
@@ -517,10 +521,14 @@ function AdminMenu({
   onLogout: () => void;
   onNavigate: () => void;
 }) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
+  const accountMenuPanelClass = [
+    'absolute mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#F5E6E0] z-50',
+    language === 'ar' ? 'left-0 right-auto' : 'right-0 left-auto',
+  ].join(' ');
 
   return (
-    <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#F5E6E0] z-50">
+    <div className={accountMenuPanelClass}>
       <div className="p-4 border-b border-[#F5E6E0]">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#c7831e] text-white">
