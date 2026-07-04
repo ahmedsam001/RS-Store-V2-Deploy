@@ -510,7 +510,8 @@
 
 .rs-hero-branch-left {
   inset-block-start: 0.25rem;
-  inset-inline-start: clamp(-3rem, -4vw, -1rem);
+  left: clamp(-3rem, -4vw, -1rem);
+  right: auto;
   width: clamp(7.5rem, 16vw, 14rem);
   height: clamp(9rem, 22vw, 16rem);
   background: url('../assets/brand/branch-left.png') no-repeat center/contain;
@@ -519,7 +520,8 @@
 
 .rs-hero-branch-right {
   inset-block-start: 0.25rem;
-  inset-inline-end: clamp(-3rem, -4vw, -1rem);
+  right: clamp(-3rem, -4vw, -1rem);
+  left: auto;
   width: clamp(7.5rem, 16vw, 14rem);
   height: clamp(9rem, 22vw, 16rem);
   background: url('../assets/brand/branch-right.png') no-repeat center/contain;
@@ -1375,7 +1377,8 @@
 
 @media (max-width: 350px) {
   .rs-hero-branch-left {
-    inset-inline-start: -1.5rem;
+    left: -1.5rem;
+    right: auto;
   }
 }
 
@@ -1426,7 +1429,8 @@
 
 .rs-hero-branch-left {
   inset-block-start: 0.65rem;
-  inset-inline-start: clamp(-3rem, -3vw, -0.75rem);
+  left: clamp(-3rem, -3vw, -0.75rem);
+  right: auto;
   width: clamp(8rem, 16vw, 14.5rem);
   height: clamp(8.5rem, 18vw, 14.5rem);
   opacity: 0.36;
@@ -1434,7 +1438,8 @@
 
 .rs-hero-branch-right {
   inset-block-start: 0.65rem;
-  inset-inline-end: clamp(-3rem, -3vw, -0.75rem);
+  right: clamp(-3rem, -3vw, -0.75rem);
+  left: auto;
   width: clamp(8rem, 16vw, 14.5rem);
   height: clamp(8.5rem, 18vw, 14.5rem);
   opacity: 0.36;
