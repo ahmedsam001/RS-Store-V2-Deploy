@@ -11,7 +11,7 @@ type ProductGalleryProps = {
 };
 
 export function ProductGallery({ images, productName }: ProductGalleryProps) {
-  const { language } = useI18n();
+  const { language, t } = useI18n();
   const [activeImage, setActiveImage] = useState(() => images[0]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -191,7 +191,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
               type="button"
               onClick={goToPrevious}
               className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background focus:outline-none focus:ring-2 focus:ring-rs-gold"
-              aria-label="Previous image"
+              aria-label={t('product.previousImage')}
             >
               <ChevronLeft className="h-5 w-5 text-rs-ink" aria-hidden="true" />
             </button>
@@ -199,7 +199,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
               type="button"
               onClick={goToNext}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background focus:outline-none focus:ring-2 focus:ring-rs-gold"
-              aria-label="Next image"
+              aria-label={t('product.nextImage')}
             >
               <ChevronRight className="h-5 w-5 text-rs-ink" aria-hidden="true" />
             </button>
@@ -211,7 +211,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
         <div
           ref={thumbnailContainerRef}
           className="premium-scrollbar rs-product-gallery-thumb-container -mx-1 flex gap-2 overflow-x-auto px-1 pb-2"
-          aria-label="Product Images"
+          aria-label={t('product.images')}
           role="tablist"
         >
           {images.map((image, index) => {

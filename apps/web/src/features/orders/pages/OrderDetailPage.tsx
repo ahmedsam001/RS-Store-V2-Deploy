@@ -619,11 +619,11 @@ export function OrderDetailPage() {
 
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <div className="rounded-2xl border border-rs-peach-light bg-rs-cream-warm p-3">
-                  <p className="text-xs font-extrabold text-muted-foreground">Vodafone Cash</p>
+                  <p className="text-xs font-extrabold text-muted-foreground">{copy.methods.vodafone}</p>
                   <p className="mt-1 font-black text-rs-ink">{vodafoneCash}</p>
                 </div>
                 <div className="rounded-2xl border border-rs-peach-light bg-rs-cream-warm p-3">
-                  <p className="text-xs font-extrabold text-muted-foreground">Instapay</p>
+                  <p className="text-xs font-extrabold text-muted-foreground">{copy.methods.instapay}</p>
                   <p className="mt-1 font-black text-rs-ink">{instapay}</p>
                 </div>
               </div>

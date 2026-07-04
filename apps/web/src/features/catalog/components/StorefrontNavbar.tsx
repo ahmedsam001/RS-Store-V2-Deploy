@@ -23,7 +23,7 @@ import {
   STORE_FOOTER_CATEGORY_LINKS,
 } from '@/features/catalog/navigation/storefront-navigation';
 import { readSetting, settingsApi, StorefrontSettings } from '@/features/settings/settings-api';
-import { localizeKnownLabel, useI18n } from '@/shared/i18n';
+import { LanguageSwitcher, localizeKnownLabel, useI18n } from '@/shared/i18n';
 import { PATHS } from '@/shared/constants/routes';
 import { buildCustomerAuthPath } from '@/shared/lib/return-to';
 import logoUrl from '@/assets/brand/rs-logo-transparent.png';
@@ -342,9 +342,9 @@ function StorefrontFooter({
   );
 
   return (
-    <footer className="rs-footer" aria-label="Store footer">
+    <footer className="rs-footer" aria-label={t('footer.storeFooter')}>
       <div className="rs-footer-inner">
-        <section className="rs-footer-brand" aria-label="About RS Store">
+        <section className="rs-footer-brand" aria-label={t('footer.aboutStore')}>
           <CatalogLink
             href={PATHS.home}
             className="rs-footer-logo"
@@ -353,7 +353,7 @@ function StorefrontFooter({
             <img src={logoUrl} alt={storeName} />
           </CatalogLink>
           <p className="rs-footer-copy">{t('footer.copy', { currency })}</p>
-          <div className="rs-footer-trust-grid" aria-label="Store benefits">
+          <div className="rs-footer-trust-grid" aria-label={t('footer.storeBenefits')}>
             <span>
               <Truck aria-hidden="true" /> {t('footer.deliveryDays', { days: deliveryDays })}
             </span>
@@ -424,7 +424,7 @@ function StorefrontFooter({
             target="_blank"
             rel="noreferrer"
             className="rs-footer-developer-link"
-            aria-label="Contact Ahmed Sami on WhatsApp"
+            aria-label={t('footer.developerContact')}
           >
             Ahmed Sami
           </a>
@@ -495,6 +495,7 @@ function ProfileMenu({
           <PackageSearch className="h-4 w-4" />
           <span>{t('nav.myOrders')}</span>
         </CatalogLink>
+        <LanguageSwitcher className="h-auto w-full justify-start rounded-md px-3 py-2 text-sm font-semibold text-[#3A2B24] hover:bg-gray-50 hover:text-[#B8860B]" />
         <button
           onClick={onLogout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-gray-50 text-red-600"
@@ -542,6 +543,7 @@ function AdminMenu({
           <LayoutDashboard className="h-4 w-4" />
           <span>{t('nav.adminDashboard')}</span>
         </CatalogLink>
+        <LanguageSwitcher className="h-auto w-full justify-start rounded-md px-3 py-2 text-sm font-semibold text-[#3A2B24] hover:bg-gray-50 hover:text-[#B8860B]" />
         <button
           onClick={onLogout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-gray-50 text-red-600"
