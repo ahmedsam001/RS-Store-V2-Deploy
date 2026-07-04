@@ -2685,6 +2685,7 @@
   display: grid;
   gap: 0.25rem;
   margin-top: 0.55rem;
+  margin-bottom: 0.5rem;
 }
 
 .product-card__price-row {
