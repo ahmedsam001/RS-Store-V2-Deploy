@@ -101,11 +101,12 @@ export function CatalogPage() {
     navigate(`${path}${params ? `?${params}` : ''}`);
   }
 
-  const rawPageTitle = activeCategory?.name ?? displayTitleFromSlug(categorySlug) ?? t('catalog.allProducts');
+  const routeCategoryTitle = displayTitleFromSlug(categorySlug);
+  const rawPageTitle = routeCategoryTitle ?? activeCategory?.name ?? t('catalog.allProducts');
   const pageTitle = localizeKnownLabel(localizeProductText(rawPageTitle, language), language) || t('catalog.allProducts');
-  const categoryDescription = activeCategory?.description
-    ? localizeProductText(activeCategory.description, language)
-    : '';
+  const knownCategoryDescription = categoryDescriptionFromSlug(categorySlug, t);
+  const categoryDescription = knownCategoryDescription ||
+    (activeCategory?.description ? localizeProductText(activeCategory.description, language) : '');
   const categorySubCategories = (activeCategory?.subCategories ?? []).filter(
     (subcategory) => subcategory.productCount > 0,
   );
@@ -179,7 +180,7 @@ export function CatalogPage() {
                 <h1 id="catalog-title" className="rs-heading-1 mt-2">
                   {pageTitle}
                 </h1>
-                {activeCategory?.description ? (
+                {categoryDescription ? (
                   <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
                     {categoryDescription}
                   </p>
@@ -226,7 +227,7 @@ export function CatalogPage() {
         {!isLoading && !error && products ? (
           <div className="rs-products-bar">
             <div className="min-w-0">
-              <span className="rs-section-kicker">{t('product.relatedKicker')}</span>
+              <span className="rs-section-kicker">{t('catalog.productsKicker')}</span>
               <h2 className="rs-heading-2 mt-1">{pageTitle}</h2>
             </div>
             <p className="rs-products-count">
@@ -255,6 +256,17 @@ export function CatalogPage() {
       </div>
     </div>
   );
+}
+
+
+function categoryDescriptionFromSlug(
+  slug: string | undefined,
+  t: ReturnType<typeof useI18n>['t'],
+): string {
+  const normalized = slug?.toLowerCase() ?? '';
+  if (normalized.includes('kid')) return t('catalog.categoryDescription.kids');
+  if (normalized.includes('women')) return t('catalog.categoryDescription.women');
+  return '';
 }
 
 function displayTitleFromSlug(slug?: string): string | undefined {

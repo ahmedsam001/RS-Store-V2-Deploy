@@ -23,7 +23,7 @@ import {
   STORE_FOOTER_CATEGORY_LINKS,
 } from '@/features/catalog/navigation/storefront-navigation';
 import { readSetting, settingsApi, StorefrontSettings } from '@/features/settings/settings-api';
-import { LanguageSwitcher, localizeKnownLabel, useI18n } from '@/shared/i18n';
+import { localizeKnownLabel, useI18n } from '@/shared/i18n';
 import { PATHS } from '@/shared/constants/routes';
 import { buildCustomerAuthPath } from '@/shared/lib/return-to';
 import logoUrl from '@/assets/brand/rs-logo-transparent.png';
@@ -140,7 +140,6 @@ export function StorefrontNavbar() {
               </div>
             </nav>
             <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3">
-              <LanguageSwitcher />
               {isAdmin ? (
                 <div className="relative" data-account-menu-root>
                   <button
@@ -220,7 +219,6 @@ export function StorefrontNavbar() {
                 <img src={logoUrl} alt={storeName} className="h-10 w-auto" />
               </CatalogLink>
               <div className="flex items-center gap-1.5">
-                <LanguageSwitcher className="px-2" />
                 {isAdmin ? (
                   <div className="relative" data-account-menu-root>
                     <button
@@ -454,9 +452,6 @@ function normalizeWhatsAppPhone(value: string) {
   return digits;
 }
 
-const accountMenuPanelClass =
-  'fixed inset-x-3 top-28 z-50 max-h-[calc(100vh-8rem)] w-auto overflow-y-auto rounded-lg border border-[#F5E6E0] bg-white shadow-lg sm:absolute sm:inset-x-auto sm:end-0 sm:top-full sm:mt-2 sm:w-72 sm:max-h-[calc(100vh-7rem)]';
-
 function ProfileMenu({
   user,
   onLogout,
@@ -469,7 +464,7 @@ function ProfileMenu({
   const { t } = useI18n();
 
   return (
-    <div className={accountMenuPanelClass}>
+    <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#F5E6E0] z-50">
       <div className="p-4 border-b border-[#F5E6E0]">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#B8860B] text-white">
@@ -500,7 +495,6 @@ function ProfileMenu({
           <PackageSearch className="h-4 w-4" />
           <span>{t('nav.myOrders')}</span>
         </CatalogLink>
-        <LanguageSwitcher className="h-auto w-full justify-start rounded-md px-3 py-2 text-sm font-semibold text-[#3A2B24] hover:bg-gray-50 hover:text-[#B8860B]" />
         <button
           onClick={onLogout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-gray-50 text-red-600"
@@ -525,7 +519,7 @@ function AdminMenu({
   const { t } = useI18n();
 
   return (
-    <div className={accountMenuPanelClass}>
+    <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#F5E6E0] z-50">
       <div className="p-4 border-b border-[#F5E6E0]">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#c7831e] text-white">
@@ -548,7 +542,6 @@ function AdminMenu({
           <LayoutDashboard className="h-4 w-4" />
           <span>{t('nav.adminDashboard')}</span>
         </CatalogLink>
-        <LanguageSwitcher className="h-auto w-full justify-start rounded-md px-3 py-2 text-sm font-semibold text-[#3A2B24] hover:bg-gray-50 hover:text-[#B8860B]" />
         <button
           onClick={onLogout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-gray-50 text-red-600"
