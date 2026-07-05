@@ -32,6 +32,7 @@ import {
 } from '@/features/admin/components/AdminFeedback';
 import { AdminEmpty, AdminLoading } from '@/features/admin/components/AdminState';
 import { AdminPagination } from '@/features/admin/components/AdminPagination';
+import { useAuth } from '@/features/auth/AuthContext';
 import { PATHS } from '@/shared/constants/routes';
 
 type WizardStep = 1 | 2 | 3 | 4;
@@ -55,6 +56,7 @@ const STEPS: Array<{ id: WizardStep; label: string; description: string }> = [
 
 export function AdminSheinBatchCreatePage() {
   const navigate = useNavigate();
+  const { csrfToken } = useAuth();
   const [step, setStep] = useState<WizardStep>(1);
   const [availableItems, setAvailableItems] =
     useState<AdminPaginated<AdminAvailableSheinOrderItem> | null>(null);
@@ -184,19 +186,22 @@ export function AdminSheinBatchCreatePage() {
     }
 
     try {
-      const created = await adminApi.createSheinBatch({
-        title: createForm.title || undefined,
-        sheinOrderReference: createForm.sheinOrderReference || undefined,
-        trackingNumber: createForm.trackingNumber || undefined,
-        trackingCarrier: createForm.trackingCarrier || undefined,
-        trackingUrl: createForm.trackingUrl || undefined,
-        exchangeRateSarToEgp: createForm.exchangeRateSarToEgp || '0',
-        notes: createForm.notes || undefined,
-        items: selectedReadyItems.map((item) => ({
-          orderItemId: item.id,
-          unitSarAmount: getSelectedUnitSarInput(item, selectedItemSarAmounts),
-        })),
-      });
+      const created = await adminApi.createSheinBatch(
+        {
+          title: createForm.title || undefined,
+          sheinOrderReference: createForm.sheinOrderReference || undefined,
+          trackingNumber: createForm.trackingNumber || undefined,
+          trackingCarrier: createForm.trackingCarrier || undefined,
+          trackingUrl: createForm.trackingUrl || undefined,
+          exchangeRateSarToEgp: createForm.exchangeRateSarToEgp || '0',
+          notes: createForm.notes || undefined,
+          items: selectedReadyItems.map((item) => ({
+            orderItemId: item.id,
+            unitSarAmount: getSelectedUnitSarInput(item, selectedItemSarAmounts),
+          })),
+        },
+        { csrfToken },
+      );
       setNotice({
         type: 'success',
         message: `${created.batchCode} created with ${selectedReadyItems.length} item(s)`,
