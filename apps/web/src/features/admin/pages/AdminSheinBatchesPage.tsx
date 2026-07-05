@@ -278,8 +278,15 @@ export function AdminSheinBatchesPage() {
     }
   }
 
-  function syncUrl(next: BatchFilters) {
-    setSearchParams(buildBatchUrlSearchParams(next));
+  function syncUrl(next: BatchFilters, batchId?: string) {
+    const params = buildBatchUrlSearchParams(next);
+    if (batchId) params.set('batchId', batchId);
+    setSearchParams(params);
+  }
+
+  async function selectBatchAndSync(id: string) {
+    syncUrl(filters, id);
+    await selectBatch(id);
   }
 
   async function submitFilters(event: FormEvent<HTMLFormElement>) {
@@ -477,7 +484,13 @@ export function AdminSheinBatchesPage() {
   }
 
   useEffect(() => {
-    load().catch((error) => setNotice(toNotice(error)));
+    const batchId = searchParams.get('batchId');
+    load()
+      .then(() => {
+        if (batchId) return selectBatch(batchId);
+        return undefined;
+      })
+      .catch((error) => setNotice(toNotice(error)));
     loadBadgeCounts().catch((error) => setNotice(toNotice(error)));
     settingsApi
       .storefront()
@@ -599,7 +612,9 @@ export function AdminSheinBatchesPage() {
               <button
                 key={batch.id}
                 type="button"
-                onClick={() => selectBatch(batch.id).catch((error) => setNotice(toNotice(error)))}
+                onClick={() =>
+                  selectBatchAndSync(batch.id).catch((error) => setNotice(toNotice(error)))
+                }
                 className={`rounded-3xl border p-4 text-left shadow-sm transition ${selected?.id === batch.id ? 'border-[#c7831e] bg-[#fff5df]' : 'border-[#efd6c5] bg-white hover:bg-[#fffaf3]'}`}
                 aria-label={`Select batch ${batch.batchCode}`}
               >

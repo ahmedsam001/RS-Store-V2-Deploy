@@ -54,6 +54,27 @@ const STEPS: Array<{ id: WizardStep; label: string; description: string }> = [
   { id: 4, label: 'Create batch', description: 'Save the SHEIN purchase group' },
 ];
 
+function getSheinBatchStatusGroupForStatus(status?: string) {
+  switch (status) {
+    case 'ORDERED_FROM_SHEIN':
+      return 'ORDERED';
+    case 'SHIPPING':
+    case 'CUSTOMS':
+    case 'ARRIVED_EGYPT':
+      return 'IN_SHIPPING';
+    case 'ARRIVED_STORE':
+    case 'READY_FOR_PICKUP':
+      return 'ARRIVED_SHOP';
+    case 'DELIVERED':
+      return 'COMPLETED';
+    case 'CANCELLED':
+      return 'CANCELLED';
+    case 'DRAFT':
+    default:
+      return 'COLLECTING';
+  }
+}
+
 export function AdminSheinBatchCreatePage() {
   const navigate = useNavigate();
   const { csrfToken } = useAuth();
@@ -206,7 +227,11 @@ export function AdminSheinBatchCreatePage() {
         type: 'success',
         message: `${created.batchCode} created with ${selectedReadyItems.length} item(s)`,
       });
-      navigate(`${PATHS.adminSheinBatches}?statusGroup=COLLECTING`);
+      const params = new URLSearchParams({
+        statusGroup: getSheinBatchStatusGroupForStatus(created.status),
+        batchId: created.id,
+      });
+      navigate(`${PATHS.adminSheinBatches}?${params.toString()}`);
     } catch (error) {
       setNotice(toNotice(error));
     }
