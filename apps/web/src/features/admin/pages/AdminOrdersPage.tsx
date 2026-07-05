@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
@@ -88,6 +88,7 @@ export function AdminOrdersPage() {
   const [response, setResponse] = useState<AdminPaginated<AdminOrder> | null>(null);
   const [reports, setReports] = useState<AdminReports | null>(null);
   const [selected, setSelected] = useState<AdminOrder | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [filters, setFilters] = useState(() => getOrderFiltersFromSearchParams(searchParams));
   const [notice, setNotice] = useState<AdminNoticeState>(null);
   const orders = response?.items ?? [];
@@ -108,6 +109,7 @@ export function AdminOrdersPage() {
       if (!selected || !stillExists) await selectOrder(orderResponse.items[0].id);
     } else {
       setSelected(null);
+      setDetailsOpen(false);
     }
   }
 
@@ -140,6 +142,7 @@ export function AdminOrdersPage() {
     const next = { ...filters, page: 1 };
     setFilters(next);
     syncUrl(next);
+    setDetailsOpen(false);
     await load(next);
   }
 
@@ -147,6 +150,7 @@ export function AdminOrdersPage() {
     const next = { ...filters, workflow, page: 1 };
     setFilters(next);
     syncUrl(next);
+    setDetailsOpen(false);
     await load(next);
   }
 
@@ -235,7 +239,7 @@ export function AdminOrdersPage() {
         </AdminFilterBar>
       </AdminCard>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
+      <div className="grid gap-4">
         <AdminCard
           title="Orders"
           description={`${response.meta.total} order in ${currentTab.label}`}
@@ -247,7 +251,11 @@ export function AdminOrdersPage() {
               key={order.id}
               order={order}
               selected={selectedInList?.id === order.id}
-              onSelect={() => selectOrder(order.id).catch((error) => setNotice(toNotice(error)))}
+              onSelect={() =>
+                selectOrder(order.id)
+                  .then(() => setDetailsOpen(true))
+                  .catch((error) => setNotice(toNotice(error)))
+              }
             />
           ))}
           <AdminPagination
@@ -255,8 +263,47 @@ export function AdminOrdersPage() {
             onPageChange={(page) => changePage(page).catch((error) => setNotice(toNotice(error)))}
           />
         </AdminCard>
+      </div>
 
-        {selected ? <OrderDetails order={selected} csrfToken={csrfToken} run={run} /> : null}
+      {selected && detailsOpen ? (
+        <AdminDetailsOverlay
+          title="Order details"
+          closeLabel="Close order details"
+          onClose={() => setDetailsOpen(false)}
+        >
+          <OrderDetails order={selected} csrfToken={csrfToken} run={run} />
+        </AdminDetailsOverlay>
+      ) : null}
+    </div>
+  );
+}
+
+function AdminDetailsOverlay({
+  title,
+  closeLabel,
+  onClose,
+  children,
+}: {
+  title: string;
+  closeLabel: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/40 p-3 sm:p-6" role="dialog" aria-modal="true">
+      <div className="mx-auto flex max-h-[calc(100vh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-200 px-3 py-1 text-lg font-semibold leading-none text-slate-600 hover:bg-slate-50"
+            aria-label={closeLabel}
+          >
+            ×
+          </button>
+        </div>
+        <div className="overflow-y-auto p-4">{children}</div>
       </div>
     </div>
   );

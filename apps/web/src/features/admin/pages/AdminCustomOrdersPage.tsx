@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Loader2, PackageSearch, RefreshCw, Search, XCircle } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { adminApi, type AdminSetting } from '@/features/admin/api/admin-api';
 import {
   customOrdersApi,
   type CustomOrderRequest,
@@ -16,9 +17,8 @@ import {
 import { AdminEmpty, AdminError, AdminLoading } from '@/features/admin/components/AdminState';
 import { Button } from '@/shared/components/ui/Button';
 
-const STATUS_FILTERS: Array<{ value: 'ALL' | CustomOrderStatus; label: string }> = [
-  { value: 'ALL', label: 'All' },
-  { value: 'PENDING_REVIEW', label: 'Waiting Review' },
+const CUSTOM_ORDER_TABS: Array<{ value: CustomOrderStatus; label: string }> = [
+  { value: 'PENDING_REVIEW', label: 'New requests' },
   { value: 'ACCEPTED', label: 'Accepted' },
   { value: 'REJECTED', label: 'Rejected' },
 ];
@@ -39,17 +39,20 @@ export function AdminCustomOrdersPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewErrors, setReviewErrors] = useState<Record<string, string>>({});
+  const [settings, setSettings] = useState<AdminSetting[]>([]);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  const status = (searchParams.get('status') as CustomOrderStatus | null) ?? 'ALL';
+  const status = normalizeTabStatus(searchParams.get('status'));
   const search = searchParams.get('search') ?? '';
+  const sarExchangeRate = useMemo(() => readCustomOrderSarRate(settings), [settings]);
+  const isSarRateAvailable = Number.isFinite(Number(sarExchangeRate)) && Number(sarExchangeRate) > 0;
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
-    if (status !== 'ALL') params.set('status', status);
     if (search) params.set('search', search);
-    params.set('limit', '30');
+    params.set('limit', '100');
     return params.toString();
-  }, [search, status]);
+  }, [search]);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -75,11 +78,28 @@ export function AdminCustomOrdersPage() {
     return () => controller.abort();
   }, [load]);
 
+  useEffect(() => {
+    let mounted = true;
+    adminApi
+      .settings()
+      .then((nextSettings) => {
+        if (mounted) setSettings(nextSettings);
+      })
+      .catch(() => {
+        if (mounted) setSettings([]);
+      })
+      .finally(() => {
+        if (mounted) setSettingsLoaded(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   function updateFilter(next: { status?: string; search?: string }) {
     const params = new URLSearchParams(searchParams);
     if (next.status !== undefined) {
-      if (next.status === 'ALL') params.delete('status');
-      else params.set('status', next.status);
+      params.set('status', next.status);
     }
     if (next.search !== undefined) {
       if (next.search.trim()) params.set('search', next.search.trim());
@@ -100,9 +120,7 @@ export function AdminCustomOrdersPage() {
     const form = new FormData(event.currentTarget);
     const file = form.get('adminImage');
     const adminTitle = String(form.get('adminTitle') ?? '').trim();
-    const adminPriceAmount = String(form.get('adminPriceAmount') ?? '').trim();
-    const adminShippingAmount = String(form.get('adminShippingAmount') ?? '').trim();
-    const adminTotalAmount = String(form.get('adminTotalAmount') ?? '').trim();
+    const sarPriceAmount = String(form.get('sarPriceAmount') ?? '').trim();
     const adminNote = String(form.get('adminNote') ?? '').trim();
 
     setReviewErrors((current) => {
@@ -111,12 +129,30 @@ export function AdminCustomOrdersPage() {
       return next;
     });
 
-    if (status === 'ACCEPTED' && (!adminTitle || !isPositiveMoneyInput(adminTotalAmount))) {
-      setReviewErrors((current) => ({
-        ...current,
-        [id]: 'To accept this request add an admin title and a final total amount greater than 0.',
-      }));
-      return;
+    let finalTotalEgp = '';
+    if (status === 'ACCEPTED') {
+      if (!adminTitle) {
+        setReviewErrors((current) => ({
+          ...current,
+          [id]: 'Product name is required.',
+        }));
+        return;
+      }
+      if (!isPositiveMoneyInput(sarPriceAmount)) {
+        setReviewErrors((current) => ({
+          ...current,
+          [id]: 'Price in SAR must be greater than 0.',
+        }));
+        return;
+      }
+      if (!isSarRateAvailable) {
+        setReviewErrors((current) => ({
+          ...current,
+          [id]: 'SAR rate is unavailable. Update pricing settings first.',
+        }));
+        return;
+      }
+      finalTotalEgp = calculateEgpFromSar(sarPriceAmount, sarExchangeRate);
     }
 
     setReviewingId(id);
@@ -127,9 +163,9 @@ export function AdminCustomOrdersPage() {
         {
           status,
           adminTitle,
-          adminPriceAmount,
-          adminShippingAmount,
-          adminTotalAmount,
+          adminPriceAmount: status === 'ACCEPTED' ? finalTotalEgp : undefined,
+          adminShippingAmount: status === 'ACCEPTED' ? '0.00' : undefined,
+          adminTotalAmount: status === 'ACCEPTED' ? finalTotalEgp : undefined,
           adminNote,
         },
         file instanceof File && file.size > 0 ? file : null,
@@ -158,6 +194,7 @@ export function AdminCustomOrdersPage() {
   }
 
   const counts = countByStatus(items);
+  const visibleItems = items.filter((item) => item.status === status);
 
   return (
     <div className="space-y-6">
@@ -179,10 +216,10 @@ export function AdminCustomOrdersPage() {
       >
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
-            {STATUS_FILTERS.map((filter) => (
+            {CUSTOM_ORDER_TABS.map((filter) => (
               <Link
                 key={filter.value}
-                to={filter.value === 'ALL' ? '?' : `?status=${filter.value}`}
+                to={`?status=${filter.value}`}
                 onClick={(event) => {
                   event.preventDefault();
                   updateFilter({ status: filter.value });
@@ -194,9 +231,7 @@ export function AdminCustomOrdersPage() {
                 }`}
               >
                 {filter.label}
-                <AdminCountBadge
-                  count={filter.value === 'ALL' ? total : (counts[filter.value] ?? 0)}
-                />
+                <AdminCountBadge count={counts[filter.value] ?? 0} />
               </Link>
             ))}
           </div>
@@ -238,18 +273,22 @@ export function AdminCustomOrdersPage() {
 
       {!loading && !error ? (
         <AdminCard
-          title="Requests"
-          description={`${total} matching custom order request${total === 1 ? '' : 's'}`}
+          title={CUSTOM_ORDER_TABS.find((tab) => tab.value === status)?.label ?? 'New requests'}
+          description={`${visibleItems.length} matching custom order request${visibleItems.length === 1 ? '' : 's'}`}
         >
-          {items.length === 0 ? <AdminEmpty message="No custom order requests found" /> : null}
+          {visibleItems.length === 0 ? (
+            <AdminEmpty message="No custom order requests found" />
+          ) : null}
           <div className="grid gap-4 xl:grid-cols-2">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <CustomOrderAdminCard
                 key={item.id}
                 item={item}
                 reviewing={reviewingId === item.id}
                 onReview={review}
                 reviewError={reviewErrors[item.id]}
+                sarExchangeRate={sarExchangeRate}
+                settingsLoaded={settingsLoaded}
               />
             ))}
           </div>
@@ -264,16 +303,33 @@ function CustomOrderAdminCard({
   reviewing,
   onReview,
   reviewError,
+  sarExchangeRate,
+  settingsLoaded,
 }: {
   item: CustomOrderRequest;
   reviewing: boolean;
   reviewError?: string;
+  sarExchangeRate: number | undefined;
+  settingsLoaded: boolean;
   onReview: (
     id: string,
     event: FormEvent<HTMLFormElement>,
     status: 'ACCEPTED' | 'REJECTED',
   ) => void;
 }) {
+  const [sarPriceAmount, setSarPriceAmount] = useState(() =>
+    inferSarInputFromEgp(item.adminTotalAmount, sarExchangeRate),
+  );
+  const isSarRateAvailable = Number.isFinite(Number(sarExchangeRate)) && Number(sarExchangeRate) > 0;
+  const finalTotalEgp = isPositiveMoneyInput(sarPriceAmount) && isSarRateAvailable
+    ? calculateEgpFromSar(sarPriceAmount, sarExchangeRate)
+    : '';
+
+  useEffect(() => {
+    if (sarPriceAmount || !sarExchangeRate) return;
+    setSarPriceAmount(inferSarInputFromEgp(item.adminTotalAmount, sarExchangeRate));
+  }, [item.adminTotalAmount, sarExchangeRate, sarPriceAmount]);
+
   return (
     <article className="rounded-2xl border border-border bg-background p-4">
       <div className="flex flex-col gap-4 sm:flex-row">
@@ -334,7 +390,7 @@ function CustomOrderAdminCard({
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-xs font-black text-rs-ink">
-            Admin title
+            Product name
             <input
               className="rounded-xl border border-input bg-card px-3 py-2 text-sm"
               name="adminTitle"
@@ -350,33 +406,41 @@ function CustomOrderAdminCard({
               accept="image/*"
             />
           </label>
-          <label className="grid gap-1 text-xs font-black text-rs-ink">
-            Product price
-            <input
-              className="rounded-xl border border-input bg-card px-3 py-2 text-sm"
-              name="adminPriceAmount"
-              defaultValue={minorToInput(item.adminPriceAmount)}
-              placeholder="0.00"
-            />
-          </label>
-          <label className="grid gap-1 text-xs font-black text-rs-ink">
-            Shipping
-            <input
-              className="rounded-xl border border-input bg-card px-3 py-2 text-sm"
-              name="adminShippingAmount"
-              defaultValue={minorToInput(item.adminShippingAmount)}
-              placeholder="0.00"
-            />
-          </label>
           <label className="grid gap-1 text-xs font-black text-rs-ink sm:col-span-2">
-            Final total
+            Price in SAR
             <input
               className="rounded-xl border border-input bg-card px-3 py-2 text-sm"
-              name="adminTotalAmount"
-              defaultValue={minorToInput(item.adminTotalAmount)}
+              name="sarPriceAmount"
+              value={sarPriceAmount}
+              onChange={(event) => setSarPriceAmount(event.target.value)}
               placeholder="0.00"
+              inputMode="decimal"
+              dir="ltr"
             />
           </label>
+        </div>
+        <div className="grid gap-2 rounded-xl bg-muted p-3 text-sm font-bold text-rs-ink sm:grid-cols-2">
+          <p>
+            SAR rate:{' '}
+            <span dir="ltr">
+              {isSarRateAvailable ? formatRate(sarExchangeRate) : settingsLoaded ? '-' : 'Loading'}
+            </span>
+          </p>
+          <p>
+            Final customer price:{' '}
+            <span dir="ltr">
+              {finalTotalEgp ? formatMajorMoney(finalTotalEgp, 'EGP') : 'EGP -'}
+            </span>
+          </p>
+          {!isSarRateAvailable && settingsLoaded ? (
+            <p className="sm:col-span-2 text-red-700">
+              SAR rate is unavailable. Update pricing settings first.
+            </p>
+          ) : (
+            <p className="sm:col-span-2 text-muted-foreground">
+              Enter the product price in SAR.
+            </p>
+          )}
         </div>
         <label className="grid gap-1 text-xs font-black text-rs-ink">
           Admin note
@@ -396,16 +460,6 @@ function CustomOrderAdminCard({
           >
             Current admin image
           </a>
-        ) : null}
-        {reviewError ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-            {reviewError}
-          </p>
-        ) : null}
-        {reviewError ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-            {reviewError}
-          </p>
         ) : null}
         {reviewError ? (
           <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
@@ -436,7 +490,7 @@ function CustomOrderAdminCard({
             type="submit"
             name="reviewStatus"
             value="ACCEPTED"
-            disabled={reviewing || Boolean(item.convertedOrderId)}
+            disabled={reviewing || Boolean(item.convertedOrderId) || !isSarRateAvailable}
           >
             {reviewing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
             Accept
@@ -463,6 +517,18 @@ function countByStatus(items: CustomOrderRequest[]) {
   }, {});
 }
 
+function normalizeTabStatus(value: string | null): CustomOrderStatus {
+  return CUSTOM_ORDER_TABS.some((tab) => tab.value === value)
+    ? (value as CustomOrderStatus)
+    : 'PENDING_REVIEW';
+}
+
+function readCustomOrderSarRate(settings: AdminSetting[]): number | undefined {
+  const raw = settings.find((item) => item.key === 'shein.import.sarExchangeRate')?.value;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function isPositiveMoneyInput(value: string) {
   if (!value.trim()) return false;
   const normalized = value.trim().replace(',', '.');
@@ -470,8 +536,34 @@ function isPositiveMoneyInput(value: string) {
   return Number.isFinite(amount) && amount > 0;
 }
 
-function minorToInput(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === '') return '';
-  const amount = Number(value) / 100;
-  return Number.isFinite(amount) ? amount.toFixed(2) : '';
+function calculateEgpFromSar(sarValue: string, sarRate: number | undefined): string {
+  const sar = Number(sarValue.trim().replace(',', '.'));
+  const rate = Number(sarRate);
+  if (!Number.isFinite(sar) || !Number.isFinite(rate) || sar <= 0 || rate <= 0) return '';
+  const cents = Math.round(sar * rate * 100);
+  return (cents / 100).toFixed(2);
+}
+
+function inferSarInputFromEgp(value: string | number | null | undefined, sarRate: number | undefined) {
+  if (value === null || value === undefined || value === '' || !sarRate) return '';
+  const egp = Number(value) / 100;
+  if (!Number.isFinite(egp) || egp <= 0) return '';
+  return (egp / sarRate).toFixed(2).replace(/\.00$/, '');
+}
+
+function formatMajorMoney(value: string, currency: 'EGP' | 'SAR') {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return `${currency} -`;
+  return `${currency} ${amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatRate(value: number | undefined) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '-';
+  return amount.toLocaleString('en-US', {
+    maximumFractionDigits: 4,
+  });
 }

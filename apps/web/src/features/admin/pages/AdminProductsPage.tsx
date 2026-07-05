@@ -1,12 +1,16 @@
-import { ChangeEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
+import { Select } from '@/shared/components/ui/Select';
 import {
   adminApi,
   AdminCategory,
   AdminCreateProductInput,
+  AdminCreateVariantInput,
   AdminImage,
   AdminProduct,
+  AdminVariant,
 } from '@/features/admin/api/admin-api';
 import { AdminCard, AdminPageHeader } from '@/features/admin/components/AdminDesign';
 import { AdminLoading } from '@/features/admin/components/AdminState';
@@ -137,6 +141,10 @@ export function AdminProductsPage() {
             product={editingProduct}
             onRefresh={() => refreshEditingProduct(editingProduct.id)}
           />
+          <ProductVariantManager
+            product={editingProduct}
+            onRefresh={() => refreshEditingProduct(editingProduct.id)}
+          />
           <Button
             type="button"
             variant="outline"
@@ -153,6 +161,213 @@ export function AdminProductsPage() {
           onAddNew={() => setShowCreateForm(true)}
         />
       )}
+    </div>
+  );
+}
+
+function ProductVariantManager({
+  product,
+  onRefresh,
+}: {
+  product: AdminProduct;
+  onRefresh: () => Promise<void>;
+}) {
+  const { csrfToken } = useAuth();
+  const [notice, setNotice] = useState<AdminNoticeState>(null);
+  const [isBusy, setIsBusy] = useState(false);
+  const variants = product.variants ?? [];
+
+  async function run(action: () => Promise<unknown>, success: string) {
+    try {
+      setIsBusy(true);
+      setNotice(null);
+      await action();
+      await onRefresh();
+      setNotice({ type: 'success', message: success });
+    } catch (error) {
+      setNotice(toNotice(error));
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function saveVariant(event: FormEvent<HTMLFormElement>, variant: AdminVariant) {
+    event.preventDefault();
+    const input = readVariantForm(event.currentTarget, product, variant);
+    if (!input) {
+      setNotice({ type: 'error', message: 'Variant stock must be a non-negative number' });
+      return;
+    }
+
+    await run(
+      () => adminApi.updateVariant(product.id, variant.id, input, { csrfToken }),
+      'Variant updated',
+    );
+  }
+
+  async function createVariant(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const input = readVariantForm(form, product);
+    if (!input) {
+      setNotice({ type: 'error', message: 'Variant stock must be a non-negative number' });
+      return;
+    }
+
+    await run(async () => {
+      await adminApi.createVariant(product.id, input, { csrfToken });
+      form.reset();
+    }, 'Variant added');
+  }
+
+  async function deleteVariant(variant: AdminVariant) {
+    if (!window.confirm('Delete this variant?')) return;
+
+    await run(
+      () => adminApi.deleteVariant(product.id, variant.id, { csrfToken }),
+      'Variant deleted',
+    );
+  }
+
+  return (
+    <div className="mt-6 rounded-2xl border bg-card p-4">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-base font-extrabold">Product variants</h3>
+        <p className="text-sm text-muted-foreground">
+          Edit size, color, stock, SKU, status, and optional variant pricing.
+        </p>
+      </div>
+
+      <div className="mt-3">
+        <AdminFeedback notice={notice} />
+      </div>
+
+      {variants.length === 0 ? (
+        <p className="mt-4 rounded-xl bg-muted p-3 text-sm font-semibold text-muted-foreground">
+          No variants yet. Add a size or color option below.
+        </p>
+      ) : (
+        <div className="mt-4 grid gap-3">
+          {variants.map((variant) => (
+            <form
+              key={variant.id}
+              className="rounded-xl border bg-background p-3"
+              onSubmit={(event) => saveVariant(event, variant)}
+            >
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Input
+                  name="size"
+                  placeholder="Size"
+                  defaultValue={variant.size ?? ''}
+                  disabled={isBusy}
+                />
+                <Input
+                  name="color"
+                  placeholder="Color"
+                  defaultValue={variant.color ?? ''}
+                  disabled={isBusy}
+                />
+                <Input
+                  name="stockQuantity"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Stock"
+                  defaultValue={String(variant.stockQuantity ?? 0)}
+                  disabled={isBusy}
+                />
+                <Select name="status" defaultValue={variant.status || 'ACTIVE'} disabled={isBusy}>
+                  {VARIANT_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {formatVariantStatus(status)}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  name="sku"
+                  placeholder="SKU"
+                  defaultValue={variant.sku ?? ''}
+                  dir="ltr"
+                  disabled={isBusy}
+                />
+                <Input
+                  name="priceAmount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Variant price"
+                  defaultValue={formatOptionalMinorUnitForInput(variant.priceAmount)}
+                  disabled={isBusy}
+                />
+                <Input
+                  name="nameAr"
+                  placeholder="Variant Arabic name"
+                  defaultValue={variant.nameAr}
+                  disabled={isBusy}
+                />
+                <Input
+                  name="nameEn"
+                  placeholder="Variant English name"
+                  defaultValue={variant.nameEn ?? ''}
+                  disabled={isBusy}
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="submit" size="sm" disabled={isBusy}>
+                  Save variant
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => deleteVariant(variant)}
+                  disabled={isBusy}
+                >
+                  Delete
+                </Button>
+              </div>
+            </form>
+          ))}
+        </div>
+      )}
+
+      <form className="mt-5 rounded-xl border bg-background p-3" onSubmit={createVariant}>
+        <p className="text-sm font-extrabold text-[#241611]">Add variant</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Input name="size" placeholder="Size" disabled={isBusy} />
+          <Input name="color" placeholder="Color" disabled={isBusy} />
+          <Input
+            name="stockQuantity"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="Stock"
+            defaultValue="0"
+            disabled={isBusy}
+          />
+          <Select name="status" defaultValue="ACTIVE" disabled={isBusy}>
+            {VARIANT_STATUS_OPTIONS.map((status) => (
+              <option key={status} value={status}>
+                {formatVariantStatus(status)}
+              </option>
+            ))}
+          </Select>
+          <Input name="sku" placeholder="SKU" dir="ltr" disabled={isBusy} />
+          <Input
+            name="priceAmount"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Variant price"
+            disabled={isBusy}
+          />
+          <Input name="nameAr" placeholder="Variant Arabic name" disabled={isBusy} />
+          <Input name="nameEn" placeholder="Variant English name" disabled={isBusy} />
+        </div>
+        <Button type="submit" size="sm" className="mt-3" disabled={isBusy}>
+          Add variant
+        </Button>
+      </form>
     </div>
   );
 }
@@ -315,10 +530,57 @@ function formatMinorUnitForInput(value: string | number | null | undefined): str
   return (numeric / 100).toFixed(2).replace(/\.00$/, '');
 }
 
+function formatOptionalMinorUnitForInput(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  return formatMinorUnitForInput(value);
+}
+
 function parseOptionalNumber(value: string | number | null | undefined): number | undefined {
   if (value === null || value === undefined || value === '') return undefined;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : undefined;
+}
+
+const VARIANT_STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'OUT_OF_STOCK'] as const;
+
+function formatVariantStatus(status: string): string {
+  return status
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function readVariantForm(
+  form: HTMLFormElement,
+  product: AdminProduct,
+  existing?: AdminVariant,
+): AdminCreateVariantInput | null {
+  const data = new FormData(form);
+  const size = String(data.get('size') ?? '').trim();
+  const color = String(data.get('color') ?? '').trim();
+  const stockQuantity = Number(data.get('stockQuantity') ?? 0);
+  const priceAmount = String(data.get('priceAmount') ?? '').trim();
+  const nameAr =
+    String(data.get('nameAr') ?? '').trim() ||
+    existing?.nameAr ||
+    [size, color].filter(Boolean).join(' / ') ||
+    product.nameAr;
+
+  if (!Number.isFinite(stockQuantity) || stockQuantity < 0) {
+    return null;
+  }
+
+  return {
+    nameAr,
+    nameEn: String(data.get('nameEn') ?? '').trim() || undefined,
+    sku: String(data.get('sku') ?? '').trim() || undefined,
+    size: existing ? size : size || undefined,
+    color: existing ? color : color || undefined,
+    priceAmount: priceAmount || undefined,
+    stockQuantity: Math.trunc(stockQuantity),
+    status: String(data.get('status') ?? existing?.status ?? 'ACTIVE') || undefined,
+  };
 }
 
 function getProductAvailableStock(product: {

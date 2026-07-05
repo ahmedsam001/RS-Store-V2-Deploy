@@ -2,6 +2,7 @@ import { ChangeEvent, useId, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { useI18n } from '@/shared/i18n';
+import { type Language } from '@/shared/i18n/translations';
 
 const MAX_PAYMENT_PROOF_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_PAYMENT_PROOF_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -91,7 +92,7 @@ export function PaymentProofUploader({
       await onUpload(file);
       setFile(null);
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : copy.uploadFailed);
+      setError(formatApiError(caughtError, language, copy.uploadFailed));
     } finally {
       setIsUploading(false);
     }
@@ -148,4 +149,46 @@ export function PaymentProofUploader({
       ) : null}
     </div>
   );
+}
+
+function formatApiError(error: unknown, language: Language, fallbackMessage: string): string {
+  const rawMessage = error instanceof Error ? error.message : String(error || '');
+
+  if (language !== 'ar') {
+    return rawMessage || fallbackMessage;
+  }
+
+  if (rawMessage.includes('shippingAddress must be longer than or equal to 8 characters')) {
+    return 'يجب أن يكون عنوان الشحن 8 أحرف على الأقل.';
+  }
+
+  if (rawMessage.includes('shippingAddress should not be empty')) {
+    return 'عنوان الشحن مطلوب.';
+  }
+
+  if (rawMessage.includes('paymentProofImageUrl should not be empty')) {
+    return 'يرجى رفع صورة إثبات الدفع.';
+  }
+
+  if (rawMessage.includes('Database request failed')) {
+    return 'فشل طلب قاعدة البيانات. حاول مرة أخرى.';
+  }
+
+  if (rawMessage.includes('Unauthorized')) {
+    return 'يرجى تسجيل الدخول أولًا.';
+  }
+
+  if (rawMessage.includes('Forbidden')) {
+    return 'ليس لديك صلاحية لتنفيذ هذا الإجراء.';
+  }
+
+  if (rawMessage.includes('Network Error')) {
+    return 'تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى.';
+  }
+
+  if (rawMessage.includes('Failed to fetch')) {
+    return 'تعذر الاتصال بالخادم. حاول مرة أخرى.';
+  }
+
+  return rawMessage || fallbackMessage;
 }

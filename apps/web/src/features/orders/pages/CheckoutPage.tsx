@@ -298,7 +298,7 @@ export function CheckoutPage() {
         },
       });
     } catch (caughtError) {
-      setSubmitError(caughtError instanceof Error ? caughtError.message : copy.failedCheckout);
+      setSubmitError(formatCheckoutError(caughtError, language, copy.failedCheckout));
     } finally {
       setIsSubmitting(false);
     }
@@ -892,4 +892,62 @@ function createCheckoutIdempotencyKey(): string {
     return crypto.randomUUID();
   }
   return `checkout-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function formatCheckoutError(
+  error: unknown,
+  language: Language,
+  fallbackMessage: string,
+): string {
+  const rawMessage = error instanceof Error ? error.message : String(error || '');
+
+  if (language !== 'ar') {
+    return rawMessage || fallbackMessage;
+  }
+
+  if (rawMessage.includes('shippingAddress must be longer than or equal to 8 characters')) {
+    return 'يجب أن يكون عنوان الشحن 8 أحرف على الأقل.';
+  }
+
+  if (rawMessage.includes('shippingAddress should not be empty')) {
+    return 'عنوان الشحن مطلوب.';
+  }
+
+  if (rawMessage.includes('recipientName should not be empty')) {
+    return 'اسم المستلم مطلوب.';
+  }
+
+  if (rawMessage.includes('recipientPhone should not be empty')) {
+    return 'رقم الهاتف مطلوب.';
+  }
+
+  if (rawMessage.includes('paymentProofImageUrl should not be empty')) {
+    return 'يرجى رفع صورة إثبات الدفع.';
+  }
+
+  if (rawMessage.includes('Database request failed')) {
+    return 'فشل طلب قاعدة البيانات. حاول مرة أخرى.';
+  }
+
+  if (rawMessage.includes('Validation failed')) {
+    return 'تأكد من البيانات المطلوبة ثم حاول مرة أخرى.';
+  }
+
+  if (rawMessage.includes('Unauthorized')) {
+    return 'يرجى تسجيل الدخول أولًا.';
+  }
+
+  if (rawMessage.includes('Forbidden')) {
+    return 'ليس لديك صلاحية لتنفيذ هذا الإجراء.';
+  }
+
+  if (rawMessage.includes('Network Error')) {
+    return 'تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى.';
+  }
+
+  if (rawMessage.includes('Failed to fetch')) {
+    return 'تعذر الاتصال بالخادم. حاول مرة أخرى.';
+  }
+
+  return 'حدث خطأ أثناء تأكيد الطلب. حاول مرة أخرى.';
 }
