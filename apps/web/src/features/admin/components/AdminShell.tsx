@@ -15,6 +15,7 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { Button } from '@/shared/components/ui/Button';
 import { cn } from '@/shared/utils/cn';
 import logoUrl from '@/assets/brand/rs-logo-transparent.png';
+import '@/styles/admin.css';
 
 export function AdminShell() {
   const [isMobileOpen, setMobileOpen] = useState(false);

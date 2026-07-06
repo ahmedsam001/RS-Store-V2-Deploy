@@ -12,6 +12,7 @@ import { localizeKnownLabel, localizeProductText, useI18n } from '@/shared/i18n'
 type ProductCardProps = {
   product: CatalogProductCard;
   className?: string;
+  index?: number;
 };
 
 type PriceLike = CatalogProductCard['price'] | number | string | null | undefined;
@@ -106,10 +107,15 @@ function resolveDiscountAmount(
   return { amount: computedAmount.toFixed(2), currency: fallbackCurrency };
 }
 
-export const ProductCard = memo(function ProductCard({ product, className }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({
+  product,
+  className,
+  index = Number.MAX_SAFE_INTEGER,
+}: ProductCardProps) {
   const navigate = useNavigate();
   const { language, t } = useI18n();
   const hasPurchasableVariants = product.variantCount > 0;
+  const isPriorityImage = index < 4;
   const productUrl = getProductUrl(product.slug);
   const priceDisplay = getProductPriceDisplay(product);
   const productName = localizeProductText(product.name, language);
@@ -143,6 +149,8 @@ export const ProductCard = memo(function ProductCard({ product, className }: Pro
               sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
               width={600}
               height={750}
+              loading={isPriorityImage ? 'eager' : 'lazy'}
+              fetchPriority={isPriorityImage ? 'high' : undefined}
             />
           ) : (
             <ImageWithFallback

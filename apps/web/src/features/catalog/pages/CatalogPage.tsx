@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useDocumentMetadata } from '@/shared/seo/use-document-metadata';
 import {
-  getCatalogCategories,
   getCatalogCategory,
   getCatalogProducts,
   getFeaturedSubCategories,
@@ -21,7 +20,6 @@ import { CatalogState } from '@/features/catalog/components/CatalogState';
 import { SubcategoryCircleNav } from '@/features/catalog/components/SubcategoryCircleNav';
 import { ProductGrid } from '@/features/catalog/components/ProductGrid';
 import { FlashSaleHomeStrip } from '@/features/catalog/components/FlashSaleHomeStrip';
-import { CategoryNavSkeleton } from '@/features/catalog/components/skeletons/CategoryNavSkeleton';
 import { SubcategoryNavSkeleton } from '@/features/catalog/components/skeletons/SubcategoryNavSkeleton';
 import { SearchResultSkeleton } from '@/features/catalog/components/skeletons/SearchResultSkeleton';
 import { localizeKnownLabel, localizeProductText, useI18n } from '@/shared/i18n';
@@ -33,52 +31,26 @@ export function CatalogPage() {
   const navigate = useNavigate();
   const query = useMemo(() => parseQuery(searchParams, categorySlug), [categorySlug, searchParams]);
   const isHomePage = !categorySlug || categorySlug.toLowerCase() === 'all';
-  const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [featuredSubCategories, setFeaturedSubCategories] = useState<FeaturedSubCategory[]>([]);
   const [homeFlashSales, setHomeFlashSales] = useState<CatalogFlashSale[]>([]);
   const [activeCategory, setActiveCategory] = useState<CatalogCategory | null>(null);
   const [products, setProducts] = useState<PaginatedCatalogProducts | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isProductsLoading, setIsProductsLoading] = useState(true);
+  const [isSubCategoriesLoading, setIsSubCategoriesLoading] = useState(true);
 
   useEffect(() => {
     const abortController = new AbortController();
 
-    async function loadCatalog() {
+    async function loadProducts() {
       try {
-        setIsLoading(true);
+        setIsProductsLoading(true);
         setError(null);
+        setProducts(null);
 
-        if (isHomePage) {
-          const [subCategoryItems, productItems, flashSaleItems] = await Promise.all([
-            getFeaturedSubCategories(abortController.signal),
-            getCatalogProducts(query, abortController.signal),
-            getActiveFlashSales(abortController.signal).catch(() => []),
-          ]);
-
-          if (!abortController.signal.aborted) {
-            setFeaturedSubCategories(
-              subCategoryItems.filter((subcategory) => subcategory.productsCount > 0),
-            );
-            setHomeFlashSales(flashSaleItems.filter((sale) => sale.products.length > 0));
-            setProducts(productItems);
-            setCategories([]);
-            setActiveCategory(null);
-          }
-        } else {
-          const [categoryItems, productItems, category] = await Promise.all([
-            getCatalogCategories(undefined, abortController.signal),
-            getCatalogProducts(query, abortController.signal),
-            getCatalogCategory(categorySlug, abortController.signal),
-          ]);
-
-          if (!abortController.signal.aborted) {
-            setCategories(categoryItems);
-            setFeaturedSubCategories([]);
-            setHomeFlashSales([]);
-            setProducts(productItems);
-            setActiveCategory(category);
-          }
+        const productItems = await getCatalogProducts(query, abortController.signal);
+        if (!abortController.signal.aborted) {
+          setProducts(productItems);
         }
       } catch (caughtError) {
         if (!abortController.signal.aborted) {
@@ -86,14 +58,80 @@ export function CatalogPage() {
         }
       } finally {
         if (!abortController.signal.aborted) {
-          setIsLoading(false);
+          setIsProductsLoading(false);
         }
       }
     }
 
-    void loadCatalog();
+    void loadProducts();
     return () => abortController.abort();
-  }, [categorySlug, isHomePage, query, t]);
+  }, [query, t]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    if (isHomePage) {
+      setActiveCategory(null);
+      setFeaturedSubCategories([]);
+      setHomeFlashSales([]);
+      setIsSubCategoriesLoading(true);
+
+      void getFeaturedSubCategories(abortController.signal)
+        .then((subCategoryItems) => {
+          if (!abortController.signal.aborted) {
+            setFeaturedSubCategories(
+              subCategoryItems.filter((subcategory) => subcategory.productsCount > 0),
+            );
+          }
+        })
+        .catch(() => {
+          if (!abortController.signal.aborted) {
+            setFeaturedSubCategories([]);
+          }
+        })
+        .finally(() => {
+          if (!abortController.signal.aborted) {
+            setIsSubCategoriesLoading(false);
+          }
+        });
+
+      void getActiveFlashSales(abortController.signal)
+        .then((flashSaleItems) => {
+          if (!abortController.signal.aborted) {
+            setHomeFlashSales(flashSaleItems.filter((sale) => sale.products.length > 0));
+          }
+        })
+        .catch(() => {
+          if (!abortController.signal.aborted) {
+            setHomeFlashSales([]);
+          }
+        });
+    } else if (categorySlug) {
+      setFeaturedSubCategories([]);
+      setHomeFlashSales([]);
+      setActiveCategory(null);
+      setIsSubCategoriesLoading(true);
+
+      void getCatalogCategory(categorySlug, abortController.signal)
+        .then((category) => {
+          if (!abortController.signal.aborted) {
+            setActiveCategory(category);
+          }
+        })
+        .catch(() => {
+          if (!abortController.signal.aborted) {
+            setActiveCategory(null);
+          }
+        })
+        .finally(() => {
+          if (!abortController.signal.aborted) {
+            setIsSubCategoriesLoading(false);
+          }
+        });
+    }
+
+    return () => abortController.abort();
+  }, [categorySlug, isHomePage]);
 
   function updateQuery(nextQuery: CatalogProductsQuery) {
     const params = buildSearchParams({ ...query, ...nextQuery });
@@ -107,13 +145,12 @@ export function CatalogPage() {
   const knownCategoryDescription = categoryDescriptionFromSlug(categorySlug, t);
   const categoryDescription = knownCategoryDescription ||
     (activeCategory?.description ? localizeProductText(activeCategory.description, language) : '');
-  const categorySubCategories = (activeCategory?.subCategories ?? []).filter(
-    (subcategory) => subcategory.productCount > 0,
-  );
-  const visibleSubCategories =
-    categorySubCategories.length > 0
-      ? categorySubCategories
-      : featuredSubCategories.filter((subcategory) => subcategory.productsCount > 0);
+  const categorySubCategories = isHomePage
+    ? []
+    : (activeCategory?.subCategories ?? []).filter((subcategory) => subcategory.productCount > 0);
+  const visibleSubCategories = isHomePage
+    ? featuredSubCategories.filter((subcategory) => subcategory.productsCount > 0)
+    : categorySubCategories;
   const visibleSubCategoryParentSlug =
     categorySubCategories.length > 0 ? activeCategory?.slug : undefined;
   const hasVisibleSubCategories = visibleSubCategories.length > 0;
@@ -131,40 +168,6 @@ export function CatalogPage() {
     },
     structuredData: buildCatalogStructuredData(),
   });
-
-  if (isLoading && categories.length === 0 && featuredSubCategories.length === 0) {
-    return (
-      <div className="rs-catalog-redesign">
-        <section className="rs-storefront-showcase-wrap" aria-label={t('catalog.loading')}>
-          <div className="rs-container">
-            <div className="rs-storefront-showcase-card">
-              <section
-                className="rs-hero rs-storefront-compact-hero"
-                aria-label={t('catalog.loadingHeading')}
-              >
-                <div className="rs-hero-branch-left" aria-hidden="true" />
-                <div className="rs-hero-branch-right" aria-hidden="true" />
-                <div className="rs-hero-logo-mark" aria-hidden="true" />
-                <div className="relative z-10 mx-auto max-w-3xl">
-                  <span className="rs-section-kicker">{t('catalog.kicker.loading')}</span>
-                  <h1 className="mx-auto mt-3 h-10 w-52 animate-pulse rounded-full bg-rs-ink/10 sm:h-12" />
-                  <div className="mx-auto mt-3 h-3 w-64 max-w-full animate-pulse rounded-full bg-rs-ink/8" />
-                </div>
-              </section>
-              <div className="rs-subcategory-dock">
-                <div className="rs-subcategory-safe-line" aria-hidden="true">
-                  <span />
-                  <b>{t('catalog.shopByStyle')}</b>
-                  <span />
-                </div>
-                <CategoryNavSkeleton />
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    );
-  }
 
   return (
     <div className="rs-catalog-redesign">
@@ -192,14 +195,14 @@ export function CatalogPage() {
               </div>
             </section>
 
-            {isLoading || hasVisibleSubCategories ? (
+            {isSubCategoriesLoading || hasVisibleSubCategories ? (
               <div className="rs-subcategory-dock" aria-label={t('catalog.shopByCategory')}>
                 <div className="rs-subcategory-safe-line" aria-hidden="true">
                   <span />
                   <b>{t('catalog.shopByStyle')}</b>
                   <span />
                 </div>
-                {isLoading && visibleSubCategories.length === 0 ? (
+                {isSubCategoriesLoading && visibleSubCategories.length === 0 ? (
                   <SubcategoryNavSkeleton />
                 ) : (
                   <SubcategoryCircleNav
@@ -224,7 +227,7 @@ export function CatalogPage() {
 
         <CatalogFilters query={query} onSubmit={updateQuery} />
 
-        {!isLoading && !error && products ? (
+        {!isProductsLoading && !error && products ? (
           <div className="rs-products-bar">
             <div className="min-w-0">
               <span className="rs-section-kicker">{t('catalog.productsKicker')}</span>
@@ -241,9 +244,9 @@ export function CatalogPage() {
             <h2 id="products-heading">{t('nav.allProducts')}</h2>
           </div>
 
-          {isLoading ? <SearchResultSkeleton /> : null}
+          {isProductsLoading ? <SearchResultSkeleton /> : null}
           {error ? <CatalogState title={t('catalog.emptyTitle')} message={error} /> : null}
-          {!isLoading && !error && products ? (
+          {!isProductsLoading && !error && products ? (
             <>
               <ProductGrid products={products.items} />
               <CatalogPagination

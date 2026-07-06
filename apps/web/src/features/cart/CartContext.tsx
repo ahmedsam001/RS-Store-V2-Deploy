@@ -22,7 +22,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const { status, csrfToken } = useAuth();
   const [cart, setCart] = useState<Cart | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const stateOptions = useCallback(() => ({ csrfToken }), [csrfToken]);
@@ -79,7 +79,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [applyCartMutation, stateOptions]);
 
   useEffect(() => {
-    void refresh();
+    if (status === 'loading') {
+      return undefined;
+    }
+
+    const runRefresh = () => {
+      void refresh();
+    };
+
+    if ('requestIdleCallback' in window) {
+      const idleCallbackId = window.requestIdleCallback(runRefresh);
+      return () => window.cancelIdleCallback(idleCallbackId);
+    }
+
+    const timeoutId = globalThis.setTimeout(runRefresh, 150);
+    return () => globalThis.clearTimeout(timeoutId);
   }, [refresh]);
 
   const value = useMemo(

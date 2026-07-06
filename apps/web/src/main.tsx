@@ -6,7 +6,6 @@ import { CartProvider } from '@/features/cart';
 import { I18nProvider } from '@/shared/i18n';
 import '@/styles/globals.css';
 import '@/styles/storefront.css';
-import '@/styles/admin.css';
 
 const rootElement = document.getElementById('root');
 

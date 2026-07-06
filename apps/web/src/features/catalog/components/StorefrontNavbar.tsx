@@ -11,7 +11,7 @@ import {
   User,
   UserRound,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useCart } from '@/features/cart';
@@ -28,25 +28,47 @@ import { PATHS } from '@/shared/constants/routes';
 import { buildCustomerAuthPath } from '@/shared/lib/return-to';
 import logoUrl from '@/assets/brand/rs-logo-transparent.png';
 
+const STOREFRONT_SETTINGS_CACHE_KEY = 'rs-storefront-settings';
+
 export function StorefrontNavbar() {
   const { itemCount: cartCount } = useCart();
   const { language, t } = useI18n();
   const { status, user, logout } = useAuth();
-  const [settings, setSettings] = useState<StorefrontSettings | null>(null);
-  const [announcement, setAnnouncement] = useState(() => t('store.announcement'));
-  const [storeName, setStoreName] = useState('RS Store');
+  const cachedStorefrontSettings = useMemo(() => readCachedStorefrontSettings(), []);
+  const [settings, setSettings] = useState<StorefrontSettings | null>(cachedStorefrontSettings);
+  const [announcement, setAnnouncement] = useState(() =>
+    readSetting(cachedStorefrontSettings, 'store.announcement', t('store.announcement')),
+  );
+  const [storeName, setStoreName] = useState(() =>
+    readSetting(cachedStorefrontSettings, 'store.name', 'RS Store'),
+  );
   const [accountOpen, setAccountOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
+    let isMounted = true;
+
     settingsApi
       .storefront()
       .then((data) => {
+        if (!isMounted) return;
+        writeCachedStorefrontSettings(data);
         setSettings(data);
         setAnnouncement(readSetting(data, 'store.announcement', t('store.announcement')));
         setStoreName(readSetting(data, 'store.name', 'RS Store'));
       })
-      .catch(() => setSettings({}));
+      .catch(() => {
+        if (!isMounted) return;
+
+        const cachedSettings = readCachedStorefrontSettings();
+        setSettings(cachedSettings);
+        setAnnouncement(readSetting(cachedSettings, 'store.announcement', t('store.announcement')));
+        setStoreName(readSetting(cachedSettings, 'store.name', 'RS Store'));
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [t]);
 
   useEffect(() => {
@@ -317,6 +339,36 @@ export function StorefrontNavbar() {
       <StorefrontFooter settings={settings} isCustomer={isCustomer} />
     </div>
   );
+}
+
+function readCachedStorefrontSettings(): StorefrontSettings | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const cachedValue = window.sessionStorage.getItem(STOREFRONT_SETTINGS_CACHE_KEY);
+    if (!cachedValue) {
+      return null;
+    }
+
+    const parsedValue: unknown = JSON.parse(cachedValue);
+    return isStorefrontSettings(parsedValue) ? parsedValue : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedStorefrontSettings(settings: StorefrontSettings): void {
+  try {
+    window.sessionStorage.setItem(STOREFRONT_SETTINGS_CACHE_KEY, JSON.stringify(settings));
+  } catch {
+    // Ignore storage failures so the navbar keeps using live or fallback settings.
+  }
+}
+
+function isStorefrontSettings(value: unknown): value is StorefrontSettings {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function StorefrontFooter({

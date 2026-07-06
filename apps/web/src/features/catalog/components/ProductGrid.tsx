@@ -31,8 +31,8 @@ export function ProductGrid({ products }: ProductGridProps) {
 
   return (
     <div className="rs-product-grid" data-product-count={products.length}>
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+      {products.map((product, index) => (
+        <ProductCard key={product.id} product={product} index={index} />
       ))}
     </div>
   );

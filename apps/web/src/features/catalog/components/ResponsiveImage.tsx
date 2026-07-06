@@ -17,6 +17,7 @@ export function ResponsiveImage({
   alt,
   fallbackLabel,
   fallbackVariant = 'product',
+  fetchPriority,
   height,
   loading = 'lazy',
   showFallbackLabel,
@@ -45,6 +46,7 @@ export function ResponsiveImage({
       width={width}
       height={height}
       loading={loading}
+      fetchPriority={fetchPriority}
       decoding="async"
       fallbackVariant={fallbackVariant}
       fallbackLabel={fallbackLabel}
