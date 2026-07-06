@@ -7,6 +7,8 @@ import { PrismaService } from '../../infrastructure/database/prisma/prisma.servi
 @Injectable()
 export class AdminBootstrapService implements OnApplicationBootstrap {
   private readonly logger = new Logger(AdminBootstrapService.name);
+  private readonly bootstrapRetryDelaysMs = [2_000, 4_000, 6_000, 8_000, 10_000, 12_000];
+  private readonly transientDatabaseErrorCodes = new Set(['P1001', 'P1002', 'P2024', 'P2028']);
 
   constructor(
     private readonly configService: ConfigService,
@@ -14,6 +16,57 @@ export class AdminBootstrapService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
+    await this.retryAdminBootstrap();
+  }
+
+  private async retryAdminBootstrap(): Promise<void> {
+    for (let attempt = 1; attempt <= this.bootstrapRetryDelaysMs.length; attempt += 1) {
+      try {
+        await this.runAdminBootstrap();
+        this.logger.log(
+          JSON.stringify({
+            message: 'admin_bootstrap_success',
+            attempt,
+            maxAttempts: this.bootstrapRetryDelaysMs.length,
+          }),
+        );
+        return;
+      } catch (error) {
+        if (!this.isTransientDatabaseError(error)) {
+          throw error;
+        }
+
+        const payload = {
+          attempt,
+          maxAttempts: this.bootstrapRetryDelaysMs.length,
+          errorName: this.getErrorName(error),
+          errorCode: this.getPrismaErrorCode(error),
+        };
+
+        if (attempt === this.bootstrapRetryDelaysMs.length) {
+          this.logger.warn(
+            JSON.stringify({
+              message: 'admin_bootstrap_skipped_database_unavailable',
+              ...payload,
+            }),
+          );
+          return;
+        }
+
+        const delayMs = this.bootstrapRetryDelaysMs[attempt - 1];
+        this.logger.warn(
+          JSON.stringify({
+            message: 'admin_bootstrap_retry',
+            ...payload,
+            nextRetryDelayMs: delayMs,
+          }),
+        );
+        await this.delay(delayMs);
+      }
+    }
+  }
+
+  private async runAdminBootstrap(): Promise<void> {
     await this.ensureDefaultStorefrontCategories();
 
     const ownerCount = await this.prisma.user.count({
@@ -184,5 +237,41 @@ export class AdminBootstrapService implements OnApplicationBootstrap {
     if (duplicate) {
       throw new Error('Admin bootstrap email or phone is already assigned to an existing user');
     }
+  }
+
+  private delay(delayMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
+  }
+
+  private isTransientDatabaseError(error: unknown): boolean {
+    const errorCode = this.getPrismaErrorCode(error);
+    if (errorCode && this.transientDatabaseErrorCodes.has(errorCode)) {
+      return true;
+    }
+
+    if (this.getErrorName(error) === 'PrismaClientInitializationError') {
+      return true;
+    }
+
+    return this.getErrorMessage(error).includes("Can't reach database server");
+  }
+
+  private getPrismaErrorCode(error: unknown): string | undefined {
+    if (typeof error === 'object' && error !== null && 'code' in error) {
+      const code = (error as { code?: unknown }).code;
+      return typeof code === 'string' ? code : undefined;
+    }
+
+    return undefined;
+  }
+
+  private getErrorName(error: unknown): string {
+    return error instanceof Error ? error.name : 'UnknownError';
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : '';
   }
 }
