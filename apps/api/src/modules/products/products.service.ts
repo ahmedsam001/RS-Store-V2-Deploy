@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ProductStatus, ProductVariantStatus } from '@prisma/client';
+import { InMemoryTtlCacheService } from '../../common/cache/in-memory-ttl-cache.service';
+import { PUBLIC_CACHE_PREFIXES } from '../../common/cache/public-cache-prefixes';
 import { moneyStringToMinorUnits } from '../../common/money/money';
 import { buildPaginationMeta } from '../../common/pagination/paginated-response';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
@@ -34,6 +36,7 @@ export class ProductsService {
     private readonly prisma: PrismaService,
     private readonly uploadsService: UploadsService,
     private readonly auditService: AuditService,
+    private readonly cache: InMemoryTtlCacheService,
   ) {}
 
   async create(dto: CreateProductDto, actor?: AuthenticatedUser) {
@@ -76,6 +79,7 @@ export class ProductsService {
         include: this.productInclude,
       });
     });
+    this.invalidatePublicStorefrontCaches();
     return product;
   }
 
@@ -178,6 +182,7 @@ export class ProductsService {
         include: this.productInclude,
       });
     });
+    this.invalidatePublicStorefrontCaches();
     return product;
   }
 
@@ -201,6 +206,7 @@ export class ProductsService {
       return updated;
     });
 
+    this.invalidatePublicStorefrontCaches();
     return { updatedCount: result.count, discount };
   }
 
@@ -217,6 +223,7 @@ export class ProductsService {
       entityType: 'PRODUCT',
       entityId: id,
     });
+    this.invalidatePublicStorefrontCaches();
     return product;
   }
 
@@ -234,13 +241,14 @@ export class ProductsService {
       entityId: id,
       metadata: { status },
     });
+    this.invalidatePublicStorefrontCaches();
     return product;
   }
 
   async addImage(productId: string, dto: AddProductImageDto, actor?: AuthenticatedUser) {
     await this.assertProductExists(productId);
 
-    return this.prisma.$transaction(async (tx) => {
+    const image = await this.prisma.$transaction(async (tx) => {
       const hasImages = await tx.productImage.count({ where: { productId } });
       const shouldBePrimary = dto.isPrimary === true || hasImages === 0;
 
@@ -265,6 +273,8 @@ export class ProductsService {
       });
       return image;
     });
+    this.invalidatePublicStorefrontCaches();
+    return image;
   }
 
   async removeImage(imageId: string, actor?: AuthenticatedUser) {
@@ -293,6 +303,7 @@ export class ProductsService {
       return removed;
     });
 
+    this.invalidatePublicStorefrontCaches();
     await this.uploadsService.deleteImage(image.cloudinaryPublicId);
     return deleted;
   }
@@ -304,7 +315,7 @@ export class ProductsService {
       throw new NotFoundException('Product image not found');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedImage = await this.prisma.$transaction(async (tx) => {
       await tx.productImage.updateMany({ where: { productId }, data: { isPrimary: false } });
       const updated = await tx.productImage.update({
         where: { id: imageId },
@@ -321,6 +332,8 @@ export class ProductsService {
       });
       return updated;
     });
+    this.invalidatePublicStorefrontCaches();
+    return updatedImage;
   }
 
   async addVariant(productId: string, dto: CreateProductVariantDto, actor?: AuthenticatedUser) {
@@ -335,6 +348,7 @@ export class ProductsService {
       entityId: variant.id,
       metadata: { productId },
     });
+    this.invalidatePublicStorefrontCaches();
     return variant;
   }
 
@@ -356,6 +370,7 @@ export class ProductsService {
       entityId: variantId,
       metadata: { productId },
     });
+    this.invalidatePublicStorefrontCaches();
     return variant;
   }
 
@@ -372,7 +387,13 @@ export class ProductsService {
       entityId: variantId,
       metadata: { productId },
     });
+    this.invalidatePublicStorefrontCaches();
     return variant;
+  }
+
+  private invalidatePublicStorefrontCaches(): void {
+    this.cache.deleteByPrefix(PUBLIC_CACHE_PREFIXES.catalog);
+    this.cache.deleteByPrefix(PUBLIC_CACHE_PREFIXES.flashSales);
   }
 
   private async syncProductAvailability(

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { InMemoryTtlCacheService } from '../../common/cache/in-memory-ttl-cache.service';
+import { PUBLIC_CACHE_PREFIXES } from '../../common/cache/public-cache-prefixes';
 import { buildPaginationMeta } from '../../common/pagination/paginated-response';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -10,9 +12,12 @@ import { getSettingDefinitions, validateSettingValue } from './settings-registry
 
 @Injectable()
 export class SettingsService {
+  private readonly storefrontSettingsCacheTtlMs = 60_000;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly cache: InMemoryTtlCacheService,
   ) {}
 
   async findAll(query: SettingsQueryDto) {
@@ -38,6 +43,14 @@ export class SettingsService {
   }
 
   async findStorefrontSettings() {
+    return this.cache.getOrSet(
+      `${PUBLIC_CACHE_PREFIXES.settings}storefront`,
+      this.storefrontSettingsCacheTtlMs,
+      () => this.findStorefrontSettingsUncached(),
+    );
+  }
+
+  private async findStorefrontSettingsUncached() {
     const allowedKeys = [
       'store.name',
       'store.whatsapp',
@@ -79,6 +92,7 @@ export class SettingsService {
       entityId: key,
       metadata: { scope: dto.scope },
     });
+    this.cache.deleteByPrefix(PUBLIC_CACHE_PREFIXES.settings);
     return setting;
   }
 
@@ -90,6 +104,7 @@ export class SettingsService {
       entityType: 'SETTING',
       entityId: key,
     });
+    this.cache.deleteByPrefix(PUBLIC_CACHE_PREFIXES.settings);
     return setting;
   }
 }

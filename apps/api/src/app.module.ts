@@ -22,6 +22,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { validateEnvironment } from './config/env.validation';
+import { InMemoryTtlCacheModule } from './common/cache/in-memory-ttl-cache.module';
 import { RedisModule } from './infrastructure/cache/redis.module';
 import { PrismaModule } from './infrastructure/database/prisma/prisma.module';
 import { CloudinaryModule } from './infrastructure/storage/cloudinary/cloudinary.module';
@@ -33,6 +34,7 @@ import { CloudinaryModule } from './infrastructure/storage/cloudinary/cloudinary
       envFilePath: ['.env', '../../.env'],
       validate: validateEnvironment,
     }),
+    InMemoryTtlCacheModule,
     PrismaModule,
     RedisModule,
     AuditModule,

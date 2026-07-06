@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Category, Prisma, ProductStatus } from '@prisma/client';
+import { InMemoryTtlCacheService } from '../../common/cache/in-memory-ttl-cache.service';
+import { PUBLIC_CACHE_PREFIXES } from '../../common/cache/public-cache-prefixes';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
 import { ProductPricingService } from '../pricing/product-pricing.service';
 import { CatalogCategoriesQueryDto } from './dto/catalog-categories-query.dto';
@@ -23,10 +25,14 @@ import {
 
 @Injectable()
 export class CatalogService {
+  private readonly catalogProductsCacheTtlMs = 30_000;
+  private readonly catalogMetadataCacheTtlMs = 60_000;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly catalogSearchService: CatalogSearchService,
     private readonly pricingService: ProductPricingService,
+    private readonly cache: InMemoryTtlCacheService,
   ) {}
 
   async findCategories(query: CatalogCategoriesQueryDto): Promise<CatalogCategory[]> {
@@ -126,6 +132,14 @@ export class CatalogService {
   }
 
   async findCategoryBySlug(slug: string): Promise<CatalogCategory> {
+    return this.cache.getOrSet(
+      this.cache.buildKey(`${PUBLIC_CACHE_PREFIXES.catalog}category`, { slug }),
+      this.catalogMetadataCacheTtlMs,
+      () => this.findCategoryBySlugUncached(slug),
+    );
+  }
+
+  private async findCategoryBySlugUncached(slug: string): Promise<CatalogCategory> {
     const category = await this.prisma.category.findFirst({
       where: { ...this.activeCategoryWhere(), slug },
       include: { parent: { select: { slug: true, nameAr: true } } },
@@ -146,6 +160,14 @@ export class CatalogService {
   }
 
   async findFeaturedSubCategories(): Promise<FeaturedSubCategory[]> {
+    return this.cache.getOrSet(
+      `${PUBLIC_CACHE_PREFIXES.catalog}featured-subcategories`,
+      this.catalogMetadataCacheTtlMs,
+      () => this.findFeaturedSubCategoriesUncached(),
+    );
+  }
+
+  private async findFeaturedSubCategoriesUncached(): Promise<FeaturedSubCategory[]> {
     const subCategories = await this.prisma.category.findMany({
       where: {
         ...this.activeCategoryWhere(),
@@ -179,7 +201,26 @@ export class CatalogService {
   }
 
   async findProducts(query: CatalogProductsQueryDto): Promise<PaginatedCatalogProducts> {
-    return this.findProductsBySaleAwareIndex(query);
+    return this.cache.getOrSet(
+      this.buildProductsCacheKey(query),
+      this.catalogProductsCacheTtlMs,
+      () => this.findProductsBySaleAwareIndex(query),
+    );
+  }
+
+  private buildProductsCacheKey(query: CatalogProductsQueryDto): string {
+    return this.cache.buildKey(`${PUBLIC_CACHE_PREFIXES.catalog}products`, {
+      categoryId: query.categoryId,
+      categorySlug: query.categorySlug?.trim(),
+      limit: query.limit,
+      maxPrice: query.maxPrice,
+      minPrice: query.minPrice,
+      page: query.page,
+      search: query.search?.trim().toLowerCase(),
+      sort: query.sort,
+      subCategory: query.subCategory?.trim().toLowerCase(),
+      subCategorySlug: query.subCategorySlug?.trim(),
+    });
   }
 
   private async findProductsBySaleAwareIndex(

@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { InMemoryTtlCacheService } from '../../common/cache/in-memory-ttl-cache.service';
+import { PUBLIC_CACHE_PREFIXES } from '../../common/cache/public-cache-prefixes';
 import { buildPaginationMeta } from '../../common/pagination/paginated-response';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
 import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
@@ -12,6 +14,7 @@ export class CategoriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly cache: InMemoryTtlCacheService,
   ) {}
 
   async create(dto: CreateCategoryDto, actor?: AuthenticatedUser) {
@@ -22,6 +25,7 @@ export class CategoriesService {
       entityType: 'CATEGORY',
       entityId: category.id,
     });
+    this.invalidatePublicStorefrontCaches();
     return category;
   }
 
@@ -82,6 +86,7 @@ export class CategoriesService {
       entityType: 'CATEGORY',
       entityId: category.id,
     });
+    this.invalidatePublicStorefrontCaches();
     return category;
   }
 
@@ -98,6 +103,7 @@ export class CategoriesService {
       entityId: id,
       metadata: { isActive: dto.isActive ?? null },
     });
+    this.invalidatePublicStorefrontCaches();
     return category;
   }
 
@@ -132,6 +138,12 @@ export class CategoriesService {
       entityType: 'CATEGORY',
       entityId: id,
     });
+    this.invalidatePublicStorefrontCaches();
     return category;
+  }
+
+  private invalidatePublicStorefrontCaches(): void {
+    this.cache.deleteByPrefix(PUBLIC_CACHE_PREFIXES.catalog);
+    this.cache.deleteByPrefix(PUBLIC_CACHE_PREFIXES.flashSales);
   }
 }

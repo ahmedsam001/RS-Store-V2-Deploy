@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FlashSaleStatus, Prisma, ProductStatus } from '@prisma/client';
+import { InMemoryTtlCacheService } from '../../common/cache/in-memory-ttl-cache.service';
+import { PUBLIC_CACHE_PREFIXES } from '../../common/cache/public-cache-prefixes';
 import { percentToBasisPoints } from '../../common/money/money';
 import { buildPaginationMeta } from '../../common/pagination/paginated-response';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
@@ -27,6 +29,8 @@ type PublicFlashSalePayload = Prisma.FlashSaleGetPayload<{
 
 @Injectable()
 export class FlashSalesService {
+  private readonly publicFlashSalesCacheTtlMs = 30_000;
+
   private readonly publicInclude = {
     products: {
       where: { product: this.catalogVisibleProductWhere() },
@@ -48,6 +52,7 @@ export class FlashSalesService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly pricingService: ProductPricingService,
+    private readonly cache: InMemoryTtlCacheService,
   ) {}
 
   async findAllForAdmin(query: FlashSalesQueryDto) {
@@ -113,10 +118,22 @@ export class FlashSalesService {
       entityType: 'FLASH_SALE',
       entityId: sale.id,
     });
+    this.invalidatePublicStorefrontCaches();
     return sale;
   }
 
   async findAll(query: FlashSalesQueryDto) {
+    return this.cache.getOrSet(
+      this.cache.buildKey(`${PUBLIC_CACHE_PREFIXES.flashSales}list`, {
+        limit: query.limit,
+        page: query.page,
+      }),
+      this.publicFlashSalesCacheTtlMs,
+      () => this.findAllPublicUncached(query),
+    );
+  }
+
+  private async findAllPublicUncached(query: FlashSalesQueryDto) {
     const now = new Date();
     const sales = await this.prisma.flashSale.findMany({
       where: {
@@ -187,6 +204,7 @@ export class FlashSalesService {
       entityId: id,
       metadata: { status: dto.status ?? null },
     });
+    this.invalidatePublicStorefrontCaches();
     return sale;
   }
 
@@ -198,6 +216,7 @@ export class FlashSalesService {
       entityType: 'FLASH_SALE',
       entityId: id,
     });
+    this.invalidatePublicStorefrontCaches();
     return sale;
   }
 
@@ -231,6 +250,7 @@ export class FlashSalesService {
       entityId: flashSaleId,
       metadata: { productId: dto.productId },
     });
+    this.invalidatePublicStorefrontCaches();
     return relation;
   }
 
@@ -250,7 +270,13 @@ export class FlashSalesService {
       entityId: flashSaleId,
       metadata: { productId },
     });
+    this.invalidatePublicStorefrontCaches();
     return deleted;
+  }
+
+  private invalidatePublicStorefrontCaches(): void {
+    this.cache.deleteByPrefix(PUBLIC_CACHE_PREFIXES.flashSales);
+    this.cache.deleteByPrefix(PUBLIC_CACHE_PREFIXES.catalog);
   }
 
   private async mapPublicSale(sale: PublicFlashSalePayload) {
