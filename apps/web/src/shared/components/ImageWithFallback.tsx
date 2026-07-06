@@ -1,5 +1,5 @@
 import { type CSSProperties, type ImgHTMLAttributes, useEffect, useState } from 'react';
-import logoUrl from '@/assets/brand/rs-logo-transparent.png';
+import logoUrl from '@/assets/brand/rs-logo-transparent.webp';
 
 type FallbackVariant = 'product' | 'category' | 'subcategory' | 'image';
 
@@ -82,6 +82,8 @@ export function ImageWithFallback({
         src={logoUrl}
         alt=""
         draggable={false}
+        decoding="async"
+        loading="lazy"
         className="rs-image-with-fallback-logo"
         style={{
           width: 'auto',

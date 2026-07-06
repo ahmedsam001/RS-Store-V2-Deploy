@@ -514,7 +514,7 @@
   right: auto;
   width: clamp(7.5rem, 16vw, 14rem);
   height: clamp(9rem, 22vw, 16rem);
-  background: url('../assets/brand/branch-left.png') no-repeat center/contain;
+  background: url('../assets/brand/branch-left.webp') no-repeat center/contain;
   opacity: 0.12;
 }
 
@@ -524,7 +524,7 @@
   left: auto;
   width: clamp(7.5rem, 16vw, 14rem);
   height: clamp(9rem, 22vw, 16rem);
-  background: url('../assets/brand/branch-right.png') no-repeat center/contain;
+  background: url('../assets/brand/branch-right.webp') no-repeat center/contain;
   opacity: 0.12;
 }
 
@@ -534,7 +534,7 @@
   width: 160px;
   height: 160px;
   transform: translateX(-50%);
-  background: url('../assets/brand/rs-logo-transparent.png') no-repeat center/contain;
+  background: url('../assets/brand/rs-logo-transparent.webp') no-repeat center/contain;
   opacity: 0.05;
 }
 
@@ -2998,7 +2998,7 @@
 
 /* ============================================================
    Final Branch Showcase + Compact Footer Polish
-   Palette sampled from branch-left.png:
+   Palette sampled from the branch artwork:
    petal #f7dac3, peach #f0c9ad, warm gold #d9965d, brown #3a2b24
    ============================================================ */
 
@@ -3232,8 +3232,8 @@
   margin-top: clamp(2rem, 4vw, 3.25rem);
   border-top: 1px solid rgba(240, 201, 173, 0.72);
   background-image:
-    url('../assets/brand/branch-left.png'),
-    url('../assets/brand/branch-right.png'),
+    url('../assets/brand/branch-left.webp'),
+    url('../assets/brand/branch-right.webp'),
     radial-gradient(circle at top left, rgba(247, 218, 195, 0.46), transparent 22rem),
     linear-gradient(180deg, #fffdfb 0%, #fff8f3 100%);
   background-position:

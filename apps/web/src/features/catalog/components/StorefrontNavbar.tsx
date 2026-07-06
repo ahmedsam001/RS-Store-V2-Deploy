@@ -26,7 +26,7 @@ import { readSetting, settingsApi, StorefrontSettings } from '@/features/setting
 import { LanguageSwitcher, localizeKnownLabel, useI18n } from '@/shared/i18n';
 import { PATHS } from '@/shared/constants/routes';
 import { buildCustomerAuthPath } from '@/shared/lib/return-to';
-import logoUrl from '@/assets/brand/rs-logo-transparent.png';
+import logoUrl from '@/assets/brand/rs-logo-transparent.webp';
 
 const STOREFRONT_SETTINGS_CACHE_KEY = 'rs-storefront-settings';
 
@@ -139,7 +139,14 @@ export function StorefrontNavbar() {
                 className="inline-flex items-center"
                 aria-label={`${storeName} home`}
               >
-                <img src={logoUrl} alt={storeName} className="h-10 w-auto sm:h-11" />
+                <img
+                  src={logoUrl}
+                  alt={storeName}
+                  className="h-10 w-auto sm:h-11"
+                  decoding="async"
+                  loading="eager"
+                  fetchPriority="high"
+                />
               </CatalogLink>
             </div>
             <nav className="overflow-x-auto px-1" aria-label={t('nav.primary')}>
@@ -238,7 +245,14 @@ export function StorefrontNavbar() {
                 className="inline-flex items-center"
                 aria-label={`${storeName} home`}
               >
-                <img src={logoUrl} alt={storeName} className="h-10 w-auto" />
+                <img
+                  src={logoUrl}
+                  alt={storeName}
+                  className="h-10 w-auto"
+                  decoding="async"
+                  loading="eager"
+                  fetchPriority="high"
+                />
               </CatalogLink>
               <div className="flex items-center gap-1.5">
                 {isAdmin ? (
@@ -402,7 +416,7 @@ function StorefrontFooter({
             className="rs-footer-logo"
             aria-label={`${storeName} home`}
           >
-            <img src={logoUrl} alt={storeName} />
+            <img src={logoUrl} alt={storeName} decoding="async" loading="lazy" />
           </CatalogLink>
           <p className="rs-footer-copy">{t('footer.copy', { currency })}</p>
           <div className="rs-footer-trust-grid" aria-label={t('footer.storeBenefits')}>

@@ -11,7 +11,7 @@ import { sanitizeReturnTo } from '@/shared/lib/return-to';
 import { normalizeEgyptianPhoneNumber } from '@/shared/lib/validation';
 import { useDocumentMetadata } from '@/shared/seo/use-document-metadata';
 import { useI18n } from '@/shared/i18n';
-import logoUrl from '@/assets/brand/rs-logo-transparent.png';
+import logoUrl from '@/assets/brand/rs-logo-transparent.webp';
 
 type SmartLoginMode = 'customer-login' | 'customer-register' | 'admin-login';
 
@@ -252,7 +252,14 @@ export function SmartLoginPage({ mode }: SmartLoginPageProps = {}) {
             className="inline-flex items-center justify-center h-16 w-28 rounded-3xl bg-card text-lg font-black text-rs-ink"
             aria-hidden="true"
           >
-            <img src={logoUrl} alt="" className="h-full w-full object-contain" />
+            <img
+              src={logoUrl}
+              alt=""
+              className="h-full w-full object-contain"
+              decoding="async"
+              loading="eager"
+              fetchPriority="high"
+            />
           </span>
           <p className="rs-kicker mt-3">{content.kicker}</p>
           <h1 id="smart-login-title" className="mt-2 text-2xl font-black text-rs-ink">

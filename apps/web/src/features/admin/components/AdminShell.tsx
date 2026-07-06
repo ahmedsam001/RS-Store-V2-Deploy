@@ -14,7 +14,7 @@ import { useDocumentMetadata } from '@/shared/seo/use-document-metadata';
 import { Badge } from '@/shared/components/ui/Badge';
 import { Button } from '@/shared/components/ui/Button';
 import { cn } from '@/shared/utils/cn';
-import logoUrl from '@/assets/brand/rs-logo-transparent.png';
+import logoUrl from '@/assets/brand/rs-logo-transparent.webp';
 import '@/styles/admin.css';
 
 export function AdminShell() {
@@ -152,7 +152,13 @@ function AdminSidebar({
           )}
         >
           <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-sm">
-            <img src={logoUrl} alt="RS Store" className="h-full w-full object-contain" />
+            <img
+              src={logoUrl}
+              alt="RS Store"
+              className="h-full w-full object-contain"
+              decoding="async"
+              loading="eager"
+            />
           </div>
           {!compact ? (
             <div className="min-w-0">
@@ -293,7 +299,13 @@ function MobileDrawer({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white p-1">
-              <img src={logoUrl} alt="RS Store" className="h-full w-full object-contain" />
+              <img
+                src={logoUrl}
+                alt="RS Store"
+                className="h-full w-full object-contain"
+                decoding="async"
+                loading="eager"
+              />
             </div>
             <div>
               <p className="font-black">RS Store</p>
