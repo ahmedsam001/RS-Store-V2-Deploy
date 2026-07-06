@@ -6,7 +6,20 @@ import { logStructured } from '../../../common/logging/structured-logger';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly connectionRetryDelaysMs = [2_000, 4_000, 6_000, 8_000, 10_000, 12_000];
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
+    void this.connectWithRetry().catch((error) => {
+      logStructured('error', 'database_connect_background_failed', {
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+        errorCode: this.getPrismaErrorCode(error),
+      });
+    });
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.$disconnect();
+  }
+
+  private async connectWithRetry(): Promise<void> {
     for (let attempt = 1; attempt <= this.connectionRetryDelaysMs.length; attempt += 1) {
       try {
         await this.$connect();
@@ -39,10 +52,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         await this.delay(delayMs);
       }
     }
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    await this.$disconnect();
   }
 
   private delay(delayMs: number): Promise<void> {

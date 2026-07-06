@@ -15,8 +15,16 @@ export class AdminBootstrapService implements OnApplicationBootstrap {
     private readonly prisma: PrismaService,
   ) {}
 
-  async onApplicationBootstrap(): Promise<void> {
-    await this.retryAdminBootstrap();
+  onApplicationBootstrap(): void {
+    void this.retryAdminBootstrap().catch((error) => {
+      this.logger.error(
+        JSON.stringify({
+          message: 'admin_bootstrap_background_failed',
+          errorName: this.getErrorName(error),
+          errorCode: this.getPrismaErrorCode(error),
+        }),
+      );
+    });
   }
 
   private async retryAdminBootstrap(): Promise<void> {
