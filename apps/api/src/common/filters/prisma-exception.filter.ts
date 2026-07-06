@@ -5,6 +5,8 @@ import { logStructured } from '../logging/structured-logger';
 
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaExceptionFilter implements ExceptionFilter {
+  private readonly transientDatabaseErrorCodes = new Set(['P1001', 'P1002', 'P2024', 'P2028']);
+
   catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost): void {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
@@ -37,6 +39,10 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       return HttpStatus.NOT_FOUND;
     }
 
+    if (this.transientDatabaseErrorCodes.has(code)) {
+      return HttpStatus.SERVICE_UNAVAILABLE;
+    }
+
     return HttpStatus.BAD_REQUEST;
   }
 
@@ -47,6 +53,10 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
     if (code === 'P2025') {
       return 'Requested record was not found';
+    }
+
+    if (this.transientDatabaseErrorCodes.has(code)) {
+      return 'Database temporarily unavailable. Please retry shortly';
     }
 
     return 'Database request failed';
