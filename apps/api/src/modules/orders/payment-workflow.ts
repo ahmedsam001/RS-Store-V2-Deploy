@@ -68,9 +68,9 @@ export function buildCheckoutPaymentSnapshot(
     depositPaymentMethod === PaymentMethod.VODAFONE
       ? calculatePercentAmount(depositBaseAmount, settings.vodafoneFeePercent)
       : 0;
-  const totalAmount = subtotal;
+  const totalAmount = subtotal + depositPaymentFeeAmount;
   const depositAmount = depositBaseAmount + depositPaymentFeeAmount;
-  const remainingAmount = Math.max(0, totalAmount - depositBaseAmount);
+  const remainingAmount = Math.max(0, totalAmount - depositAmount);
   return {
     depositPaymentMethod,
     depositPaymentFeeAmount,
