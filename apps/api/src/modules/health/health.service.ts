@@ -2,7 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as Cloudinary } from 'cloudinary';
 import { RedisService } from '../../infrastructure/cache/redis.service';
-import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
+import {
+  isTransientDatabaseError,
+  PrismaService,
+} from '../../infrastructure/database/prisma/prisma.service';
 import { CLOUDINARY_CLIENT } from '../../infrastructure/storage/cloudinary/cloudinary.constants';
 
 type CheckState = 'healthy' | 'degraded' | 'unhealthy';
@@ -46,6 +49,9 @@ export class HealthService {
       await this.prisma.$queryRaw`SELECT 1`;
       return { status: 'healthy' as const };
     } catch (error) {
+      if (isTransientDatabaseError(error)) {
+        void this.prisma.requestRuntimeRecovery(error, 'health_check');
+      }
       return { status: 'unhealthy' as const, message: this.errorMessage(error) };
     }
   }

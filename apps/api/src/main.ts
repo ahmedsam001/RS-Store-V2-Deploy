@@ -10,10 +10,12 @@ import {
   parseAllowedOrigins,
   securityHeadersMiddleware,
 } from './common/middleware/security-headers.middleware';
+import { PrismaService } from './infrastructure/database/prisma/prisma.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const configService = app.get(ConfigService);
+  const prisma = app.get(PrismaService);
   const expressApp = app.getHttpAdapter().getInstance();
 
   expressApp.disable('x-powered-by');
@@ -36,7 +38,7 @@ async function bootstrap(): Promise<void> {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-  app.useGlobalFilters(new PrismaExceptionFilter(), new HttpExceptionFilter());
+  app.useGlobalFilters(new PrismaExceptionFilter(prisma), new HttpExceptionFilter());
 
   app.enableShutdownHooks();
   const port = configService.getOrThrow<number>('PORT');
