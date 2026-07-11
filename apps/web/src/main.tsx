@@ -1,9 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/app/App';
+import { AppI18nProvider } from '@/app/AppI18nProvider';
 import { AuthProvider } from '@/features/auth';
 import { CartProvider } from '@/features/cart';
-import { I18nProvider } from '@/shared/i18n';
 import '@/styles/globals.css';
 import '@/styles/storefront.css';
 
@@ -15,12 +15,12 @@ if (rootElement === null) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <I18nProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <AppI18nProvider>
         <CartProvider>
           <App />
         </CartProvider>
-      </AuthProvider>
-    </I18nProvider>
+      </AppI18nProvider>
+    </AuthProvider>
   </StrictMode>,
 );

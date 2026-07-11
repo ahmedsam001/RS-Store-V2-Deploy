@@ -1,5 +1,4 @@
 import { apiRequest } from '@/shared/api/http-client';
-import type { Order } from '@/shared/types/OrderTypes';
 
 export type CustomOrderStatus = 'PENDING_REVIEW' | 'ACCEPTED' | 'REJECTED';
 
@@ -83,13 +82,6 @@ export const customOrdersApi = {
     return apiRequest<CustomOrderRequest>('/custom-orders', {
       method: 'POST',
       body,
-      csrfToken: options.csrfToken,
-    });
-  },
-
-  createOrder(id: string, options: RequestOptions = {}) {
-    return apiRequest<Order>(`/custom-orders/${id}/create-order`, {
-      method: 'POST',
       csrfToken: options.csrfToken,
     });
   },

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { FormEvent, useEffect, useState } from 'react';
 import { Search, Filter, Plus } from 'lucide-react';
 import { X } from 'lucide-react';

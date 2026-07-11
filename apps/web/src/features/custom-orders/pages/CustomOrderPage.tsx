@@ -6,6 +6,7 @@ import {
   type CustomOrderRequest,
 } from '@/features/custom-orders/api/custom-orders-api';
 import { useAuth } from '@/features/auth/AuthContext';
+import { useCart } from '@/features/cart';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 import { Button } from '@/shared/components/ui/Button';
 import { orderPath, PATHS } from '@/shared/constants/routes';
@@ -98,6 +99,7 @@ export function CustomOrderPage() {
   const { language } = useI18n();
   const copy = customOrderCopy[language];
   const { csrfToken } = useAuth();
+  const { refresh: refreshCart } = useCart();
   const navigate = useNavigate();
   const [items, setItems] = useState<CustomOrderRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -276,11 +278,16 @@ export function CustomOrderPage() {
                   item={item}
                   copy={copy}
                   language={language}
-                  onOpen={() =>
-                    item.convertedOrder
-                      ? navigate(orderPath(item.convertedOrder.id))
-                      : navigate(PATHS.cart)
-                  }
+                  onOpen={async () => {
+                    const convertedOrderId = item.convertedOrder?.id ?? item.convertedOrderId;
+                    if (convertedOrderId) {
+                      navigate(orderPath(convertedOrderId));
+                      return;
+                    }
+
+                    await refreshCart();
+                    navigate(PATHS.cart);
+                  }}
                 />
               ) : (
                 <PendingCustomOrderCard key={item.id} item={item} copy={copy} />
@@ -360,7 +367,7 @@ function AcceptedCustomOrderCard({
   item: CustomOrderRequest;
   copy: CustomOrderCopy;
   language: Language;
-  onOpen: () => void;
+  onOpen: () => void | Promise<void>;
 }) {
   return (
     <article className="rs-product-card min-w-0">
@@ -411,9 +418,9 @@ function AcceptedCustomOrderCard({
             {item.adminNote}
           </p>
         ) : null}
-        <Button className="rs-cart-btn mt-auto" onClick={onOpen}>
+        <Button className="rs-cart-btn mt-auto" onClick={() => void onOpen()}>
           <ShoppingBag className="h-4 w-4" aria-hidden="true" />
-          {item.convertedOrder ? copy.openOrder : copy.viewInCart}
+          {item.convertedOrder?.id || item.convertedOrderId ? copy.openOrder : copy.viewInCart}
         </Button>
       </div>
     </article>

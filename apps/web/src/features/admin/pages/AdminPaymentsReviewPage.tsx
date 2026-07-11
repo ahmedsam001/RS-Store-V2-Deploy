@@ -91,7 +91,7 @@ export function AdminPaymentsReviewPage() {
   const [notice, setNotice] = useState<AdminNoticeState>(null);
   const [rejectingProofId, setRejectingProofId] = useState<string | null>(null);
   const [cashRejectOpen, setCashRejectOpen] = useState(false);
-  const orders = response?.items ?? [];
+  const orders = useMemo(() => response?.items ?? [], [response?.items]);
   const activeTab =
     PAYMENT_REVIEW_TABS.find((tab) => tab.key === filters.queue) ?? PAYMENT_REVIEW_TABS[0];
   const selectedInList = useMemo(

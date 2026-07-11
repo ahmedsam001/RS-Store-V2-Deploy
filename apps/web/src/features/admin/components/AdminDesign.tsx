@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { type FormHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { MessageCircle } from 'lucide-react';

@@ -14,6 +14,7 @@ import { useDocumentMetadata } from '@/shared/seo/use-document-metadata';
 import { Badge } from '@/shared/components/ui/Badge';
 import { Button } from '@/shared/components/ui/Button';
 import { cn } from '@/shared/utils/cn';
+import { LanguageSwitcher, useI18n, type Language } from '@/shared/i18n';
 import logoUrl from '@/assets/brand/rs-logo-transparent.webp';
 import '@/styles/admin.css';
 
@@ -21,14 +22,19 @@ export function AdminShell() {
   const [isMobileOpen, setMobileOpen] = useState(false);
   const [isCompact, setCompact] = useState(false);
   const { user, logout } = useAuth();
+  const { direction, language } = useI18n();
+  const copy = adminShellCopy[language];
   const navigate = useNavigate();
   const location = useLocation();
   const initials = useMemo(() => buildInitials(user?.name ?? 'RS'), [user?.name]);
-  const pageTitle = useMemo(() => resolvePageTitle(location.pathname), [location.pathname]);
+  const pageTitle = useMemo(
+    () => translateAdminLabel(resolvePageTitle(location.pathname), language),
+    [language, location.pathname],
+  );
 
   useDocumentMetadata({
-    title: 'Admin Dashboard | RS Store',
-    description: 'RS Store private admin dashboard',
+    title: copy.metaTitle,
+    description: copy.metaDescription,
     canonicalPath: '/admin',
     robots: 'noindex,nofollow',
   });
@@ -39,9 +45,9 @@ export function AdminShell() {
   }
 
   return (
-    <div className="admin-shell-bg min-h-screen text-foreground" dir="ltr">
+    <div className="admin-shell-bg min-h-screen text-foreground" dir={direction}>
       <a className="skip-link" href="#admin-main">
-        Skip to content
+        {copy.skipToContent}
       </a>
       <div
         className={cn(
@@ -65,7 +71,7 @@ export function AdminShell() {
               size="icon"
               className="lg:hidden"
               onClick={() => setMobileOpen(true)}
-              aria-label="Open admin menu"
+              aria-label={copy.openMenu}
             >
               <Menu className="h-5 w-5" aria-hidden="true" />
             </Button>
@@ -76,7 +82,7 @@ export function AdminShell() {
                   RS Store V2
                 </Badge>
                 <span className="hidden text-xs font-extrabold text-muted-foreground sm:inline">
-                  Admin console
+                  {copy.adminConsole}
                 </span>
               </div>
               <h1 className="mt-1 truncate text-base font-black text-[#241611] sm:text-2xl">
@@ -93,15 +99,20 @@ export function AdminShell() {
                     to={link.to}
                     className="rounded-full px-2 py-1 font-bold transition hover:bg-[#fff6e4] hover:text-[#241611]"
                   >
-                    {link.labelEn}
+                    {translateAdminLabel(link.labelEn, language)}
                   </Link>
                 ))}
               </div>
             </div>
 
-            <a href="/">
-              <span className="hidden sm:inline">View store</span>
-              <span className="sm:hidden">Store</span>
+            <LanguageSwitcher className="shrink-0 rounded-full border border-[#efd6c5] bg-white/80" />
+
+            <a
+              href={PATHS.home}
+              className="flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[#efd6c5] bg-white/80 px-3 text-sm font-black text-[#241611] transition hover:bg-[#fff6e4] sm:px-4"
+            >
+              <span className="hidden sm:inline">{copy.viewStore}</span>
+              <span className="sm:hidden">{copy.store}</span>
             </a>
           </header>
 
@@ -142,6 +153,9 @@ function AdminSidebar({
   userInitials: string;
   userName: string;
 }) {
+  const { language } = useI18n();
+  const copy = adminShellCopy[language];
+
   return (
     <aside className="admin-sidebar sticky top-0 hidden h-screen border-e border-white/10 p-4 text-white shadow-xl lg:block">
       <div className="flex h-full min-h-0 flex-col">
@@ -163,25 +177,25 @@ function AdminSidebar({
           {!compact ? (
             <div className="min-w-0">
               <p className="truncate text-base font-black">RS Store</p>
-              <p className="truncate text-xs text-white/60">Premium admin system</p>
+              <p className="truncate text-xs text-white/60">{copy.premiumAdmin}</p>
             </div>
           ) : null}
         </div>
 
         <div className="premium-scrollbar mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto pe-1">
-          <SidebarGroup compact={compact} title="Overview" links={ADMIN_MANAGEMENT_LINKS} />
-          <SidebarGroup compact={compact} title="Operations" links={ADMIN_OPERATIONS_LINKS} />
+          <SidebarGroup compact={compact} title={copy.overview} links={ADMIN_MANAGEMENT_LINKS} />
+          <SidebarGroup compact={compact} title={copy.operations} links={ADMIN_OPERATIONS_LINKS} />
         </div>
 
         <div className="mt-4 space-y-3">
           <button
             type="button"
             onClick={onCompactToggle}
-            aria-label={compact ? 'Expand menu' : 'Compact menu'}
+            aria-label={compact ? copy.expandMenu : copy.compactMenu}
             className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
           >
             <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
-            {!compact ? <span>Compact menu</span> : null}
+            {!compact ? <span>{copy.compactMenu}</span> : null}
           </button>
           <div className={cn('rounded-3xl bg-white/10 p-3 ring-1 ring-white/10', compact && 'p-2')}>
             <div className={cn('flex items-center gap-3', compact && 'justify-center')}>
@@ -191,7 +205,7 @@ function AdminSidebar({
               {!compact ? (
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold">{userName}</p>
-                  <p className="truncate text-xs text-white/60">Secure admin session</p>
+                  <p className="truncate text-xs text-white/60">{copy.secureSession}</p>
                 </div>
               ) : null}
             </div>
@@ -203,7 +217,7 @@ function AdminSidebar({
                 onClick={onLogout}
               >
                 <LogOut className="h-4 w-4" aria-hidden="true" />
-                Logout
+                {copy.logout}
               </Button>
             ) : null}
           </div>
@@ -235,12 +249,14 @@ function SidebarGroup({
 }
 
 function SidebarLink({ link, compact }: { link: AdminNavLink; compact: boolean }) {
+  const { language } = useI18n();
   const Icon = link.icon;
+  const label = translateAdminLabel(link.labelEn, language);
   return (
     <NavLink
       to={link.to}
       end={link.end}
-      title={link.labelEn}
+      title={label}
       className={({ isActive }) =>
         cn(
           'group flex min-h-12 items-center gap-3 rounded-2xl px-3 py-2 text-sm font-bold transition',
@@ -252,10 +268,10 @@ function SidebarLink({ link, compact }: { link: AdminNavLink; compact: boolean }
       }
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      {!compact ? <span className="min-w-0 flex-1 truncate">{link.labelEn}</span> : null}
+      {!compact ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
       {!compact && link.badge ? (
         <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-black text-emerald-100">
-          {link.badge}
+          {translateAdminLabel(link.badge, language)}
         </span>
       ) : null}
     </NavLink>
@@ -263,6 +279,7 @@ function SidebarLink({ link, compact }: { link: AdminNavLink; compact: boolean }
 }
 
 function AdminMobileNavLink({ link }: { link: AdminNavLink }) {
+  const { language } = useI18n();
   const Icon = link.icon;
   return (
     <NavLink
@@ -276,7 +293,7 @@ function AdminMobileNavLink({ link }: { link: AdminNavLink }) {
       }
     >
       <Icon className="h-4 w-4" aria-hidden="true" />
-      {link.labelEn}
+      {translateAdminLabel(link.labelEn, language)}
     </NavLink>
   );
 }
@@ -292,9 +309,12 @@ function MobileDrawer({
   userInitials: string;
   userName: string;
 }) {
+  const { language } = useI18n();
+  const copy = adminShellCopy[language];
+
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <button className="absolute inset-0 bg-black/55" aria-label="Close menu" onClick={onClose} />
+      <button className="absolute inset-0 bg-black/55" aria-label={copy.closeMenu} onClick={onClose} />
       <aside className="admin-sidebar relative flex h-full w-[min(88vw,360px)] flex-col p-4 text-white shadow-2xl">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -309,7 +329,7 @@ function MobileDrawer({
             </div>
             <div>
               <p className="font-black">RS Store</p>
-              <p className="text-xs text-white/60">Admin system</p>
+              <p className="text-xs text-white/60">{copy.adminSystem}</p>
             </div>
           </div>
           <Button
@@ -317,7 +337,7 @@ function MobileDrawer({
             variant="ghost"
             className="text-white hover:bg-white/10 hover:text-white"
             onClick={onClose}
-            aria-label="Close menu"
+            aria-label={copy.closeMenu}
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </Button>
@@ -326,8 +346,11 @@ function MobileDrawer({
           {ADMIN_NAV_LINKS.map((link) => (
             <MobileDrawerLink key={link.to} link={link} onClose={onClose} />
           ))}
-          <a href="/">
-            <span>View store</span>
+          <a
+            href={PATHS.home}
+            className="rounded-2xl px-3 py-2 text-sm font-bold text-white/75 hover:bg-white/10 hover:text-white"
+          >
+            <span>{copy.viewStore}</span>
           </a>
         </div>
         <div className="mt-auto rounded-3xl bg-white/10 p-3 ring-1 ring-white/10">
@@ -337,7 +360,7 @@ function MobileDrawer({
             </div>
             <div>
               <p className="text-sm font-bold">{userName}</p>
-              <p className="text-xs text-white/60">Secure admin session</p>
+              <p className="text-xs text-white/60">{copy.secureSession}</p>
             </div>
           </div>
           <Button
@@ -347,7 +370,7 @@ function MobileDrawer({
             onClick={onLogout}
           >
             <LogOut className="h-4 w-4" aria-hidden="true" />
-            Logout
+            {copy.logout}
           </Button>
         </div>
       </aside>
@@ -356,6 +379,7 @@ function MobileDrawer({
 }
 
 function MobileDrawerLink({ link, onClose }: { link: AdminNavLink; onClose: () => void }) {
+  const { language } = useI18n();
   const Icon = link.icon;
   return (
     <NavLink
@@ -370,7 +394,7 @@ function MobileDrawerLink({ link, onClose }: { link: AdminNavLink; onClose: () =
       }
     >
       <Icon className="h-5 w-5" aria-hidden="true" />
-      <span>{link.labelEn}</span>
+      <span>{translateAdminLabel(link.labelEn, language)}</span>
     </NavLink>
   );
 }
@@ -394,4 +418,71 @@ function buildInitials(value: string): string {
       .map((part) => part[0]?.toUpperCase() ?? '')
       .join('') || 'RS'
   );
+}
+
+const adminShellCopy = {
+  en: {
+    metaTitle: 'Admin Dashboard | RS Store',
+    metaDescription: 'RS Store private admin dashboard',
+    skipToContent: 'Skip to content',
+    openMenu: 'Open admin menu',
+    closeMenu: 'Close menu',
+    adminConsole: 'Admin console',
+    viewStore: 'View store',
+    store: 'Store',
+    premiumAdmin: 'Premium admin system',
+    overview: 'Overview',
+    operations: 'Operations',
+    expandMenu: 'Expand menu',
+    compactMenu: 'Compact menu',
+    secureSession: 'Secure admin session',
+    logout: 'Logout',
+    adminSystem: 'Admin system',
+  },
+  ar: {
+    metaTitle: 'لوحة الإدارة | متجر RS',
+    metaDescription: 'لوحة الإدارة الخاصة بمتجر RS',
+    skipToContent: 'انتقل إلى المحتوى',
+    openMenu: 'فتح قائمة الإدارة',
+    closeMenu: 'إغلاق القائمة',
+    adminConsole: 'لوحة الإدارة',
+    viewStore: 'عرض المتجر',
+    store: 'المتجر',
+    premiumAdmin: 'نظام إدارة احترافي',
+    overview: 'الإدارة',
+    operations: 'العمليات',
+    expandMenu: 'توسيع القائمة',
+    compactMenu: 'تصغير القائمة',
+    secureSession: 'جلسة إدارة آمنة',
+    logout: 'تسجيل الخروج',
+    adminSystem: 'نظام الإدارة',
+  },
+} as const;
+
+const adminArabicLabels: Record<string, string> = {
+  Dashboard: 'لوحة التحكم',
+  Products: 'المنتجات',
+  Categories: 'الأقسام',
+  'Custom Orders': 'الطلبات الخاصة',
+  'Payments Review': 'مراجعة المدفوعات',
+  Orders: 'الطلبات',
+  Reports: 'التقارير',
+  'Flash Sales': 'العروض السريعة',
+  'SHEIN Import': 'استيراد شي إن',
+  'SHEIN Batches': 'دفعات شي إن',
+  Uploads: 'الملفات المرفوعة',
+  Settings: 'الإعدادات',
+  'Audit Logs': 'سجل النشاط',
+  'Add Product': 'إضافة منتج',
+  'Review Payment': 'مراجعة دفعة',
+  'Create New SHEIN Batch': 'إنشاء دفعة شي إن جديدة',
+  'Store command center': 'مركز إدارة المتجر',
+  New: 'جديد',
+  Ready: 'جاهز',
+  Track: 'تتبع',
+};
+
+function translateAdminLabel(label: string | undefined, language: Language): string {
+  if (!label) return '';
+  return language === 'ar' ? (adminArabicLabels[label] ?? label) : label;
 }

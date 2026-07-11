@@ -91,7 +91,7 @@ export function AdminOrdersPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [filters, setFilters] = useState(() => getOrderFiltersFromSearchParams(searchParams));
   const [notice, setNotice] = useState<AdminNoticeState>(null);
-  const orders = response?.items ?? [];
+  const orders = useMemo(() => response?.items ?? [], [response?.items]);
   const currentTab =
     ORDER_WORKFLOW_TABS.find((tab) => tab.key === filters.workflow) ?? ORDER_WORKFLOW_TABS[0];
   const selectedInList = useMemo(

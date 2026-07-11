@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGE_STORAGE_KEY,
+  isSupportedLanguage,
   normalizeLanguage,
   translations,
   type Language,
@@ -12,6 +20,15 @@ import {
   type I18nContextValue,
   type TranslationVariables,
 } from '@/shared/i18n/I18nContext';
+
+type AccountStatus = 'loading' | 'anonymous' | 'authenticated';
+
+type I18nProviderProps = {
+  children: ReactNode;
+  accountStatus?: AccountStatus;
+  accountLanguage?: string | null;
+  persistLanguage?: (language: Language) => Promise<void>;
+};
 
 function readInitialLanguage(): Language {
   if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
@@ -36,8 +53,24 @@ function interpolate(template: string, variables?: TranslationVariables) {
   }, template);
 }
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => readInitialLanguage());
+export function I18nProvider({
+  children,
+  accountStatus = 'anonymous',
+  accountLanguage,
+  persistLanguage,
+}: I18nProviderProps) {
+  const [language, setLanguageState] = useState<Language>(() =>
+    readInitialLanguage(),
+  );
+  const [isSavingLanguage, setIsSavingLanguage] = useState(false);
+  const [languageError, setLanguageError] = useState<string | null>(null);
+  const languageRef = useRef(language);
+  const savingRef = useRef(false);
+
+  const applyLanguage = useCallback((nextLanguage: Language) => {
+    languageRef.current = nextLanguage;
+    setLanguageState(nextLanguage);
+  }, []);
 
   useEffect(() => {
     applyDocumentLanguage(language);
@@ -46,17 +79,64 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, [language]);
 
-  const setLanguage = useCallback((nextLanguage: Language) => {
-    setLanguageState(normalizeLanguage(nextLanguage));
-  }, []);
+  useEffect(() => {
+    if (
+      accountStatus !== 'authenticated' ||
+      savingRef.current ||
+      !isSupportedLanguage(accountLanguage) ||
+      accountLanguage === languageRef.current
+    ) {
+      return;
+    }
 
-  const toggleLanguage = useCallback(() => {
-    setLanguageState((currentLanguage) => (currentLanguage === 'ar' ? 'en' : 'ar'));
-  }, []);
+    applyLanguage(accountLanguage);
+  }, [accountLanguage, accountStatus, applyLanguage]);
+
+  const setLanguage = useCallback(
+    async (nextLanguage: Language) => {
+      const normalizedLanguage = normalizeLanguage(nextLanguage);
+      const previousLanguage = languageRef.current;
+
+      if (normalizedLanguage === previousLanguage) {
+        setLanguageError(null);
+        return true;
+      }
+
+      setLanguageError(null);
+      applyLanguage(normalizedLanguage);
+
+      if (accountStatus !== 'authenticated' || !persistLanguage) {
+        return true;
+      }
+
+      savingRef.current = true;
+      setIsSavingLanguage(true);
+      try {
+        await persistLanguage(normalizedLanguage);
+        return true;
+      } catch {
+        applyLanguage(previousLanguage);
+        setLanguageError(translations[previousLanguage]['language.saveFailed']);
+        return false;
+      } finally {
+        savingRef.current = false;
+        setIsSavingLanguage(false);
+      }
+    },
+    [accountStatus, applyLanguage, persistLanguage],
+  );
+
+  const toggleLanguage = useCallback(
+    () => setLanguage(languageRef.current === 'ar' ? 'en' : 'ar'),
+    [setLanguage],
+  );
+
+  const clearLanguageError = useCallback(() => setLanguageError(null), []);
 
   const t = useCallback(
     (key: TranslationKey, variables?: TranslationVariables) => {
-      const localizedText = translations[language][key] ?? translations.en[key] ?? key;
+      const localizedText =
+        translations[language][key] ?? translations.en[key] ?? key;
       return interpolate(localizedText, variables);
     },
     [language],
@@ -68,10 +148,40 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       direction: language === 'ar' ? 'rtl' : 'ltr',
       setLanguage,
       toggleLanguage,
+      isSavingLanguage,
+      languageError,
+      clearLanguageError,
       t,
     }),
-    [language, setLanguage, t, toggleLanguage],
+    [
+      clearLanguageError,
+      isSavingLanguage,
+      language,
+      languageError,
+      setLanguage,
+      t,
+      toggleLanguage,
+    ],
   );
 
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+  return (
+    <I18nContext.Provider value={value}>
+      {children}
+      {languageError ? (
+        <div
+          role="alert"
+          className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-xl items-center justify-between gap-3 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-bold text-red-700 shadow-xl"
+        >
+          <span>{languageError}</span>
+          <button
+            type="button"
+            className="shrink-0 rounded-lg px-2 py-1 text-xs font-black hover:bg-red-50"
+            onClick={clearLanguageError}
+          >
+            {t('common.dismiss')}
+          </button>
+        </div>
+      ) : null}
+    </I18nContext.Provider>
+  );
 }

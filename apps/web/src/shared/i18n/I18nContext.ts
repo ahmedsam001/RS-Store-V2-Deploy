@@ -6,8 +6,11 @@ export type TranslationVariables = Record<string, string | number>;
 export type I18nContextValue = {
   language: Language;
   direction: 'rtl' | 'ltr';
-  setLanguage: (language: Language) => void;
-  toggleLanguage: () => void;
+  setLanguage: (language: Language) => Promise<boolean>;
+  toggleLanguage: () => Promise<boolean>;
+  isSavingLanguage: boolean;
+  languageError: string | null;
+  clearLanguageError: () => void;
   t: (key: TranslationKey, variables?: TranslationVariables) => string;
 };
 

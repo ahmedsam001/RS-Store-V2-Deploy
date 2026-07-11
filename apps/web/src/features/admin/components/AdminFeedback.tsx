@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 export type AdminNoticeState = { type: 'success' | 'error'; message: string } | null;
 
 export function AdminFeedback({ notice }: { notice: AdminNoticeState }) {

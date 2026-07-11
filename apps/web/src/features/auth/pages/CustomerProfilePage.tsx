@@ -114,7 +114,7 @@ const profileCopy = {
 type ProfileCopy = (typeof profileCopy)[keyof typeof profileCopy];
 
 export function CustomerProfilePage() {
-  const { language, setLanguage } = useI18n();
+  const { language, setLanguage, isSavingLanguage } = useI18n();
   const copy = profileCopy[language];
   const { status, user, logout, updateProfile } = useAuth();
   const isArabic = language === 'ar';
@@ -170,8 +170,7 @@ export function CustomerProfilePage() {
   const currentName = user.name ?? '';
 
   function handleLanguageChange(lang: Language) {
-    setLanguage(lang);
-    void updateProfile({ language: lang });
+    void setLanguage(lang);
   }
 
   async function handleSave() {
@@ -472,6 +471,7 @@ export function CustomerProfilePage() {
                   variant={language === 'en' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handleLanguageChange('en')}
+                  disabled={isSavingLanguage}
                   className="text-xs"
                 >
                   EN
@@ -480,6 +480,7 @@ export function CustomerProfilePage() {
                   variant={language === 'ar' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handleLanguageChange('ar')}
+                  disabled={isSavingLanguage}
                   className="text-xs"
                 >
                   AR

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { isApiError } from '@/shared/api/api-error';
@@ -85,9 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (status === 'loading') {
-        setStatus('anonymous');
-      }
+      setStatus((currentStatus) =>
+        currentStatus === 'loading' ? 'anonymous' : currentStatus,
+      );
     }
   }, []);
 

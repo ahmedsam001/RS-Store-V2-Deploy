@@ -14,7 +14,7 @@ import { formatPrice } from '@/features/catalog/utils/format';
 import { settingsApi, readSetting, StorefrontSettings } from '@/features/settings/settings-api';
 import { ordersApi } from '@/features/orders/api/orders-api';
 import { localizeProductText, useI18n, type Language } from '@/shared/i18n';
-import type { Cart } from '@/shared/types/CartTypes';
+import { getCheckoutCartBlockCode } from '@/features/orders/utils/checkout-cart';
 import type { CheckoutInput } from '@/shared/types/OrderTypes';
 
 const checkoutCopy = {
@@ -253,9 +253,9 @@ export function CheckoutPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const staticCartReason = staticCartBlockReason(cart, copy);
-    if (staticCartReason) {
-      setSubmitError(staticCartReason);
+    const cartBlockCode = getCheckoutCartBlockCode(cart);
+    if (cartBlockCode) {
+      setSubmitError(cartBlockCode === 'preview-cart' ? copy.previewBlocked : copy.staticBlocked);
       return;
     }
     if (!depositProofFile) {
@@ -619,28 +619,6 @@ export function CheckoutPage() {
         </div>
       </form>
     </div>
-  );
-}
-
-function staticCartBlockReason(cart: Cart | null, copy: CheckoutCopy): string | null {
-  if (!cart?.items.length) return null;
-  if (cart.id === 'preview-cart') {
-    return copy.previewBlocked;
-  }
-
-  const hasStaticProduct = cart.items.some(
-    (item) =>
-      item.type === 'PRODUCT' &&
-      (!isDatabaseId(item.product?.id) ||
-        (item.variant?.id ? !isDatabaseId(item.variant.id) : false)),
-  );
-  return hasStaticProduct ? copy.staticBlocked : null;
-}
-
-function isDatabaseId(value: string | null | undefined): boolean {
-  return Boolean(
-    value &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
   );
 }
 

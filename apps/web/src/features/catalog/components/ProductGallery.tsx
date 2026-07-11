@@ -41,6 +41,18 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
     }
   }, [selectedImage?.id]);
 
+  const goToPrevious = useCallback(() => {
+    const prevIndex = activeIndex <= 0 ? images.length - 1 : activeIndex - 1;
+    setActiveImage(images[prevIndex]);
+    setActiveIndex(prevIndex);
+  }, [activeIndex, images]);
+
+  const goToNext = useCallback(() => {
+    const nextIndex = activeIndex >= images.length - 1 ? 0 : activeIndex + 1;
+    setActiveImage(images[nextIndex]);
+    setActiveIndex(nextIndex);
+  }, [activeIndex, images]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
@@ -62,19 +74,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeIndex, images.length]);
-
-  const goToPrevious = useCallback(() => {
-    const prevIndex = activeIndex <= 0 ? images.length - 1 : activeIndex - 1;
-    setActiveImage(images[prevIndex]);
-    setActiveIndex(prevIndex);
-  }, [activeIndex, images]);
-
-  const goToNext = useCallback(() => {
-    const nextIndex = activeIndex >= images.length - 1 ? 0 : activeIndex + 1;
-    setActiveImage(images[nextIndex]);
-    setActiveIndex(nextIndex);
-  }, [activeIndex, images]);
+  }, [goToNext, goToPrevious]);
 
   const handleTouchStart = useCallback((event: React.TouchEvent) => {
     if (event.touches.length !== 1) return;

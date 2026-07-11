@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { AdminAuditLog, AdminPaginated, adminApi } from '@/features/admin/api/admin-api';
@@ -47,9 +47,9 @@ export function AdminAuditLogsPage() {
   const [filters, setFilters] = useState<AuditFilters>(initialFilters);
   const [notice, setNotice] = useState<AdminNoticeState>(null);
 
-  async function load(next = filters) {
+  const load = useCallback(async (next: AuditFilters) => {
     setResponse(await adminApi.auditLogsPage(buildAuditQuery(next)));
-  }
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,8 +70,8 @@ export function AdminAuditLogsPage() {
   }
 
   useEffect(() => {
-    load().catch((error) => setNotice(toNotice(error)));
-  }, []);
+    load(initialFilters).catch((error) => setNotice(toNotice(error)));
+  }, [load]);
   if (!response) return <AdminLoading />;
   const items = response.items;
 
@@ -85,7 +85,7 @@ export function AdminAuditLogsPage() {
           <Button
             variant="outline"
             type="button"
-            onClick={() => load().catch((error) => setNotice(toNotice(error)))}
+            onClick={() => load(filters).catch((error) => setNotice(toNotice(error)))}
           >
             Refresh
           </Button>
