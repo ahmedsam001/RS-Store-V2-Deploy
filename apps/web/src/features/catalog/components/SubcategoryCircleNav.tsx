@@ -66,6 +66,8 @@ export function SubcategoryCircleNav({
                   src={subcategory.image}
                   alt=""
                   loading="lazy"
+                  width={88}
+                  height={88}
                   className="h-full w-full"
                   fallbackVariant="subcategory"
                 />

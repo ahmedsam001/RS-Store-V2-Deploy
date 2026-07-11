@@ -155,6 +155,8 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
         src={null}
         alt={productName}
         className="rs-panel-soft aspect-square sm:aspect-[4/5] w-full rounded-2xl sm:rounded-[1.5rem]"
+        width={960}
+        height={1200}
         fallbackVariant="product"
         showFallbackLabel
       />
@@ -183,6 +185,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
           width={960}
           height={1200}
           loading="eager"
+          fetchPriority="high"
         />
 
         {images.length > 1 ? (

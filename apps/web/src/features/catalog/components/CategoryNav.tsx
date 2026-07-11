@@ -43,6 +43,8 @@ export function CategoryNav({ activeSlug, categories }: CategoryNavProps) {
                 src={category.image}
                 alt=""
                 loading="lazy"
+                width={48}
+                height={48}
                 className="h-full w-full rounded-full"
                 fallbackVariant="category"
               />

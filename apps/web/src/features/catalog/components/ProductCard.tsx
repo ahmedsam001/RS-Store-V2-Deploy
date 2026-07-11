@@ -115,7 +115,8 @@ export const ProductCard = memo(function ProductCard({
   const navigate = useNavigate();
   const { language, t } = useI18n();
   const hasPurchasableVariants = product.variantCount > 0;
-  const isPriorityImage = index < 4;
+  const isLcpImage = index === 0;
+  const isAboveFoldImage = index < 2;
   const productUrl = getProductUrl(product.slug);
   const priceDisplay = getProductPriceDisplay(product);
   const productName = localizeProductText(product.name, language);
@@ -149,14 +150,16 @@ export const ProductCard = memo(function ProductCard({
               sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
               width={600}
               height={750}
-              loading={isPriorityImage ? 'eager' : 'lazy'}
-              fetchPriority={isPriorityImage ? 'high' : undefined}
+              loading={isAboveFoldImage ? 'eager' : 'lazy'}
+              fetchPriority={isLcpImage ? 'high' : undefined}
             />
           ) : (
             <ImageWithFallback
               src={null}
               alt={productName}
               className="rs-product-image"
+              width={600}
+              height={750}
               fallbackVariant="product"
             />
           )}

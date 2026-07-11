@@ -10,6 +10,22 @@ function LocationProbe() {
   return <span data-testid="location">{location.pathname}</span>;
 }
 
+function createProductWithImage(slug: string) {
+  return createMockProduct({
+    slug,
+    imageCount: 1,
+    primaryImage: {
+      id: `${slug}-image`,
+      url: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+      width: 600,
+      height: 750,
+      altText: 'Product image',
+      isPrimary: true,
+      sortOrder: 0,
+    },
+  });
+}
+
 describe('ProductCard primary action behavior', () => {
   it('navigates to product details for products without variants instead of adding an invalid cart item', async () => {
     const product = createMockProduct({ slug: 'product-direct', variantCount: 0 });
@@ -171,5 +187,32 @@ describe('ProductCard discount display', () => {
     renderWithRouter(<ProductCard product={product} />);
 
     expect(screen.queryByLabelText(/Discount/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('ProductCard image loading priority', () => {
+  it('gives only the first product high fetch priority', () => {
+    const product = createProductWithImage('priority-product');
+    renderWithRouter(<ProductCard product={product} index={0} />);
+
+    const image = screen.getByRole('img');
+    expect(image).toHaveAttribute('loading', 'eager');
+    expect(image).toHaveAttribute('fetchpriority', 'high');
+  });
+
+  it('loads the second product eagerly without high fetch priority', () => {
+    const product = createProductWithImage('second-product');
+    renderWithRouter(<ProductCard product={product} index={1} />);
+
+    const image = screen.getByRole('img');
+    expect(image).toHaveAttribute('loading', 'eager');
+    expect(image).not.toHaveAttribute('fetchpriority', 'high');
+  });
+
+  it('lazy-loads products below the first row', () => {
+    const product = createProductWithImage('below-fold-product');
+    renderWithRouter(<ProductCard product={product} index={2} />);
+
+    expect(screen.getByRole('img')).toHaveAttribute('loading', 'lazy');
   });
 });

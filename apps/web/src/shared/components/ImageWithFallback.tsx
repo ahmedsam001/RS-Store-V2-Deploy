@@ -82,6 +82,8 @@ export function ImageWithFallback({
         src={logoUrl}
         alt=""
         draggable={false}
+        width={303}
+        height={90}
         decoding="async"
         loading="lazy"
         className="rs-image-with-fallback-logo"

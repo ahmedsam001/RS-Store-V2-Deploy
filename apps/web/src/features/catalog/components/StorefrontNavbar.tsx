@@ -143,9 +143,10 @@ export function StorefrontNavbar() {
                   src={logoUrl}
                   alt={storeName}
                   className="h-10 w-auto sm:h-11"
+                  width={303}
+                  height={90}
                   decoding="async"
                   loading="eager"
-                  fetchPriority="high"
                 />
               </CatalogLink>
             </div>
@@ -249,9 +250,10 @@ export function StorefrontNavbar() {
                   src={logoUrl}
                   alt={storeName}
                   className="h-10 w-auto"
+                  width={303}
+                  height={90}
                   decoding="async"
                   loading="eager"
-                  fetchPriority="high"
                 />
               </CatalogLink>
               <div className="flex items-center gap-1.5">
@@ -416,7 +418,14 @@ function StorefrontFooter({
             className="rs-footer-logo"
             aria-label={`${storeName} home`}
           >
-            <img src={logoUrl} alt={storeName} decoding="async" loading="lazy" />
+            <img
+              src={logoUrl}
+              alt={storeName}
+              width={303}
+              height={90}
+              decoding="async"
+              loading="lazy"
+            />
           </CatalogLink>
           <p className="rs-footer-copy">{t('footer.copy', { currency })}</p>
           <div className="rs-footer-trust-grid" aria-label={t('footer.storeBenefits')}>

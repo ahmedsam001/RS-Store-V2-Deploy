@@ -1,5 +1,5 @@
 import { CatalogLink } from '@/features/catalog/components/CatalogLink';
-import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
+import { ResponsiveImage } from '@/features/catalog/components/ResponsiveImage';
 import type { CatalogFlashSale } from '@/features/catalog/api/catalog-api';
 import { formatPrice, getProductUrl } from '@/features/catalog/utils/format';
 import { PATHS } from '@/shared/constants/routes';
@@ -61,9 +61,13 @@ export function FlashSaleHomeStrip({ sales }: FlashSaleHomeStripProps) {
             className="rs-flash-compact-card"
           >
             <div className="rs-flash-compact-image">
-              <ImageWithFallback
-                src={product.primaryImage?.url}
+              <ResponsiveImage
+                src={product.primaryImage?.url ?? ''}
                 alt={localizeProductText(product.name, language)}
+                widths={[160, 240, 320]}
+                sizes="148px"
+                width={320}
+                height={320}
                 loading="lazy"
                 className="h-full w-full object-cover"
                 fallbackVariant="product"

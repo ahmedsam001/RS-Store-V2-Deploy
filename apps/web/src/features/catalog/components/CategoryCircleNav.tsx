@@ -31,6 +31,8 @@ export function CategoryCircleNav({ activeSlug, categories }: CategoryCircleNavP
                 src={category.image}
                 alt=""
                 loading="lazy"
+                width={110}
+                height={110}
                 className="h-full w-full"
                 fallbackVariant="category"
               />
