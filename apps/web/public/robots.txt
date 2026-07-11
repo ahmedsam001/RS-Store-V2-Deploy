@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
-Disallow: /admin
-Disallow: /checkout
-Sitemap: /api/v1/seo/sitemap.xml
+Disallow: /admin/
+Disallow: /checkout/
+
+Sitemap: https://www.rs-store.me/sitemap.xml
