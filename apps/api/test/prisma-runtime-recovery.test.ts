@@ -1,21 +1,24 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
-import { ArgumentsHost } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
-import { v2 as Cloudinary } from 'cloudinary';
-import { Request, Response } from 'express';
-import '../src/common/middleware/request-id.middleware';
-import { PrismaExceptionFilter } from '../src/common/filters/prisma-exception.filter';
-import { RedisService } from '../src/infrastructure/cache/redis.service';
-import { PrismaService } from '../src/infrastructure/database/prisma/prisma.service';
-import { HealthService } from '../src/modules/health/health.service';
+import assert from "node:assert/strict";
+import test from "node:test";
+import { ArgumentsHost } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Prisma } from "@prisma/client";
+import { v2 as Cloudinary } from "cloudinary";
+import { Request, Response } from "express";
+import "../src/common/middleware/request-id.middleware";
+import { PrismaExceptionFilter } from "../src/common/filters/prisma-exception.filter";
+import { RedisService } from "../src/infrastructure/cache/redis.service";
+import { PrismaService } from "../src/infrastructure/database/prisma/prisma.service";
+import { HealthService } from "../src/modules/health/health.service";
 
 class TestPrismaService extends PrismaService {
   protected override readonly connectionRetryDelaysMs = [1, 2, 3];
   protected override readonly runtimeRecoveryCooldownMs = 100;
+  protected override readonly heartbeatIntervalMs = 0;
+  protected override readonly engineRestartDelayMs = 1;
 
   currentTimeMs = 0;
+  readonly exitCodes: number[] = [];
   readonly recordedDelays: number[] = [];
 
   protected override delay(delayMs: number): Promise<void> {
@@ -25,6 +28,14 @@ class TestPrismaService extends PrismaService {
 
   protected override now(): number {
     return this.currentTimeMs;
+  }
+
+  protected override exitProcess(exitCode: number): void {
+    this.exitCodes.push(exitCode);
+  }
+
+  runHeartbeatNow(): Promise<void> {
+    return this.runHeartbeat();
   }
 }
 
@@ -41,11 +52,27 @@ function replacePrismaMethod<Key extends keyof PrismaService>(
 
 function transientError(code: string, useInitializationCode = false): Error {
   return useInitializationCode
-    ? new Prisma.PrismaClientInitializationError('connection failed', '6.19.3', code)
-    : new Prisma.PrismaClientKnownRequestError('request failed', {
+    ? new Prisma.PrismaClientInitializationError(
+        "connection failed",
+        "6.19.3",
         code,
-        clientVersion: '6.19.3',
+      )
+    : new Prisma.PrismaClientKnownRequestError("request failed", {
+        code,
+        clientVersion: "6.19.3",
       });
+}
+
+function unknownRequestError(
+  message: string,
+): Prisma.PrismaClientUnknownRequestError {
+  return new Prisma.PrismaClientUnknownRequestError(message, {
+    clientVersion: "6.19.3",
+  });
+}
+
+function rustPanicError(): Prisma.PrismaClientRustPanicError {
+  return new Prisma.PrismaClientRustPanicError("query engine panic", "6.19.3");
 }
 
 function deferred(): { promise: Promise<void>; resolve: () => void } {
@@ -60,15 +87,14 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
   };
 }
 
-function mockSuccessfulQuery(prisma: PrismaService, onQuery?: () => void): void {
-  replacePrismaMethod(
-    prisma,
-    '$queryRaw',
-    (async () => {
-      onQuery?.();
-      return [{ result: 1 }];
-    }) as unknown as PrismaService['$queryRaw'],
-  );
+function mockSuccessfulQuery(
+  prisma: PrismaService,
+  onQuery?: () => void,
+): void {
+  replacePrismaMethod(prisma, "$queryRaw", (async () => {
+    onQuery?.();
+    return [{ result: 1 }];
+  }) as unknown as PrismaService["$queryRaw"]);
 }
 
 function createHttpHost(): {
@@ -86,7 +112,10 @@ function createHttpHost(): {
       return this;
     },
   } as unknown as Response;
-  const request = { url: '/api/v1/cart', requestId: 'request-1' } as unknown as Request;
+  const request = {
+    url: "/api/v1/cart",
+    requestId: "request-1",
+  } as unknown as Request;
   const host = {
     switchToHttp: () => ({
       getRequest: () => request,
@@ -97,34 +126,32 @@ function createHttpHost(): {
   return { host, result };
 }
 
-test('simultaneous transient failures join one runtime recovery operation', async () => {
+test("simultaneous transient failures join one runtime recovery operation", async () => {
   const prisma = new TestPrismaService();
   const disconnectStarted = deferred();
   const allowDisconnect = deferred();
   let disconnectCalls = 0;
   let connectCalls = 0;
 
-  replacePrismaMethod(
-    prisma,
-    '$disconnect',
-    (async () => {
-      disconnectCalls += 1;
-      disconnectStarted.resolve();
-      await allowDisconnect.promise;
-    }) as PrismaService['$disconnect'],
-  );
-  replacePrismaMethod(
-    prisma,
-    '$connect',
-    (async () => {
-      connectCalls += 1;
-    }) as PrismaService['$connect'],
-  );
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    disconnectCalls += 1;
+    disconnectStarted.resolve();
+    await allowDisconnect.promise;
+  }) as PrismaService["$disconnect"]);
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    connectCalls += 1;
+  }) as PrismaService["$connect"]);
   mockSuccessfulQuery(prisma);
 
-  const firstRecovery = prisma.requestRuntimeRecovery(transientError('P1001'), 'exception_filter');
+  const firstRecovery = prisma.requestRuntimeRecovery(
+    transientError("P1001"),
+    "exception_filter",
+  );
   await disconnectStarted.promise;
-  const joinedRecovery = prisma.requestRuntimeRecovery(transientError('P2024'), 'health_check');
+  const joinedRecovery = prisma.requestRuntimeRecovery(
+    transientError("P2024"),
+    "health_check",
+  );
 
   assert.equal(joinedRecovery, firstRecovery);
   assert.equal(disconnectCalls, 1);
@@ -133,7 +160,7 @@ test('simultaneous transient failures join one runtime recovery operation', asyn
   assert.equal(connectCalls, 1);
 });
 
-test('runtime recovery joins active startup connection retry without a competing loop', async () => {
+test("runtime recovery joins active startup connection retry without a competing loop", async () => {
   const prisma = new TestPrismaService();
   const startupConnectStarted = deferred();
   const allowStartupConnect = deferred();
@@ -141,22 +168,14 @@ test('runtime recovery joins active startup connection retry without a competing
   let disconnectCalls = 0;
   let queryCalls = 0;
 
-  replacePrismaMethod(
-    prisma,
-    '$connect',
-    (async () => {
-      connectCalls += 1;
-      startupConnectStarted.resolve();
-      await allowStartupConnect.promise;
-    }) as PrismaService['$connect'],
-  );
-  replacePrismaMethod(
-    prisma,
-    '$disconnect',
-    (async () => {
-      disconnectCalls += 1;
-    }) as PrismaService['$disconnect'],
-  );
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    connectCalls += 1;
+    startupConnectStarted.resolve();
+    await allowStartupConnect.promise;
+  }) as PrismaService["$connect"]);
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    disconnectCalls += 1;
+  }) as PrismaService["$disconnect"]);
   mockSuccessfulQuery(prisma, () => {
     queryCalls += 1;
   });
@@ -164,7 +183,10 @@ test('runtime recovery joins active startup connection retry without a competing
   prisma.onModuleInit();
   await startupConnectStarted.promise;
 
-  const joinedStartup = prisma.requestRuntimeRecovery(transientError('P1001'), 'health_check');
+  const joinedStartup = prisma.requestRuntimeRecovery(
+    transientError("P1001"),
+    "health_check",
+  );
 
   assert.notEqual(joinedStartup, undefined);
   assert.equal(connectCalls, 1);
@@ -176,7 +198,7 @@ test('runtime recovery joins active startup connection retry without a competing
   assert.equal(queryCalls, 1);
 });
 
-test('transient Prisma filter responses return 503 without waiting or replaying', () => {
+test("transient Prisma filter responses return 503 without waiting or replaying", () => {
   const pendingRecovery = deferred();
   const recoveryCalls: Array<{ error: unknown; source: string }> = [];
   const prisma = {
@@ -187,18 +209,24 @@ test('transient Prisma filter responses return 503 without waiting or replaying'
   } as unknown as PrismaService;
   const filter = new PrismaExceptionFilter(prisma);
   const { host, result } = createHttpHost();
-  const error = transientError('P1001', true) as Prisma.PrismaClientInitializationError;
+  const error = transientError(
+    "P1001",
+    true,
+  ) as Prisma.PrismaClientInitializationError;
 
   filter.catch(error, host);
 
   assert.equal(result.statusCode, 503);
-  assert.equal(result.body?.message, 'Database temporarily unavailable. Please retry shortly');
+  assert.equal(
+    result.body?.message,
+    "Database temporarily unavailable. Please retry shortly",
+  );
   assert.equal(recoveryCalls.length, 1);
   assert.equal(recoveryCalls[0]?.error, error);
-  assert.equal(recoveryCalls[0]?.source, 'exception_filter');
+  assert.equal(recoveryCalls[0]?.source, "exception_filter");
 });
 
-test('P2002 and P2025 filter responses do not schedule runtime recovery', () => {
+test("P2002 and P2025 filter responses do not schedule runtime recovery", () => {
   let recoveryCalls = 0;
   const prisma = {
     requestRuntimeRecovery() {
@@ -209,8 +237,8 @@ test('P2002 and P2025 filter responses do not schedule runtime recovery', () => 
   const filter = new PrismaExceptionFilter(prisma);
 
   for (const [code, expectedStatus] of [
-    ['P2002', 409],
-    ['P2025', 404],
+    ["P2002", 409],
+    ["P2025", 404],
   ] as const) {
     const { host, result } = createHttpHost();
     filter.catch(
@@ -223,33 +251,36 @@ test('P2002 and P2025 filter responses do not schedule runtime recovery', () => 
   assert.equal(recoveryCalls, 0);
 });
 
-test('health PostgreSQL failures schedule recovery for every transient Prisma code', async () => {
-  for (const code of ['P1001', 'P1002', 'P2024', 'P2028']) {
+test("health PostgreSQL failures schedule recovery for every transient Prisma code", async () => {
+  for (const code of ["P1001", "P1002", "P2024", "P2028"]) {
     const recoverySources: string[] = [];
     const prisma = {
       $queryRaw: async () => {
-        throw transientError(code, code === 'P1001');
+        throw transientError(code, code === "P1001");
       },
       requestRuntimeRecovery(_error: unknown, source: string) {
         recoverySources.push(source);
         return Promise.resolve();
       },
     } as unknown as PrismaService;
-    const redis = { ping: async () => 'PONG' } as RedisService;
+    const redis = { ping: async () => "PONG" } as RedisService;
     const config = {
-      get: (key: string) => (key === 'CLOUDINARY_CLOUD_NAME' ? 'rs-store' : 'configured'),
+      get: (key: string) =>
+        key === "CLOUDINARY_CLOUD_NAME" ? "rs-store" : "configured",
     } as ConfigService;
-    const cloudinary = { config: () => ({ cloud_name: 'rs-store' }) } as typeof Cloudinary;
+    const cloudinary = {
+      config: () => ({ cloud_name: "rs-store" }),
+    } as typeof Cloudinary;
     const health = new HealthService(prisma, redis, config, cloudinary);
 
     const result = await health.check();
 
     assert.equal(result.statusCode, 503);
-    assert.deepEqual(recoverySources, ['health_check']);
+    assert.deepEqual(recoverySources, ["health_check"]);
   }
 });
 
-test('successful recovery disconnects, reconnects, probes, logs success, and clears its lock', async () => {
+test("successful recovery disconnects, reconnects, probes, logs success, and clears its lock", async () => {
   const prisma = new TestPrismaService();
   const operations: string[] = [];
   const loggedLines: string[] = [];
@@ -259,107 +290,101 @@ test('successful recovery disconnects, reconnects, probes, logs success, and cle
   console.log = (line?: unknown) => loggedLines.push(String(line));
   console.warn = (line?: unknown) => loggedLines.push(String(line));
   try {
-    replacePrismaMethod(
-      prisma,
-      '$disconnect',
-      (async () => {
-        operations.push('disconnect');
-      }) as PrismaService['$disconnect'],
-    );
-    replacePrismaMethod(
-      prisma,
-      '$connect',
-      (async () => {
-        operations.push('connect');
-      }) as PrismaService['$connect'],
-    );
-    mockSuccessfulQuery(prisma, () => operations.push('query'));
+    replacePrismaMethod(prisma, "$disconnect", (async () => {
+      operations.push("disconnect");
+    }) as PrismaService["$disconnect"]);
+    replacePrismaMethod(prisma, "$connect", (async () => {
+      operations.push("connect");
+    }) as PrismaService["$connect"]);
+    mockSuccessfulQuery(prisma, () => operations.push("query"));
 
-    await prisma.requestRuntimeRecovery(transientError('P1002'), 'exception_filter');
-    await prisma.requestRuntimeRecovery(transientError('P1002'), 'exception_filter');
+    await prisma.requestRuntimeRecovery(
+      transientError("P1002"),
+      "exception_filter",
+    );
+    await prisma.requestRuntimeRecovery(
+      transientError("P1002"),
+      "exception_filter",
+    );
   } finally {
     console.log = originalLog;
     console.warn = originalWarn;
   }
 
   assert.deepEqual(operations, [
-    'disconnect',
-    'connect',
-    'query',
-    'disconnect',
-    'connect',
-    'query',
+    "disconnect",
+    "connect",
+    "query",
+    "disconnect",
+    "connect",
+    "query",
   ]);
   assert.equal(
-    loggedLines.some((line) => JSON.parse(line).message === 'database_runtime_recovery_success'),
+    loggedLines.some(
+      (line) =>
+        JSON.parse(line).message === "database_runtime_recovery_success",
+    ),
     true,
   );
 });
 
-test('failed recovery is bounded, backs off, cools down, and can restart later', async () => {
+test("failed recovery is bounded, backs off, cools down, and can restart later", async () => {
   const prisma = new TestPrismaService();
   let disconnectCalls = 0;
   let connectCalls = 0;
 
-  replacePrismaMethod(
-    prisma,
-    '$disconnect',
-    (async () => {
-      disconnectCalls += 1;
-    }) as PrismaService['$disconnect'],
-  );
-  replacePrismaMethod(
-    prisma,
-    '$connect',
-    (async () => {
-      connectCalls += 1;
-      throw transientError('P1001');
-    }) as PrismaService['$connect'],
-  );
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    disconnectCalls += 1;
+  }) as PrismaService["$disconnect"]);
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    connectCalls += 1;
+    throw transientError("P1001");
+  }) as PrismaService["$connect"]);
   mockSuccessfulQuery(prisma);
 
-  await prisma.requestRuntimeRecovery(transientError('P2028'), 'exception_filter');
+  await prisma.requestRuntimeRecovery(
+    transientError("P2028"),
+    "exception_filter",
+  );
   assert.equal(connectCalls, 3);
   assert.equal(disconnectCalls, 3);
   assert.deepEqual(prisma.recordedDelays, [1, 2]);
 
-  const duringCooldown = prisma.requestRuntimeRecovery(transientError('P2028'), 'exception_filter');
+  const duringCooldown = prisma.requestRuntimeRecovery(
+    transientError("P2028"),
+    "exception_filter",
+  );
   assert.equal(duringCooldown, undefined);
   assert.equal(connectCalls, 3);
 
   prisma.currentTimeMs = 100;
-  await prisma.requestRuntimeRecovery(transientError('P2028'), 'health_check');
+  await prisma.requestRuntimeRecovery(transientError("P2028"), "health_check");
   assert.equal(connectCalls, 6);
 });
 
-test('shutdown waits for active recovery and prevents new recovery work', async () => {
+test("shutdown waits for active recovery and prevents new recovery work", async () => {
   const prisma = new TestPrismaService();
   const recoveryDisconnectStarted = deferred();
   const allowRecoveryDisconnect = deferred();
   let disconnectCalls = 0;
   let connectCalls = 0;
 
-  replacePrismaMethod(
-    prisma,
-    '$disconnect',
-    (async () => {
-      disconnectCalls += 1;
-      if (disconnectCalls === 1) {
-        recoveryDisconnectStarted.resolve();
-        await allowRecoveryDisconnect.promise;
-      }
-    }) as PrismaService['$disconnect'],
-  );
-  replacePrismaMethod(
-    prisma,
-    '$connect',
-    (async () => {
-      connectCalls += 1;
-    }) as PrismaService['$connect'],
-  );
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    disconnectCalls += 1;
+    if (disconnectCalls === 1) {
+      recoveryDisconnectStarted.resolve();
+      await allowRecoveryDisconnect.promise;
+    }
+  }) as PrismaService["$disconnect"]);
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    connectCalls += 1;
+  }) as PrismaService["$connect"]);
   mockSuccessfulQuery(prisma);
 
-  const recovery = prisma.requestRuntimeRecovery(transientError('P1001'), 'exception_filter');
+  const recovery = prisma.requestRuntimeRecovery(
+    transientError("P1001"),
+    "exception_filter",
+  );
   await recoveryDisconnectStarted.promise;
   const shutdown = prisma.onModuleDestroy();
   allowRecoveryDisconnect.resolve();
@@ -368,7 +393,108 @@ test('shutdown waits for active recovery and prevents new recovery work', async 
   assert.equal(connectCalls, 0);
   assert.equal(disconnectCalls, 2);
   assert.equal(
-    prisma.requestRuntimeRecovery(transientError('P1001'), 'exception_filter'),
+    prisma.requestRuntimeRecovery(transientError("P1001"), "exception_filter"),
     undefined,
   );
+});
+
+test("unknown Prisma connection errors return 503 and trigger runtime recovery", () => {
+  const recoveryCalls: Array<{ error: unknown; source: string }> = [];
+  const prisma = {
+    requestRuntimeRecovery(error: unknown, source: string) {
+      recoveryCalls.push({ error, source });
+      return Promise.resolve();
+    },
+  } as unknown as PrismaService;
+  const filter = new PrismaExceptionFilter(prisma);
+  const { host, result } = createHttpHost();
+  const error = unknownRequestError(
+    "Error in connector: server closed the connection unexpectedly",
+  );
+
+  filter.catch(error, host);
+
+  assert.equal(result.statusCode, 503);
+  assert.equal(
+    result.body?.message,
+    "Database temporarily unavailable. Please retry shortly",
+  );
+  assert.deepEqual(recoveryCalls, [{ error, source: "exception_filter" }]);
+});
+
+test("unknown non-connectivity Prisma errors are 500 instead of misleading 400 responses", () => {
+  let recoveryCalls = 0;
+  const prisma = {
+    requestRuntimeRecovery() {
+      recoveryCalls += 1;
+      return Promise.resolve();
+    },
+  } as unknown as PrismaService;
+  const filter = new PrismaExceptionFilter(prisma);
+  const { host, result } = createHttpHost();
+
+  filter.catch(unknownRequestError("Unexpected query engine response"), host);
+
+  assert.equal(result.statusCode, 500);
+  assert.equal(result.body?.message, "Database request failed");
+  assert.equal(recoveryCalls, 0);
+});
+
+test("Prisma engine panic returns 503 and schedules one controlled process restart", async () => {
+  const prisma = new TestPrismaService();
+  const filter = new PrismaExceptionFilter(prisma);
+  const first = createHttpHost();
+  const second = createHttpHost();
+
+  filter.catch(rustPanicError(), first.host);
+  filter.catch(rustPanicError(), second.host);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  assert.equal(first.result.statusCode, 503);
+  assert.equal(second.result.statusCode, 503);
+  assert.deepEqual(prisma.exitCodes, [1]);
+});
+
+test("heartbeat detects no-code connection failures and starts recovery before user traffic", async () => {
+  const prisma = new TestPrismaService();
+  const operations: string[] = [];
+  let queryCalls = 0;
+
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    operations.push("disconnect");
+  }) as PrismaService["$disconnect"]);
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    operations.push("connect");
+  }) as PrismaService["$connect"]);
+  replacePrismaMethod(prisma, "$queryRaw", (async () => {
+    queryCalls += 1;
+    if (queryCalls === 1) {
+      throw unknownRequestError("Connection reset by peer");
+    }
+    operations.push("query");
+    return [{ result: 1 }];
+  }) as unknown as PrismaService["$queryRaw"]);
+
+  await prisma.runHeartbeatNow();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(operations, ["disconnect", "connect", "query"]);
+});
+
+test("additional operational Prisma codes are treated as transient database failures", () => {
+  const prisma = {
+    requestRuntimeRecovery() {
+      return Promise.resolve();
+    },
+  } as unknown as PrismaService;
+  const filter = new PrismaExceptionFilter(prisma);
+
+  for (const code of ["P1008", "P1011", "P2037"]) {
+    const { host, result } = createHttpHost();
+    filter.catch(
+      transientError(code) as Prisma.PrismaClientKnownRequestError,
+      host,
+    );
+    assert.equal(result.statusCode, 503);
+  }
 });

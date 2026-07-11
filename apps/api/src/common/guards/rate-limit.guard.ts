@@ -5,12 +5,15 @@ import {
   HttpStatus,
   Injectable,
   ServiceUnavailableException,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { RedisService } from '../../infrastructure/cache/redis.service';
-import { RATE_LIMIT_KEY, RateLimitRule } from '../decorators/rate-limit.decorator';
-import { AuthenticatedRequest } from '../types/authenticated-request';
-import { clientIp } from '../utils/request.util';
+} from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { RedisService } from "../../infrastructure/cache/redis.service";
+import {
+  RATE_LIMIT_KEY,
+  RateLimitRule,
+} from "../decorators/rate-limit.decorator";
+import { AuthenticatedRequest } from "../types/authenticated-request";
+import { clientIp } from "../utils/request.util";
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
@@ -20,22 +23,25 @@ export class RateLimitGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const rule = this.reflector.getAllAndOverride<RateLimitRule>(RATE_LIMIT_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const rule = this.reflector.getAllAndOverride<RateLimitRule>(
+      RATE_LIMIT_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (!rule) {
       return true;
     }
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const identity = request.user?.id ?? clientIp(request) ?? 'unknown';
+    const identity = request.user?.id ?? clientIp(request) ?? "unknown";
     const key = `rate-limit:${rule.bucket}:${identity}`;
 
     try {
-      const { count, ttlMs } = await this.redisService.incrementWithTtl(key, rule.windowMs);
-      if (count <= rule.limit || count >= rule.limit) {
+      const { count, ttlMs } = await this.redisService.incrementWithTtl(
+        key,
+        rule.windowMs,
+      );
+      if (count <= rule.limit) {
         return true;
       }
 
@@ -49,7 +55,9 @@ export class RateLimitGuard implements CanActivate {
         throw error;
       }
 
-      throw new ServiceUnavailableException('Rate limiting service is unavailable');
+      throw new ServiceUnavailableException(
+        "Rate limiting service is unavailable",
+      );
     }
   }
 }

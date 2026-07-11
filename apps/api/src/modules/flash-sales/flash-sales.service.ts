@@ -3,33 +3,38 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { FlashSaleStatus, Prisma, ProductStatus } from '@prisma/client';
-import { InMemoryTtlCacheService } from '../../common/cache/in-memory-ttl-cache.service';
-import { PUBLIC_CACHE_PREFIXES } from '../../common/cache/public-cache-prefixes';
-import { percentToBasisPoints } from '../../common/money/money';
-import { buildPaginationMeta } from '../../common/pagination/paginated-response';
-import { AuthenticatedUser } from '../../common/types/authenticated-user';
-import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
-import { AuditService } from '../audit/audit.service';
+} from "@nestjs/common";
+import { FlashSaleStatus, Prisma, ProductStatus } from "@prisma/client";
+import { InMemoryTtlCacheService } from "../../common/cache/in-memory-ttl-cache.service";
+import { PUBLIC_CACHE_PREFIXES } from "../../common/cache/public-cache-prefixes";
+import { percentToBasisPoints } from "../../common/money/money";
+import { buildPaginationMeta } from "../../common/pagination/paginated-response";
+import { AuthenticatedUser } from "../../common/types/authenticated-user";
+import { PrismaService } from "../../infrastructure/database/prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
 import {
   catalogProductInclude,
   mapProductCard,
   CatalogPricingContext,
-} from '../catalog/mappers/catalog.mapper';
-import { ProductPricingService } from '../pricing/product-pricing.service';
-import { CreateFlashSaleDto } from './dto/create-flash-sale.dto';
-import { FlashSaleProductDto } from './dto/flash-sale-product.dto';
-import { FlashSalesQueryDto } from './dto/flash-sales-query.dto';
-import { UpdateFlashSaleDto } from './dto/update-flash-sale.dto';
+} from "../catalog/mappers/catalog.mapper";
+import { ProductPricingService } from "../pricing/product-pricing.service";
+import { CreateFlashSaleDto } from "./dto/create-flash-sale.dto";
+import { FlashSaleProductDto } from "./dto/flash-sale-product.dto";
+import { FlashSalesQueryDto } from "./dto/flash-sales-query.dto";
+import { UpdateFlashSaleDto } from "./dto/update-flash-sale.dto";
 
 type PublicFlashSalePayload = Prisma.FlashSaleGetPayload<{
-  include: { products: { include: { product: { include: typeof catalogProductInclude } } } };
+  include: {
+    products: {
+      include: { product: { include: typeof catalogProductInclude } };
+    };
+  };
 }>;
 
 @Injectable()
 export class FlashSalesService {
   private readonly publicFlashSalesCacheTtlMs = 30_000;
+  private readonly publicFlashSalesStaleIfErrorMs = 5 * 60_000;
 
   private readonly publicInclude = {
     products: {
@@ -42,7 +47,11 @@ export class FlashSalesService {
     products: {
       include: {
         product: {
-          include: { images: true, category: true, variants: { where: { deletedAt: null } } },
+          include: {
+            images: true,
+            category: true,
+            variants: { where: { deletedAt: null } },
+          },
         },
       },
     },
@@ -63,19 +72,33 @@ export class FlashSalesService {
       endsAt: query.endsTo ? { lte: query.endsTo } : undefined,
       OR: search
         ? [
-            { titleAr: { contains: search, mode: 'insensitive' } },
-            { titleEn: { contains: search, mode: 'insensitive' } },
+            { titleAr: { contains: search, mode: "insensitive" } },
+            { titleEn: { contains: search, mode: "insensitive" } },
             {
               products: {
-                some: { product: { nameAr: { contains: search, mode: 'insensitive' } } },
+                some: {
+                  product: {
+                    nameAr: { contains: search, mode: "insensitive" },
+                  },
+                },
               },
             },
             {
               products: {
-                some: { product: { nameEn: { contains: search, mode: 'insensitive' } } },
+                some: {
+                  product: {
+                    nameEn: { contains: search, mode: "insensitive" },
+                  },
+                },
               },
             },
-            { products: { some: { product: { sku: { contains: search, mode: 'insensitive' } } } } },
+            {
+              products: {
+                some: {
+                  product: { sku: { contains: search, mode: "insensitive" } },
+                },
+              },
+            },
           ]
         : undefined,
     };
@@ -83,7 +106,7 @@ export class FlashSalesService {
       this.prisma.flashSale.findMany({
         where,
         include: this.adminInclude,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (query.page - 1) * query.limit,
         take: query.limit,
       }),
@@ -98,7 +121,12 @@ export class FlashSalesService {
     const productIds = [...new Set(dto.productIds ?? [])];
     const status = dto.status ?? FlashSaleStatus.SCHEDULED;
     await this.assertProductsCanJoinFlashSale(productIds);
-    await this.assertProductsHaveNoOverlappingSale(productIds, dto.startsAt, dto.endsAt, status);
+    await this.assertProductsHaveNoOverlappingSale(
+      productIds,
+      dto.startsAt,
+      dto.endsAt,
+      status,
+    );
 
     const sale = await this.prisma.flashSale.create({
       data: {
@@ -114,8 +142,8 @@ export class FlashSalesService {
     });
     await this.auditService.log({
       actorUserId: actor?.id,
-      action: 'FLASH_SALE_CREATED',
-      entityType: 'FLASH_SALE',
+      action: "FLASH_SALE_CREATED",
+      entityType: "FLASH_SALE",
       entityId: sale.id,
     });
     this.invalidatePublicStorefrontCaches();
@@ -130,6 +158,7 @@ export class FlashSalesService {
       }),
       this.publicFlashSalesCacheTtlMs,
       () => this.findAllPublicUncached(query),
+      { staleIfErrorMs: this.publicFlashSalesStaleIfErrorMs },
     );
   }
 
@@ -143,7 +172,7 @@ export class FlashSalesService {
         products: { some: { product: this.catalogVisibleProductWhere() } },
       },
       include: this.publicInclude,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       skip: (query.page - 1) * query.limit,
       take: query.limit,
     });
@@ -165,7 +194,7 @@ export class FlashSalesService {
     });
 
     if (!flashSale) {
-      throw new NotFoundException('Flash sale not found');
+      throw new NotFoundException("Flash sale not found");
     }
 
     return this.mapPublicSale(flashSale);
@@ -176,12 +205,14 @@ export class FlashSalesService {
       where: { id },
       include: { products: { select: { productId: true } } },
     });
-    if (!existing) throw new NotFoundException('Flash sale not found');
+    if (!existing) throw new NotFoundException("Flash sale not found");
 
     const startsAt = dto.startsAt ?? existing.startsAt;
     const endsAt = dto.endsAt ?? existing.endsAt;
     const status = dto.status ?? existing.status;
-    this.assertDiscountPercent(dto.discountPercent ?? existing.discountPercent.toString());
+    this.assertDiscountPercent(
+      dto.discountPercent ?? existing.discountPercent.toString(),
+    );
     this.assertSaleWindow(startsAt, endsAt);
     await this.assertExistingProductsStillValid(id);
     await this.assertProductsHaveNoOverlappingSale(
@@ -199,8 +230,8 @@ export class FlashSalesService {
     });
     await this.auditService.log({
       actorUserId: actor?.id,
-      action: 'FLASH_SALE_UPDATED',
-      entityType: 'FLASH_SALE',
+      action: "FLASH_SALE_UPDATED",
+      entityType: "FLASH_SALE",
       entityId: id,
       metadata: { status: dto.status ?? null },
     });
@@ -212,17 +243,23 @@ export class FlashSalesService {
     const sale = await this.prisma.flashSale.delete({ where: { id } });
     await this.auditService.log({
       actorUserId: actor?.id,
-      action: 'FLASH_SALE_DELETED',
-      entityType: 'FLASH_SALE',
+      action: "FLASH_SALE_DELETED",
+      entityType: "FLASH_SALE",
       entityId: id,
     });
     this.invalidatePublicStorefrontCaches();
     return sale;
   }
 
-  async addProduct(flashSaleId: string, dto: FlashSaleProductDto, actor?: AuthenticatedUser) {
-    const sale = await this.prisma.flashSale.findUnique({ where: { id: flashSaleId } });
-    if (!sale) throw new NotFoundException('Flash sale not found');
+  async addProduct(
+    flashSaleId: string,
+    dto: FlashSaleProductDto,
+    actor?: AuthenticatedUser,
+  ) {
+    const sale = await this.prisma.flashSale.findUnique({
+      where: { id: flashSaleId },
+    });
+    if (!sale) throw new NotFoundException("Flash sale not found");
 
     await this.assertProductsCanJoinFlashSale([dto.productId]);
     await this.assertProductsHaveNoOverlappingSale(
@@ -234,10 +271,14 @@ export class FlashSalesService {
     );
 
     const existingRelation = await this.prisma.flashSaleProduct.findUnique({
-      where: { flashSaleId_productId: { flashSaleId, productId: dto.productId } },
+      where: {
+        flashSaleId_productId: { flashSaleId, productId: dto.productId },
+      },
     });
     if (existingRelation) {
-      throw new ConflictException('Product is already attached to this flash sale');
+      throw new ConflictException(
+        "Product is already attached to this flash sale",
+      );
     }
 
     const relation = await this.prisma.flashSaleProduct.create({
@@ -245,8 +286,8 @@ export class FlashSalesService {
     });
     await this.auditService.log({
       actorUserId: actor?.id,
-      action: 'FLASH_SALE_PRODUCT_ADDED',
-      entityType: 'FLASH_SALE',
+      action: "FLASH_SALE_PRODUCT_ADDED",
+      entityType: "FLASH_SALE",
       entityId: flashSaleId,
       metadata: { productId: dto.productId },
     });
@@ -254,19 +295,24 @@ export class FlashSalesService {
     return relation;
   }
 
-  async removeProduct(flashSaleId: string, productId: string, actor?: AuthenticatedUser) {
+  async removeProduct(
+    flashSaleId: string,
+    productId: string,
+    actor?: AuthenticatedUser,
+  ) {
     const relation = await this.prisma.flashSaleProduct.findUnique({
       where: { flashSaleId_productId: { flashSaleId, productId } },
     });
-    if (!relation) throw new NotFoundException('Product is not attached to this flash sale');
+    if (!relation)
+      throw new NotFoundException("Product is not attached to this flash sale");
 
     const deleted = await this.prisma.flashSaleProduct.delete({
       where: { flashSaleId_productId: { flashSaleId, productId } },
     });
     await this.auditService.log({
       actorUserId: actor?.id,
-      action: 'FLASH_SALE_PRODUCT_REMOVED',
-      entityType: 'FLASH_SALE',
+      action: "FLASH_SALE_PRODUCT_REMOVED",
+      entityType: "FLASH_SALE",
       entityId: flashSaleId,
       metadata: { productId },
     });
@@ -284,7 +330,10 @@ export class FlashSalesService {
     const saleAdjustments = await this.pricingService.getActiveSaleAdjustments(
       products.map((product) => product.id),
     );
-    const context: CatalogPricingContext = { pricingService: this.pricingService, saleAdjustments };
+    const context: CatalogPricingContext = {
+      pricingService: this.pricingService,
+      saleAdjustments,
+    };
 
     return {
       id: sale.id,
@@ -301,24 +350,32 @@ export class FlashSalesService {
   private assertDiscountPercent(discountPercent: string): void {
     const basisPoints = percentToBasisPoints(discountPercent);
     if (basisPoints <= 0) {
-      throw new BadRequestException('Flash sale discount percent must be greater than 0');
+      throw new BadRequestException(
+        "Flash sale discount percent must be greater than 0",
+      );
     }
     if (basisPoints > 10_000) {
-      throw new BadRequestException('Flash sale discount percent must not exceed 100');
+      throw new BadRequestException(
+        "Flash sale discount percent must not exceed 100",
+      );
     }
   }
 
   private assertSaleWindow(startsAt: Date, endsAt: Date): void {
     if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
-      throw new BadRequestException('Flash sale dates are invalid');
+      throw new BadRequestException("Flash sale dates are invalid");
     }
 
     if (endsAt <= startsAt) {
-      throw new BadRequestException('Flash sale end date must be after the start date');
+      throw new BadRequestException(
+        "Flash sale end date must be after the start date",
+      );
     }
   }
 
-  private async assertProductsCanJoinFlashSale(productIds: string[]): Promise<void> {
+  private async assertProductsCanJoinFlashSale(
+    productIds: string[],
+  ): Promise<void> {
     if (productIds.length === 0) {
       return;
     }
@@ -327,19 +384,26 @@ export class FlashSalesService {
       where: { id: { in: productIds }, ...this.catalogVisibleProductWhere() },
     });
     if (count !== new Set(productIds).size) {
-      throw new BadRequestException('Flash sales can include only active visible products');
+      throw new BadRequestException(
+        "Flash sales can include only active visible products",
+      );
     }
   }
 
-  private async assertExistingProductsStillValid(flashSaleId: string): Promise<void> {
+  private async assertExistingProductsStillValid(
+    flashSaleId: string,
+  ): Promise<void> {
     const invalid = await this.prisma.flashSaleProduct.findFirst({
-      where: { flashSaleId, NOT: { product: this.catalogVisibleProductWhere() } },
+      where: {
+        flashSaleId,
+        NOT: { product: this.catalogVisibleProductWhere() },
+      },
       select: { productId: true },
     });
 
     if (invalid) {
       throw new BadRequestException(
-        'Flash sale contains a product that is no longer active or visible',
+        "Flash sale contains a product that is no longer active or visible",
       );
     }
   }
@@ -358,7 +422,9 @@ export class FlashSalesService {
     const overlap = await this.prisma.flashSaleProduct.findFirst({
       where: {
         productId: { in: [...new Set(productIds)] },
-        flashSaleId: excludeFlashSaleId ? { not: excludeFlashSaleId } : undefined,
+        flashSaleId: excludeFlashSaleId
+          ? { not: excludeFlashSaleId }
+          : undefined,
         flashSale: {
           status: { in: [FlashSaleStatus.ACTIVE, FlashSaleStatus.SCHEDULED] },
           startsAt: { lt: endsAt },
@@ -367,19 +433,23 @@ export class FlashSalesService {
       },
       include: {
         product: { select: { nameAr: true, sku: true } },
-        flashSale: { select: { id: true, titleAr: true, startsAt: true, endsAt: true } },
+        flashSale: {
+          select: { id: true, titleAr: true, startsAt: true, endsAt: true },
+        },
       },
     });
 
     if (overlap) {
       throw new ConflictException(
-        `Product ${overlap.product.nameAr}${overlap.product.sku ? ` (${overlap.product.sku})` : ''} already has an overlapping flash sale: ${overlap.flashSale.titleAr}`,
+        `Product ${overlap.product.nameAr}${overlap.product.sku ? ` (${overlap.product.sku})` : ""} already has an overlapping flash sale: ${overlap.flashSale.titleAr}`,
       );
     }
   }
 
   private requiresExclusiveSaleWindow(status: FlashSaleStatus): boolean {
-    return status === FlashSaleStatus.ACTIVE || status === FlashSaleStatus.SCHEDULED;
+    return (
+      status === FlashSaleStatus.ACTIVE || status === FlashSaleStatus.SCHEDULED
+    );
   }
 
   private catalogVisibleProductWhere(): Prisma.ProductWhereInput {

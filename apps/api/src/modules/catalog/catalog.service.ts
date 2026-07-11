@@ -1,12 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Category, Prisma, ProductStatus } from '@prisma/client';
-import { InMemoryTtlCacheService } from '../../common/cache/in-memory-ttl-cache.service';
-import { PUBLIC_CACHE_PREFIXES } from '../../common/cache/public-cache-prefixes';
-import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
-import { ProductPricingService } from '../pricing/product-pricing.service';
-import { CatalogCategoriesQueryDto } from './dto/catalog-categories-query.dto';
-import { CatalogProductsQueryDto } from './dto/catalog-products-query.dto';
-import { CatalogSearchService } from './catalog-search.service';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { Category, Prisma, ProductStatus } from "@prisma/client";
+import { InMemoryTtlCacheService } from "../../common/cache/in-memory-ttl-cache.service";
+import { PUBLIC_CACHE_PREFIXES } from "../../common/cache/public-cache-prefixes";
+import { PrismaService } from "../../infrastructure/database/prisma/prisma.service";
+import { ProductPricingService } from "../pricing/product-pricing.service";
+import { CatalogCategoriesQueryDto } from "./dto/catalog-categories-query.dto";
+import { CatalogProductsQueryDto } from "./dto/catalog-products-query.dto";
+import { CatalogSearchService } from "./catalog-search.service";
 import {
   CatalogProductPayload,
   catalogProductInclude,
@@ -15,18 +15,19 @@ import {
   mapProductDetail,
   mapFeaturedSubCategory,
   CatalogPricingContext,
-} from './mappers/catalog.mapper';
+} from "./mappers/catalog.mapper";
 import {
   CatalogCategory,
   CatalogProductDetail,
   FeaturedSubCategory,
   PaginatedCatalogProducts,
-} from './types/catalog-response.types';
+} from "./types/catalog-response.types";
 
 @Injectable()
 export class CatalogService {
   private readonly catalogProductsCacheTtlMs = 30_000;
   private readonly catalogMetadataCacheTtlMs = 60_000;
+  private readonly publicCatalogStaleIfErrorMs = 15 * 60_000;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -35,20 +36,25 @@ export class CatalogService {
     private readonly cache: InMemoryTtlCacheService,
   ) {}
 
-  async findCategories(query: CatalogCategoriesQueryDto): Promise<CatalogCategory[]> {
+  async findCategories(
+    query: CatalogCategoriesQueryDto,
+  ): Promise<CatalogCategory[]> {
     const categoryIds = query.search
       ? await this.catalogSearchService.searchCategoryIds(query.search)
       : undefined;
-    const topLevelCategoryWhere = { ...this.activeCategoryWhere(), parentId: null };
+    const topLevelCategoryWhere = {
+      ...this.activeCategoryWhere(),
+      parentId: null,
+    };
     const categories = await this.prisma.category.findMany({
       where: categoryIds
         ? { ...topLevelCategoryWhere, id: { in: categoryIds } }
         : topLevelCategoryWhere,
-      orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }],
+      orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
     });
 
     const productCounts = await this.prisma.product.groupBy({
-      by: ['categoryId'],
+      by: ["categoryId"],
       where: this.activeProductWhere(),
       _count: { _all: true },
     });
@@ -98,7 +104,7 @@ export class CatalogService {
           },
         },
       },
-      orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }],
+      orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
     });
 
     const map = new Map<
@@ -114,7 +120,8 @@ export class CatalogService {
       }>
     >();
     childCategories.forEach((category) => {
-      if (!category.parentId || category._count.subCategoryProducts <= 0) return;
+      if (!category.parentId || category._count.subCategoryProducts <= 0)
+        return;
       const existing = map.get(category.parentId) ?? [];
       existing.push({
         id: category.id,
@@ -136,27 +143,36 @@ export class CatalogService {
       this.cache.buildKey(`${PUBLIC_CACHE_PREFIXES.catalog}category`, { slug }),
       this.catalogMetadataCacheTtlMs,
       () => this.findCategoryBySlugUncached(slug),
+      { staleIfErrorMs: this.publicCatalogStaleIfErrorMs },
     );
   }
 
-  private async findCategoryBySlugUncached(slug: string): Promise<CatalogCategory> {
+  private async findCategoryBySlugUncached(
+    slug: string,
+  ): Promise<CatalogCategory> {
     const category = await this.prisma.category.findFirst({
       where: { ...this.activeCategoryWhere(), slug },
       include: { parent: { select: { slug: true, nameAr: true } } },
     });
 
     if (!category) {
-      throw new NotFoundException('Category not found');
+      throw new NotFoundException("Category not found");
     }
 
     const productWhere = category.parentId
       ? this.activeProductWhere({ subCategoryId: category.id })
       : this.activeProductWhere({ categoryId: category.id });
-    const productCount = await this.prisma.product.count({ where: productWhere });
+    const productCount = await this.prisma.product.count({
+      where: productWhere,
+    });
     const subCategoryProductCounts = category.parentId
       ? new Map()
       : await this.getSubCategoryProductCounts();
-    return mapCategory(category, productCount, subCategoryProductCounts.get(category.id) ?? []);
+    return mapCategory(
+      category,
+      productCount,
+      subCategoryProductCounts.get(category.id) ?? [],
+    );
   }
 
   async findFeaturedSubCategories(): Promise<FeaturedSubCategory[]> {
@@ -164,10 +180,13 @@ export class CatalogService {
       `${PUBLIC_CACHE_PREFIXES.catalog}featured-subcategories`,
       this.catalogMetadataCacheTtlMs,
       () => this.findFeaturedSubCategoriesUncached(),
+      { staleIfErrorMs: this.publicCatalogStaleIfErrorMs },
     );
   }
 
-  private async findFeaturedSubCategoriesUncached(): Promise<FeaturedSubCategory[]> {
+  private async findFeaturedSubCategoriesUncached(): Promise<
+    FeaturedSubCategory[]
+  > {
     const subCategories = await this.prisma.category.findMany({
       where: {
         ...this.activeCategoryWhere(),
@@ -185,7 +204,7 @@ export class CatalogService {
           },
         },
       },
-      orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }],
+      orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
     });
 
     return subCategories
@@ -200,11 +219,14 @@ export class CatalogService {
       .filter((sub) => sub.productsCount > 0);
   }
 
-  async findProducts(query: CatalogProductsQueryDto): Promise<PaginatedCatalogProducts> {
+  async findProducts(
+    query: CatalogProductsQueryDto,
+  ): Promise<PaginatedCatalogProducts> {
     return this.cache.getOrSet(
       this.buildProductsCacheKey(query),
       this.catalogProductsCacheTtlMs,
       () => this.findProductsBySaleAwareIndex(query),
+      { staleIfErrorMs: this.publicCatalogStaleIfErrorMs },
     );
   }
 
@@ -226,7 +248,8 @@ export class CatalogService {
   private async findProductsBySaleAwareIndex(
     query: CatalogProductsQueryDto,
   ): Promise<PaginatedCatalogProducts> {
-    const searchResult = await this.catalogSearchService.searchProductIds(query);
+    const searchResult =
+      await this.catalogSearchService.searchProductIds(query);
     if (searchResult.ids.length === 0) {
       return this.paginateProducts([], searchResult.total, query);
     }
@@ -238,7 +261,8 @@ export class CatalogService {
 
     const order = new Map(searchResult.ids.map((id, index) => [id, index]));
     const sortedProducts = products.sort(
-      (first, second) => (order.get(first.id) ?? 0) - (order.get(second.id) ?? 0),
+      (first, second) =>
+        (order.get(first.id) ?? 0) - (order.get(second.id) ?? 0),
     );
     return this.paginateProducts(sortedProducts, searchResult.total, query);
   }
@@ -253,7 +277,10 @@ export class CatalogService {
     const saleAdjustments = await this.pricingService.getActiveSaleAdjustments(
       items.map((item) => item.id),
     );
-    const context: CatalogPricingContext = { pricingService: this.pricingService, saleAdjustments };
+    const context: CatalogPricingContext = {
+      pricingService: this.pricingService,
+      saleAdjustments,
+    };
 
     return {
       items: items.map((item) => mapProductCard(item, context)),
@@ -275,15 +302,22 @@ export class CatalogService {
     });
 
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException("Product not found");
     }
 
-    const saleAdjustments = await this.pricingService.getActiveSaleAdjustments([product.id]);
-    const context: CatalogPricingContext = { pricingService: this.pricingService, saleAdjustments };
+    const saleAdjustments = await this.pricingService.getActiveSaleAdjustments([
+      product.id,
+    ]);
+    const context: CatalogPricingContext = {
+      pricingService: this.pricingService,
+      saleAdjustments,
+    };
     return mapProductDetail(product, context);
   }
 
-  private activeProductWhere(extra: Prisma.ProductWhereInput = {}): Prisma.ProductWhereInput {
+  private activeProductWhere(
+    extra: Prisma.ProductWhereInput = {},
+  ): Prisma.ProductWhereInput {
     return {
       status: ProductStatus.ACTIVE,
       deletedAt: null,

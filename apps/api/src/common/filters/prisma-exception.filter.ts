@@ -1,19 +1,31 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { Request, Response } from 'express';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpStatus,
+} from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+import { Request, Response } from "express";
 import {
   getPrismaErrorCode,
-  isTransientDatabaseError,
-  isTransientDatabaseErrorCode,
+  getPrismaErrorName,
+  isRecoverableDatabaseError,
   PrismaService,
-} from '../../infrastructure/database/prisma/prisma.service';
-import { logStructured } from '../logging/structured-logger';
+} from "../../infrastructure/database/prisma/prisma.service";
+import { logStructured } from "../logging/structured-logger";
 
 type FilteredPrismaError =
   | Prisma.PrismaClientKnownRequestError
-  | Prisma.PrismaClientInitializationError;
+  | Prisma.PrismaClientUnknownRequestError
+  | Prisma.PrismaClientInitializationError
+  | Prisma.PrismaClientRustPanicError;
 
-@Catch(Prisma.PrismaClientKnownRequestError, Prisma.PrismaClientInitializationError)
+@Catch(
+  Prisma.PrismaClientKnownRequestError,
+  Prisma.PrismaClientUnknownRequestError,
+  Prisma.PrismaClientInitializationError,
+  Prisma.PrismaClientRustPanicError,
+)
 export class PrismaExceptionFilter implements ExceptionFilter {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -22,22 +34,34 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     const response = context.getResponse<Response>();
     const request = context.getRequest<Request>();
     const code = getPrismaErrorCode(exception);
-    const statusCode = this.resolveStatusCode(code);
+    const statusCode = this.resolveStatusCode(exception, code);
 
-    if (isTransientDatabaseError(exception)) {
-      void this.prisma.requestRuntimeRecovery(exception, 'exception_filter');
+    if (isRecoverableDatabaseError(exception)) {
+      const recovery = this.prisma.requestRuntimeRecovery(
+        exception,
+        "exception_filter",
+      );
+      void recovery?.catch((error) => {
+        logStructured("error", "database_recovery_trigger_failed", {
+          requestId: request.requestId,
+          source: "exception_filter",
+          errorName: getPrismaErrorName(error),
+          errorCode: getPrismaErrorCode(error),
+        });
+      });
     }
 
-    logStructured('error', 'prisma_exception', {
+    logStructured("error", "prisma_exception", {
       requestId: request.requestId,
       statusCode,
       code,
+      errorName: getPrismaErrorName(exception),
       path: request.url,
     });
 
     response.status(statusCode).json({
       statusCode,
-      message: this.resolveMessage(code),
+      message: this.resolveMessage(exception, code),
       error: HttpStatus[statusCode],
       path: request.url,
       timestamp: new Date().toISOString(),
@@ -45,35 +69,45 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     });
   }
 
-  private resolveStatusCode(code: string | undefined): number {
-    if (code === 'P2002') {
-      return HttpStatus.CONFLICT;
-    }
-
-    if (code === 'P2025') {
-      return HttpStatus.NOT_FOUND;
-    }
-
-    if (isTransientDatabaseErrorCode(code)) {
+  private resolveStatusCode(
+    exception: FilteredPrismaError,
+    code: string | undefined,
+  ): number {
+    if (isRecoverableDatabaseError(exception)) {
       return HttpStatus.SERVICE_UNAVAILABLE;
     }
 
-    return HttpStatus.BAD_REQUEST;
+    if (code === "P2002") {
+      return HttpStatus.CONFLICT;
+    }
+
+    if (code === "P2025") {
+      return HttpStatus.NOT_FOUND;
+    }
+
+    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      return HttpStatus.BAD_REQUEST;
+    }
+
+    return HttpStatus.INTERNAL_SERVER_ERROR;
   }
 
-  private resolveMessage(code: string | undefined): string {
-    if (code === 'P2002') {
-      return 'A record with the same unique value already exists';
+  private resolveMessage(
+    exception: FilteredPrismaError,
+    code: string | undefined,
+  ): string {
+    if (isRecoverableDatabaseError(exception)) {
+      return "Database temporarily unavailable. Please retry shortly";
     }
 
-    if (code === 'P2025') {
-      return 'Requested record was not found';
+    if (code === "P2002") {
+      return "A record with the same unique value already exists";
     }
 
-    if (isTransientDatabaseErrorCode(code)) {
-      return 'Database temporarily unavailable. Please retry shortly';
+    if (code === "P2025") {
+      return "Requested record was not found";
     }
 
-    return 'Database request failed';
+    return "Database request failed";
   }
 }
