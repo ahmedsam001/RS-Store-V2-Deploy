@@ -38,7 +38,10 @@ export function CartPage() {
   }
 
   if (error) {
-    return <CatalogState title={t('cart.failedLoad')} message={error} />;
+    const message = error.includes('temporarily unavailable')
+      ? t('common.serviceUnavailable')
+      : error;
+    return <CatalogState title={t('cart.failedLoad')} message={message} />;
   }
 
   if (!cart || cart.items.length === 0) {

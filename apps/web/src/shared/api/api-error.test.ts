@@ -79,6 +79,29 @@ describe('ApiError utilities and http client parsing', () => {
     }
   });
 
+
+  it('does not misclassify database unavailability as an inventory error', () => {
+    expect(
+      toUserMessage(
+        new ApiError({
+          status: 503,
+          message: 'Database temporarily unavailable. Please retry shortly',
+        }),
+      ),
+    ).toBe('Service is temporarily unavailable. Please try again shortly.');
+  });
+
+  it('still maps real inventory errors to the quantity message', () => {
+    expect(
+      toUserMessage(
+        new ApiError({
+          status: 409,
+          message: 'Requested quantity is not available',
+        }),
+      ),
+    ).toBe('Requested quantity is not available');
+  });
+
   it('extracts validation errors from common backend shapes', () => {
     expect(extractValidationErrors({ fieldErrors: { phone: ['phone is invalid'] } })).toEqual({
       phone: ['phone is invalid'],

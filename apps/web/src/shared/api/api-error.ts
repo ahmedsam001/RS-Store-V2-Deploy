@@ -11,6 +11,8 @@ export type ApiErrorOptions = {
 };
 
 const DEFAULT_API_ERROR_MESSAGE = 'An unexpected error occurred. Please try again.';
+const SERVICE_UNAVAILABLE_MESSAGE =
+  'Service is temporarily unavailable. Please try again shortly.';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -193,17 +195,27 @@ function statusMessage(status: number, fallbackMessage: string, code?: string): 
       return 'Data conflict occurred. Please try again';
     case 422:
       return 'Please review required fields';
+    case 503:
+      return SERVICE_UNAVAILABLE_MESSAGE;
     default:
       return status >= 500 ? 'An unexpected error occurred. Please try again.' : fallbackMessage;
   }
 }
 
 function translateKnownMessage(message: string): string {
+  if (/database temporarily unavailable|service unavailable|temporarily unavailable|try again shortly/i.test(message)) {
+    return SERVICE_UNAVAILABLE_MESSAGE;
+  }
+
   if (/^Only \d+ left for this option\.?$/i.test(message)) {
     return message;
   }
 
-  if (/stock|quantity|available|out of stock|insufficient/i.test(message)) {
+  if (
+    /\b(stock|quantity)\b|out of stock|insufficient (stock|quantity)|not enough (stock|quantity)|requested quantity is not available/i.test(
+      message,
+    )
+  ) {
     return 'Requested quantity is not available';
   }
 
@@ -242,7 +254,7 @@ function firstFieldError(fieldErrors: ApiFieldErrors): string | undefined {
 function isSpecificUserFacingMessage(message: string): boolean {
   return (
     /[\u0600-\u06FF]/.test(message) ||
-    /stock|quantity|available|variant|option|size|color|unauthorized|forbidden|csrf|security token|not found/i.test(
+    /database temporarily unavailable|service unavailable|temporarily unavailable|try again shortly|\b(stock|quantity)\b|out of stock|insufficient (stock|quantity)|not enough (stock|quantity)|variant|option|size|color|unauthorized|forbidden|csrf|security token|not found/i.test(
       message,
     )
   );
