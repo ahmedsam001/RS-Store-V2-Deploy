@@ -48,7 +48,9 @@ export function AdminError({ message, onRetry }: { message: string; onRetry?: ()
           </span>
           <div>
             <p className="font-black">Admin panel error</p>
-            <p className="mt-1 text-sm leading-7">{message}</p>
+            <p data-no-admin-translate className="mt-1 text-sm leading-7">
+              {message}
+            </p>
           </div>
         </div>
         {onRetry ? (

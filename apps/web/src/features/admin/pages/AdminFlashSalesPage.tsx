@@ -521,10 +521,17 @@ export function AdminFlashSalesPage() {
                                 fallbackVariant="product"
                               />
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-black text-[#241611] truncate">
+                                <p
+                                  data-no-admin-translate
+                                  className="text-sm font-black text-[#241611] truncate"
+                                >
                                   {product.nameAr}
                                 </p>
-                                <p className="text-xs text-muted-foreground truncate" dir="ltr">
+                                <p
+                                  data-no-admin-translate
+                                  className="text-xs text-muted-foreground truncate"
+                                  dir="ltr"
+                                >
                                   {product.sku ?? '-'}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
@@ -570,7 +577,9 @@ export function AdminFlashSalesPage() {
                     className="admin-list-card grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                   >
                     <div className="min-w-0">
-                      <strong className="text-[#241611]">{entry.product.nameAr}</strong>
+                      <strong data-no-admin-translate className="text-[#241611]">
+                        {entry.product.nameAr}
+                      </strong>
                       <p className="text-sm text-muted-foreground">
                         <span className="line-through">
                           {formatBaseProductPrice(entry.product)}

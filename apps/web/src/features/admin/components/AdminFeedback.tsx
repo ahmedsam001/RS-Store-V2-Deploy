@@ -9,6 +9,7 @@ export function AdminFeedback({ notice }: { notice: AdminNoticeState }) {
       : 'border-red-200 bg-red-50 text-red-800';
   return (
     <div
+      data-no-admin-translate={notice.type === 'error' ? true : undefined}
       className={`rounded-2xl border px-4 py-3 text-sm font-bold leading-7 shadow-sm ${className}`}
     >
       {notice.message}

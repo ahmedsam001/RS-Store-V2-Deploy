@@ -384,12 +384,13 @@ export function AdminSheinBatchCreatePage() {
                         aria-label={`Select ${item.productNameSnapshot}`}
                       />
                       <div className="min-w-0">
-                        <p className="text-sm font-black text-[#241611]">
+                        <p data-no-admin-translate className="text-sm font-black text-[#241611]">
                           {item.productNameSnapshot}
                         </p>
                         <p className="mt-1 text-xs font-bold text-muted-foreground">
-                          {item.order.orderNumber} · {item.order.customerNameSnapshot} ·{' '}
-                          <span dir="ltr">{item.order.customerPhoneSnapshot}</span> · Qty{' '}
+                          <span data-no-admin-translate>{item.order.orderNumber}</span> ·{' '}
+                          <span data-no-admin-translate>{item.order.customerNameSnapshot}</span> ·{' '}
+                          <span data-no-admin-translate dir="ltr">{item.order.customerPhoneSnapshot}</span> · Qty{' '}
                           {item.quantity}
                         </p>
                         <ItemVariantMeta item={item} />
@@ -466,11 +467,12 @@ export function AdminSheinBatchCreatePage() {
                       className="grid gap-3 rounded-2xl border border-[#efd6c5] bg-white p-3 md:grid-cols-[minmax(0,1fr)_180px_180px] md:items-center"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-black text-[#241611]">
+                        <p data-no-admin-translate className="text-sm font-black text-[#241611]">
                           {item.productNameSnapshot}
                         </p>
                         <p className="text-xs font-bold text-muted-foreground">
-                          {item.order.orderNumber} · {item.order.customerNameSnapshot} · Qty{' '}
+                          <span data-no-admin-translate>{item.order.orderNumber}</span> ·{' '}
+                          <span data-no-admin-translate>{item.order.customerNameSnapshot}</span> · Qty{' '}
                           {item.quantity}
                         </p>
                         <ItemVariantMeta item={item} />
@@ -546,9 +548,10 @@ export function AdminSheinBatchCreatePage() {
                       className="grid gap-2 rounded-2xl border border-[#efd6c5] bg-white p-3 text-sm md:grid-cols-[minmax(0,1fr)_120px_150px_150px] md:items-center"
                     >
                       <div className="min-w-0">
-                        <p className="font-black text-[#241611]">{item.productNameSnapshot}</p>
+                        <p data-no-admin-translate className="font-black text-[#241611]">{item.productNameSnapshot}</p>
                         <p className="text-xs font-bold text-muted-foreground">
-                          {item.order.orderNumber} · {item.order.customerNameSnapshot}
+                          <span data-no-admin-translate>{item.order.orderNumber}</span> ·{' '}
+                          <span data-no-admin-translate>{item.order.customerNameSnapshot}</span>
                         </p>
                         <ItemVariantMeta item={item} />
                         <div className="mt-2">
@@ -710,11 +713,12 @@ function SelectedItemsPanel({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-sm font-black text-[#241611]">
+                      <p data-no-admin-translate className="text-sm font-black text-[#241611]">
                         {item.productNameSnapshot}
                       </p>
                       <p>
-                        {item.order.orderNumber} · {item.order.customerNameSnapshot}
+                        <span data-no-admin-translate>{item.order.orderNumber}</span> ·{' '}
+                        <span data-no-admin-translate>{item.order.customerNameSnapshot}</span>
                       </p>
                       <p>Qty {item.quantity}</p>
                       <ItemVariantMeta item={item} />

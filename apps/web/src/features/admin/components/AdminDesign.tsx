@@ -203,7 +203,9 @@ export function AdminInfoItem({
   return (
     <div className="admin-info-item">
       <p>{label}</p>
-      <strong dir={dir}>{value}</strong>
+      <strong data-no-admin-translate dir={dir}>
+        {value}
+      </strong>
     </div>
   );
 }

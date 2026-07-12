@@ -180,7 +180,7 @@ export function AdminDashboardPage() {
           <div className="space-y-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-black text-white ring-1 ring-white/15">
-                {health.message}
+                <span data-no-admin-translate>{health.message}</span>
               </span>
               <span className="text-sm text-white/60">{new Date().toLocaleString('en-US')}</span>
             </div>
@@ -221,7 +221,12 @@ export function AdminDashboardPage() {
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <HeroStat icon={CheckCircle2} label="System Status" value={health.message} />
+            <HeroStat
+              icon={CheckCircle2}
+              label="System Status"
+              value={health.message}
+              protectValue
+            />
             <HeroStat
               icon={Bell}
               label="Unread notifications"
@@ -426,11 +431,13 @@ function RecentOrderRow({ order }: { order: AdminOverview['recentOrders'][number
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <strong className="text-[#241611]">{order.orderNumber}</strong>
+          <strong data-no-admin-translate className="text-[#241611]">
+            {order.orderNumber}
+          </strong>
           <AdminStatusBadge value={order.status} />
           <AdminStatusBadge value={order.paymentStatus} />
         </div>
-        <p className="mt-1 truncate text-sm text-muted-foreground">
+        <p data-no-admin-translate className="mt-1 truncate text-sm text-muted-foreground">
           {order.customerNameSnapshot ?? '-'} · {order.customerPhoneSnapshot ?? '-'} ·{' '}
           {formatDate(order.createdAt)}
         </p>
@@ -446,12 +453,12 @@ function SheinImportRow({ item }: { item: AdminOverview['recentSheinImports'][nu
   return (
     <Link to={PATHS.adminShein} className="admin-list-card block transition hover:bg-[#fff8ef]">
       <div className="flex items-center justify-between gap-2">
-        <strong className="truncate text-sm text-[#241611]">
+        <strong data-no-admin-translate className="truncate text-sm text-[#241611]">
           {item.createdProduct?.nameAr ?? item.sourceUrl}
         </strong>
         <AdminStatusBadge value={item.status} />
       </div>
-      <p className="mt-1 truncate text-xs text-muted-foreground">
+      <p data-no-admin-translate className="mt-1 truncate text-xs text-muted-foreground">
         {item.errorMessage ?? item.sourceUrl}
       </p>
       <p className="mt-2 text-xs text-muted-foreground">{formatDate(item.createdAt)}</p>
@@ -466,8 +473,10 @@ function LowStockRow({ variant }: { variant: AdminOverview['lowStockVariants'][n
       className="admin-list-card flex items-center justify-between gap-3 transition hover:bg-[#fff8ef]"
     >
       <div className="min-w-0">
-        <strong className="truncate text-sm text-[#241611]">{variant.product.nameAr}</strong>
-        <p className="mt-1 truncate text-xs text-muted-foreground">
+        <strong data-no-admin-translate className="truncate text-sm text-[#241611]">
+          {variant.product.nameAr}
+        </strong>
+        <p data-no-admin-translate className="mt-1 truncate text-xs text-muted-foreground">
           {variant.nameAr} {variant.size ? `· ${variant.size}` : ''}{' '}
           {variant.color ? `· ${variant.color}` : ''}
         </p>
@@ -483,10 +492,12 @@ function HeroStat({
   icon: Icon,
   label,
   value,
+  protectValue = false,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
+  protectValue?: boolean;
 }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/10 p-4">
@@ -496,7 +507,12 @@ function HeroStat({
         </div>
         <div>
           <p className="text-xs text-white/50">{label}</p>
-          <p className="text-sm font-bold text-white">{value}</p>
+          <p
+            data-no-admin-translate={protectValue ? true : undefined}
+            className="text-sm font-bold text-white"
+          >
+            {value}
+          </p>
         </div>
       </div>
     </div>

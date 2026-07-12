@@ -22,9 +22,14 @@ function LocalizationFixture({ language }: { language: Language }) {
       <p>· Qty</p>
       <p>Showing 1–5 of 12</p>
       <p>Custom customer product name</p>
+      <p data-no-admin-translate>Order Dress</p>
+      <p data-no-admin-translate>Active</p>
+      <p data-no-admin-translate>أحمد</p>
+      <p>{language === "ar" ? "نظام إدارة احترافي" : "Premium admin system"}</p>
       <input
         placeholder="Search products..."
         title="Filter Products"
+        aria-label="Filter Products"
         alt="Product images"
       />
       <span ref={dynamicTextRef}>Loading...</span>
@@ -74,6 +79,16 @@ describe("admin Arabic localization", () => {
       "title",
       "تصفية المنتجات",
     );
+    expect(screen.getByPlaceholderText("البحث في المنتجات...")).toHaveAttribute(
+      "aria-label",
+      "تصفية المنتجات",
+    );
+    expect(screen.getByText("Order Dress")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByText("أحمد")).toBeInTheDocument();
+    expect(screen.queryByText("Results")).not.toBeInTheDocument();
+    expect(screen.queryByText("· Qty")).not.toBeInTheDocument();
+    expect(screen.queryByText("Showing 1–5 of 12")).not.toBeInTheDocument();
   });
 
   it("translates character-data and attribute updates added after the initial render", async () => {
@@ -107,5 +122,45 @@ describe("admin Arabic localization", () => {
       "title",
       "Filter Products",
     );
+    expect(screen.getByPlaceholderText("Search products...")).toHaveAttribute(
+      "aria-label",
+      "Filter Products",
+    );
+    expect(screen.getByText("Premium admin system")).toBeInTheDocument();
+    expect(screen.queryByText("النتائج")).not.toBeInTheDocument();
+    expect(screen.queryByText("نظام إدارة احترافي")).not.toBeInTheDocument();
+  });
+
+  it("survives repeated switching without caching Arabic as the English source", async () => {
+    const view = render(<LocalizationFixture language="en" />);
+
+    for (const language of ["ar", "en", "ar", "en"] as const) {
+      view.rerender(<LocalizationFixture language={language} />);
+      await waitFor(() =>
+        expect(screen.getByRole("heading")).toHaveTextContent(
+          language === "ar" ? "النتائج" : "Results",
+        ),
+      );
+    }
+
+    expect(screen.getByText("Premium admin system")).toBeInTheDocument();
+    expect(screen.getByText("Order Dress")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
+  });
+
+  it("does not let a stale Arabic observer retranslate English mutations", async () => {
+    const view = render(<LocalizationFixture language="ar" />);
+    await waitFor(() => expect(screen.getByRole("heading")).toHaveTextContent("النتائج"));
+
+    view.rerender(<LocalizationFixture language="en" />);
+    await waitFor(() => expect(screen.getByRole("heading")).toHaveTextContent("Results"));
+
+    await act(async () => {
+      screen.getByRole("button", { name: "Change dynamic copy" }).click();
+    });
+
+    await waitFor(() => expect(screen.getByText("Uploading...")).toBeInTheDocument());
+    expect(screen.getByPlaceholderText("Search this queue")).toBeInTheDocument();
+    expect(screen.queryByText("جارٍ الرفع...")).not.toBeInTheDocument();
   });
 });

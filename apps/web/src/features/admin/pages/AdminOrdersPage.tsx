@@ -433,7 +433,9 @@ function OrderDetails({
           order.items.map((item) => (
             <div key={item.id} className="admin-list-card">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <strong className="text-[#241611]">{item.productNameSnapshot}</strong>
+                <strong data-no-admin-translate className="text-[#241611]">
+                  {item.productNameSnapshot}
+                </strong>
                 <AdminStatusBadge value={item.status} />
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -562,7 +564,9 @@ function OrderTimeline({ order }: { order: AdminOrder }) {
           {timeline.map((event) => (
             <div key={event.id} className="admin-list-card text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <strong className="text-[#241611]">{event.message}</strong>
+                <strong data-no-admin-translate className="text-[#241611]">
+                  {event.message}
+                </strong>
                 <span className="text-xs text-muted-foreground">
                   {new Date(event.createdAt).toLocaleString()}
                 </span>

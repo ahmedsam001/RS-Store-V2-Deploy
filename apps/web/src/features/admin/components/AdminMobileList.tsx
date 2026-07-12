@@ -44,10 +44,16 @@ export function AdminMobileDataCard({
         {media ? <div className="admin-mobile-card-media">{media}</div> : null}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <strong className="admin-mobile-card-title">{title}</strong>
+            <strong data-no-admin-translate className="admin-mobile-card-title">
+              {title}
+            </strong>
             {badge}
           </div>
-          {meta ? <div className="admin-mobile-card-meta">{meta}</div> : null}
+          {meta ? (
+            <div data-no-admin-translate className="admin-mobile-card-meta">
+              {meta}
+            </div>
+          ) : null}
         </div>
       </div>
       {children ? <div className="admin-mobile-field-grid">{children}</div> : null}
@@ -86,7 +92,11 @@ export function AdminMobileField({
   return (
     <div className="admin-mobile-field">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <strong dir={dir} className="block text-sm font-bold text-foreground">
+      <strong
+        data-no-admin-translate
+        dir={dir}
+        className="block text-sm font-bold text-foreground"
+      >
         {value}
       </strong>
     </div>

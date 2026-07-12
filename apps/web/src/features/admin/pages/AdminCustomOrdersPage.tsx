@@ -354,8 +354,10 @@ function CustomOrderAdminCard({
             </span>
           </div>
           <div>
-            <p className="text-sm font-black text-rs-ink">{item.user?.name ?? 'Customer'}</p>
-            <p className="text-xs font-bold text-muted-foreground">
+            <p data-no-admin-translate className="text-sm font-black text-rs-ink">
+              {item.user?.name ?? 'Customer'}
+            </p>
+            <p data-no-admin-translate className="text-xs font-bold text-muted-foreground">
               {item.user?.phone ?? item.user?.email ?? 'No contact saved'}
             </p>
           </div>
@@ -468,7 +470,8 @@ function CustomOrderAdminCard({
         ) : null}
         {item.convertedOrder ? (
           <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">
-            Converted to order {item.convertedOrder.orderNumber}
+            Converted to order{' '}
+            <span data-no-admin-translate>{item.convertedOrder.orderNumber}</span>
           </p>
         ) : item.status === 'ACCEPTED' ? (
           <p className="rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-700">

@@ -369,7 +369,9 @@ export function AdminReportsPage() {
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,auto)] lg:items-center">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <strong className="text-[#241611]">{batch.batchCode}</strong>
+                    <strong data-no-admin-translate className="text-[#241611]">
+                      {batch.batchCode}
+                    </strong>
                     <AdminStatusBadge value={batch.status}>
                       {labelBatchStatus(batch.status)}
                     </AdminStatusBadge>

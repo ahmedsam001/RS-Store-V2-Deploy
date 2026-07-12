@@ -15,6 +15,10 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { Button } from '@/shared/components/ui/Button';
 import { cn } from '@/shared/utils/cn';
 import { LanguageSwitcher, useI18n, type Language } from '@/shared/i18n';
+import {
+  translateAdminText,
+  useAdminArabicLocalization,
+} from '@/features/admin/i18n/admin-arabic';
 import logoUrl from '@/assets/brand/rs-logo-transparent.webp';
 import '@/styles/admin.css';
 
@@ -23,7 +27,8 @@ export function AdminShell() {
   const [isCompact, setCompact] = useState(false);
   const { user, logout } = useAuth();
   const { direction, language } = useI18n();
-  const copy = adminShellCopy[language];
+  useAdminArabicLocalization(language);
+  const copy = getAdminShellCopy(language);
   const navigate = useNavigate();
   const location = useLocation();
   const initials = useMemo(() => buildInitials(user?.name ?? 'RS'), [user?.name]);
@@ -45,7 +50,12 @@ export function AdminShell() {
   }
 
   return (
-    <div className="admin-shell-bg min-h-screen text-foreground" dir={direction}>
+    <div
+      id="admin-root"
+      className="admin-shell-bg min-h-screen text-foreground"
+      lang={language}
+      dir={direction}
+    >
       <a className="skip-link" href="#admin-main">
         {copy.skipToContent}
       </a>
@@ -105,7 +115,10 @@ export function AdminShell() {
               </div>
             </div>
 
-            <LanguageSwitcher className="shrink-0 rounded-full border border-[#efd6c5] bg-white/80" />
+            <LanguageSwitcher
+              className="shrink-0 rounded-full border border-[#efd6c5] bg-white/80"
+              nextLanguageLabel={language === 'ar' ? translateAdminText('English') : 'Arabic'}
+            />
 
             <a
               href={PATHS.home}
@@ -154,7 +167,7 @@ function AdminSidebar({
   userName: string;
 }) {
   const { language } = useI18n();
-  const copy = adminShellCopy[language];
+  const copy = getAdminShellCopy(language);
 
   return (
     <aside className="admin-sidebar sticky top-0 hidden h-screen border-e border-white/10 p-4 text-white shadow-xl lg:block">
@@ -204,7 +217,9 @@ function AdminSidebar({
               </div>
               {!compact ? (
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold">{userName}</p>
+                  <p data-no-admin-translate className="truncate text-sm font-bold">
+                    {userName}
+                  </p>
                   <p className="truncate text-xs text-white/60">{copy.secureSession}</p>
                 </div>
               ) : null}
@@ -310,7 +325,7 @@ function MobileDrawer({
   userName: string;
 }) {
   const { language } = useI18n();
-  const copy = adminShellCopy[language];
+  const copy = getAdminShellCopy(language);
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
@@ -359,7 +374,9 @@ function MobileDrawer({
               {userInitials}
             </div>
             <div>
-              <p className="text-sm font-bold">{userName}</p>
+              <p data-no-admin-translate className="text-sm font-bold">
+                {userName}
+              </p>
               <p className="text-xs text-white/60">{copy.secureSession}</p>
             </div>
           </div>
@@ -420,69 +437,33 @@ function buildInitials(value: string): string {
   );
 }
 
-const adminShellCopy = {
-  en: {
-    metaTitle: 'Admin Dashboard | RS Store',
-    metaDescription: 'RS Store private admin dashboard',
-    skipToContent: 'Skip to content',
-    openMenu: 'Open admin menu',
-    closeMenu: 'Close menu',
-    adminConsole: 'Admin console',
-    viewStore: 'View store',
-    store: 'Store',
-    premiumAdmin: 'Premium admin system',
-    overview: 'Overview',
-    operations: 'Operations',
-    expandMenu: 'Expand menu',
-    compactMenu: 'Compact menu',
-    secureSession: 'Secure admin session',
-    logout: 'Logout',
-    adminSystem: 'Admin system',
-  },
-  ar: {
-    metaTitle: 'لوحة الإدارة | متجر RS',
-    metaDescription: 'لوحة الإدارة الخاصة بمتجر RS',
-    skipToContent: 'انتقل إلى المحتوى',
-    openMenu: 'فتح قائمة الإدارة',
-    closeMenu: 'إغلاق القائمة',
-    adminConsole: 'لوحة الإدارة',
-    viewStore: 'عرض المتجر',
-    store: 'المتجر',
-    premiumAdmin: 'نظام إدارة احترافي',
-    overview: 'الإدارة',
-    operations: 'العمليات',
-    expandMenu: 'توسيع القائمة',
-    compactMenu: 'تصغير القائمة',
-    secureSession: 'جلسة إدارة آمنة',
-    logout: 'تسجيل الخروج',
-    adminSystem: 'نظام الإدارة',
-  },
+const adminShellEnglishCopy = {
+  metaTitle: 'Admin Dashboard | RS Store',
+  metaDescription: 'RS Store private admin dashboard',
+  skipToContent: 'Skip to content',
+  openMenu: 'Open admin menu',
+  closeMenu: 'Close menu',
+  adminConsole: 'Admin console',
+  viewStore: 'View store',
+  store: 'Store',
+  premiumAdmin: 'Premium admin system',
+  overview: 'Overview',
+  operations: 'Operations',
+  expandMenu: 'Expand menu',
+  compactMenu: 'Compact menu',
+  secureSession: 'Secure admin session',
+  logout: 'Logout',
+  adminSystem: 'Admin system',
 } as const;
 
-const adminArabicLabels: Record<string, string> = {
-  Dashboard: 'لوحة التحكم',
-  Products: 'المنتجات',
-  Categories: 'الأقسام',
-  'Custom Orders': 'الطلبات الخاصة',
-  'Payments Review': 'مراجعة المدفوعات',
-  Orders: 'الطلبات',
-  Reports: 'التقارير',
-  'Flash Sales': 'العروض السريعة',
-  'SHEIN Import': 'استيراد شي إن',
-  'SHEIN Batches': 'دفعات شي إن',
-  Uploads: 'الملفات المرفوعة',
-  Settings: 'الإعدادات',
-  'Audit Logs': 'سجل النشاط',
-  'Add Product': 'إضافة منتج',
-  'Review Payment': 'مراجعة دفعة',
-  'Create New SHEIN Batch': 'إنشاء دفعة شي إن جديدة',
-  'Store command center': 'مركز إدارة المتجر',
-  New: 'جديد',
-  Ready: 'جاهز',
-  Track: 'تتبع',
-};
+function getAdminShellCopy(language: Language): Record<keyof typeof adminShellEnglishCopy, string> {
+  if (language === 'en') return adminShellEnglishCopy;
+  return Object.fromEntries(
+    Object.entries(adminShellEnglishCopy).map(([key, value]) => [key, translateAdminText(value)]),
+  ) as Record<keyof typeof adminShellEnglishCopy, string>;
+}
 
 function translateAdminLabel(label: string | undefined, language: Language): string {
   if (!label) return '';
-  return language === 'ar' ? (adminArabicLabels[label] ?? label) : label;
+  return language === 'ar' ? translateAdminText(label) : label;
 }

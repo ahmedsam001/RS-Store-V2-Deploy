@@ -19,13 +19,40 @@ describe('I18nProvider', () => {
     );
     const { result } = renderHook(() => useI18n(), { wrapper });
 
+    await act(() => result.current.setLanguage('ar'));
+
+    expect(result.current.language).toBe('ar');
+    expect(result.current.direction).toBe('rtl');
+    expect(document.documentElement.lang).toBe('ar');
+    expect(document.documentElement.dir).toBe('rtl');
+    expect(document.documentElement.classList.contains('rs-rtl')).toBe(true);
+    expect(document.documentElement.classList.contains('rs-ltr')).toBe(false);
+
     await act(() => result.current.setLanguage('en'));
 
     expect(result.current.language).toBe('en');
     expect(result.current.direction).toBe('ltr');
     expect(document.documentElement.lang).toBe('en');
     expect(document.documentElement.dir).toBe('ltr');
+    expect(document.documentElement.classList.contains('rs-ltr')).toBe(true);
+    expect(document.documentElement.classList.contains('rs-rtl')).toBe(false);
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('en');
+  });
+
+  it('restores a saved language preference after remount', async () => {
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'ar');
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <I18nProvider>{children}</I18nProvider>
+    );
+    const first = renderHook(() => useI18n(), { wrapper });
+
+    expect(first.result.current.language).toBe('ar');
+    first.unmount();
+
+    const second = renderHook(() => useI18n(), { wrapper });
+    expect(second.result.current.language).toBe('ar');
+    expect(document.documentElement.lang).toBe('ar');
+    expect(document.documentElement.dir).toBe('rtl');
   });
 
   it('uses the authenticated account language', async () => {

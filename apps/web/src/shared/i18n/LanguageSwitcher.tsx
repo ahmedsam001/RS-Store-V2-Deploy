@@ -5,12 +5,13 @@ import { cn } from '@/shared/utils/cn';
 
 type LanguageSwitcherProps = {
   className?: string;
+  nextLanguageLabel?: string;
 };
 
-export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
+export function LanguageSwitcher({ className, nextLanguageLabel }: LanguageSwitcherProps) {
   const { language, toggleLanguage, isSavingLanguage, t } = useI18n();
-  const nextLanguageLabel =
-    language === 'ar' ? t('language.en') : t('language.ar');
+  const resolvedNextLanguageLabel =
+    nextLanguageLabel ?? (language === 'ar' ? t('language.en') : t('language.ar'));
   const ariaLabel =
     language === 'ar'
       ? t('language.switchToEnglish')
@@ -18,6 +19,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
 
   return (
     <Button
+      data-no-admin-translate={nextLanguageLabel ? true : undefined}
       type="button"
       variant="ghost"
       size="sm"
@@ -35,7 +37,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
       ) : (
         <Languages className="h-4 w-4" aria-hidden="true" />
       )}
-      <span>{nextLanguageLabel}</span>
+      <span>{resolvedNextLanguageLabel}</span>
     </Button>
   );
 }

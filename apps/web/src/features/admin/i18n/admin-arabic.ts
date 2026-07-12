@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Language } from "@/shared/i18n";
 
 /**
@@ -1186,6 +1186,7 @@ const translatedAttributeNames = [
   "aria-label",
   "alt",
 ] as const;
+const arabicTextPattern = /[\u0600-\u06ff]/u;
 
 function normalize(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -1474,7 +1475,9 @@ function localizeTextNode(
   if (captureCurrent && cachedOriginal !== undefined) {
     const expected =
       language === "ar" ? translateAdminText(cachedOriginal) : cachedOriginal;
-    if (text.data !== expected) originalTexts.set(text, text.data);
+    if (text.data !== expected && !arabicTextPattern.test(text.data)) {
+      originalTexts.set(text, text.data);
+    }
   }
 
   const original = originalTexts.get(text) ?? text.data;
@@ -1503,7 +1506,9 @@ function localizeAttribute(
   if (captureCurrent && cachedOriginal !== undefined) {
     const expected =
       language === "ar" ? translateAdminText(cachedOriginal) : cachedOriginal;
-    if (current !== expected) values.set(attribute, current);
+    if (current !== expected && !arabicTextPattern.test(current)) {
+      values.set(attribute, current);
+    }
   }
 
   if (!values.has(attribute)) values.set(attribute, current);
@@ -1512,10 +1517,14 @@ function localizeAttribute(
   if (current !== localized) element.setAttribute(attribute, localized);
 }
 
-function applyAdminLocalization(root: ParentNode, language: Language) {
+function applyAdminLocalization(
+  root: ParentNode,
+  language: Language,
+  captureCurrent = false,
+) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    localizeTextNode(node as Text, language);
+    localizeTextNode(node as Text, language, captureCurrent);
   }
 
   const elements =
@@ -1525,24 +1534,28 @@ function applyAdminLocalization(root: ParentNode, language: Language) {
 
   for (const element of elements) {
     for (const attribute of translatedAttributeNames) {
-      localizeAttribute(element, attribute, language);
+      localizeAttribute(element, attribute, language, captureCurrent);
     }
   }
 }
 
 export function useAdminArabicLocalization(language: Language) {
+  const languageRef = useRef(language);
+  languageRef.current = language;
+
   useEffect(() => {
     const root = document.getElementById("admin-root");
     if (!root) return;
 
-    applyAdminLocalization(root, language);
+    applyAdminLocalization(root, languageRef.current, true);
     const observer = new MutationObserver((mutations) => {
+      const activeLanguage = languageRef.current;
       for (const mutation of mutations) {
         if (
           mutation.type === "characterData" &&
           mutation.target instanceof Text
         ) {
-          localizeTextNode(mutation.target, language, true);
+          localizeTextNode(mutation.target, activeLanguage, true);
           continue;
         }
 
@@ -1560,7 +1573,7 @@ export function useAdminArabicLocalization(language: Language) {
             localizeAttribute(
               mutation.target,
               attribute as (typeof translatedAttributeNames)[number],
-              language,
+              activeLanguage,
               true,
             );
           }
@@ -1569,12 +1582,12 @@ export function useAdminArabicLocalization(language: Language) {
 
         for (const node of mutation.addedNodes) {
           if (node instanceof Text) {
-            localizeTextNode(node, language);
+            localizeTextNode(node, activeLanguage);
           } else if (
             node instanceof Element ||
             node instanceof DocumentFragment
           ) {
-            applyAdminLocalization(node, language);
+            applyAdminLocalization(node, activeLanguage);
           }
         }
       }
@@ -1586,6 +1599,8 @@ export function useAdminArabicLocalization(language: Language) {
       attributes: true,
       attributeFilter: [...translatedAttributeNames],
     });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, [language]);
 }

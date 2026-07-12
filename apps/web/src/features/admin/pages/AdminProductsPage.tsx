@@ -132,7 +132,9 @@ export function AdminProductsPage() {
                 rel="noreferrer"
                 className="mt-2 inline-flex max-w-full items-center gap-2 truncate text-sm font-bold text-[#c7831e]"
               >
-                <span className="truncate">{editingProduct.sourceSheinUrl}</span>
+                <span data-no-admin-translate className="truncate">
+                  {editingProduct.sourceSheinUrl}
+                </span>
                 <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
               </a>
             </div>

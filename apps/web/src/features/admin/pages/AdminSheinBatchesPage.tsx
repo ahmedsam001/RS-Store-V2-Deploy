@@ -990,13 +990,13 @@ export function AdminSheinBatchesPage() {
                   >
                     <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px] xl:items-start">
                       <div className="min-w-0">
-                        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#c7831e]">
+                        <p data-no-admin-translate className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#c7831e]">
                           {order.orderNumber}
                         </p>
-                        <h3 className="mt-1 text-base font-black text-[#241611]">
+                        <h3 data-no-admin-translate className="mt-1 text-base font-black text-[#241611]">
                           {order.customerName}
                         </h3>
-                        <p dir="ltr" className="mt-1 text-sm font-bold text-muted-foreground">
+                        <p data-no-admin-translate dir="ltr" className="mt-1 text-sm font-bold text-muted-foreground">
                           {order.customerPhone}
                         </p>
                         <p className="mt-2 text-sm font-semibold text-muted-foreground">
@@ -1059,21 +1059,21 @@ export function AdminSheinBatchesPage() {
                   >
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-center">
                       <div className="min-w-0">
-                        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#c7831e]">
+                        <p data-no-admin-translate className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#c7831e]">
                           {item.orderNumberSnapshot}
                         </p>
-                        <h3 className="mt-1 line-clamp-2 text-base font-black text-[#241611]">
+                        <h3 data-no-admin-translate className="mt-1 line-clamp-2 text-base font-black text-[#241611]">
                           {item.productNameSnapshot}
                         </h3>
                         {item.productVariantNameSnapshot ? (
-                          <p className="mt-1 text-sm font-bold text-muted-foreground">
+                          <p data-no-admin-translate className="mt-1 text-sm font-bold text-muted-foreground">
                             {item.productVariantNameSnapshot}
                           </p>
                         ) : null}
                       </div>
                       <div className="grid gap-1 text-sm">
-                        <strong className="text-[#241611]">{item.customerNameSnapshot}</strong>
-                        <span dir="ltr" className="font-bold text-muted-foreground">
+                        <strong data-no-admin-translate className="text-[#241611]">{item.customerNameSnapshot}</strong>
+                        <span data-no-admin-translate dir="ltr" className="font-bold text-muted-foreground">
                           {item.customerPhoneSnapshot}
                         </span>
                         <span className="text-muted-foreground">
@@ -1223,13 +1223,13 @@ export function AdminSheinBatchesPage() {
                     >
                       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_260px_220px] xl:items-start">
                         <div className="min-w-0">
-                          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#c7831e]">
+                          <p data-no-admin-translate className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#c7831e]">
                             {order.orderNumber}
                           </p>
-                          <h3 className="mt-1 text-base font-black text-[#241611]">
+                          <h3 data-no-admin-translate className="mt-1 text-base font-black text-[#241611]">
                             {order.customerName}
                           </h3>
-                          <p dir="ltr" className="mt-1 text-sm font-bold text-muted-foreground">
+                          <p data-no-admin-translate dir="ltr" className="mt-1 text-sm font-bold text-muted-foreground">
                             {order.customerPhone}
                           </p>
                           <p className="mt-2 text-sm font-semibold text-muted-foreground">
