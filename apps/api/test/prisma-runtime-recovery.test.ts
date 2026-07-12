@@ -69,9 +69,11 @@ class TestPrismaService extends PrismaService {
   protected override readonly connectionRetryDelaysMs = [1, 2, 3];
   protected override readonly runtimeRecoveryCooldownMs = 100;
   protected override readonly heartbeatIntervalMs = 0;
+  protected override readonly heartbeatConfirmationDelayMs = 1;
   protected override readonly engineRestartDelayMs = 1;
 
   currentTimeMs = 0;
+  confirmationWait?: () => Promise<void>;
   readonly exitCodes: number[] = [];
   readonly recordedDelays: number[] = [];
 
@@ -86,6 +88,10 @@ class TestPrismaService extends PrismaService {
 
   protected override exitProcess(exitCode: number): void {
     this.exitCodes.push(exitCode);
+  }
+
+  protected override waitForHeartbeatConfirmation(): Promise<void> {
+    return this.confirmationWait?.() ?? super.waitForHeartbeatConfirmation();
   }
 
   runHeartbeatNow(): Promise<void> {
@@ -571,11 +577,109 @@ test("Prisma engine panic returns 503 and schedules one controlled process resta
   assert.deepEqual(prisma.exitCodes, [1]);
 });
 
-test("heartbeat detects no-code connection failures and starts recovery before user traffic", async () => {
+test("successful heartbeat does not confirm or restart the Prisma pool", async () => {
+  const prisma = new TestPrismaService();
+  let queryCalls = 0;
+  let disconnectCalls = 0;
+  let connectCalls = 0;
+  prisma.confirmationWait = async () => assert.fail("confirmation must not run");
+  replacePrismaMethod(prisma, "$queryRaw", (async () => {
+    queryCalls += 1;
+    return [{ result: 1 }];
+  }) as unknown as PrismaService["$queryRaw"]);
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    disconnectCalls += 1;
+  }) as PrismaService["$disconnect"]);
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    connectCalls += 1;
+  }) as PrismaService["$connect"]);
+
+  await prisma.runHeartbeatNow();
+
+  assert.equal(queryCalls, 1);
+  assert.equal(disconnectCalls, 0);
+  assert.equal(connectCalls, 0);
+});
+
+test("heartbeat confirmation success avoids disconnecting the Prisma pool", async () => {
+  const prisma = new TestPrismaService();
+  const loggedLines: string[] = [];
+  const originalLog = console.log;
+  let queryCalls = 0;
+  let disconnectCalls = 0;
+  let connectCalls = 0;
+
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    disconnectCalls += 1;
+  }) as PrismaService["$disconnect"]);
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    connectCalls += 1;
+  }) as PrismaService["$connect"]);
+  replacePrismaMethod(prisma, "$queryRaw", (async () => {
+    queryCalls += 1;
+    if (queryCalls === 1) {
+      throw unknownRequestError("Connection reset by peer");
+    }
+    return [{ result: 1 }];
+  }) as unknown as PrismaService["$queryRaw"]);
+
+  console.log = (line?: unknown) => loggedLines.push(String(line));
+  try {
+    await prisma.runHeartbeatNow();
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(queryCalls, 2);
+  assert.equal(disconnectCalls, 0);
+  assert.equal(connectCalls, 0);
+  assert.deepEqual(prisma.recordedDelays, [1]);
+  assert.equal(
+    loggedLines.some(
+      (line) =>
+        JSON.parse(line).message === "database_heartbeat_recovered_without_restart",
+    ),
+    true,
+  );
+});
+
+test("non-connectivity heartbeat confirmation failure does not restart the Prisma pool", async () => {
+  const prisma = new TestPrismaService();
+  let queryCalls = 0;
+  let disconnectCalls = 0;
+  let connectCalls = 0;
+  let recoveryCalls = 0;
+
+  replacePrismaMethod(prisma, "$queryRaw", (async () => {
+    queryCalls += 1;
+    if (queryCalls === 1) {
+      throw transientError("P1001");
+    }
+    throw new Error("query validation failed");
+  }) as unknown as PrismaService["$queryRaw"]);
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    disconnectCalls += 1;
+  }) as PrismaService["$disconnect"]);
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    connectCalls += 1;
+  }) as PrismaService["$connect"]);
+  replacePrismaMethod(prisma, "requestRuntimeRecovery", (() => {
+    recoveryCalls += 1;
+    return undefined;
+  }) as PrismaService["requestRuntimeRecovery"]);
+
+  await prisma.runHeartbeatNow();
+
+  assert.equal(queryCalls, 2);
+  assert.equal(disconnectCalls, 0);
+  assert.equal(connectCalls, 0);
+  assert.equal(recoveryCalls, 0);
+});
+
+test("two confirmed heartbeat connection failures start one bounded recovery", async () => {
   const prisma = new TestPrismaService();
   const operations: string[] = [];
   let queryCalls = 0;
-
   replacePrismaMethod(prisma, "$disconnect", (async () => {
     operations.push("disconnect");
   }) as PrismaService["$disconnect"]);
@@ -584,8 +688,8 @@ test("heartbeat detects no-code connection failures and starts recovery before u
   }) as PrismaService["$connect"]);
   replacePrismaMethod(prisma, "$queryRaw", (async () => {
     queryCalls += 1;
-    if (queryCalls === 1) {
-      throw unknownRequestError("Connection reset by peer");
+    if (queryCalls <= 2) {
+      throw transientError("P1001");
     }
     operations.push("query");
     return [{ result: 1 }];
@@ -594,7 +698,107 @@ test("heartbeat detects no-code connection failures and starts recovery before u
   await prisma.runHeartbeatNow();
   await new Promise((resolve) => setImmediate(resolve));
 
+  assert.equal(queryCalls, 3);
   assert.deepEqual(operations, ["disconnect", "connect", "query"]);
+});
+
+test("heartbeat confirmation avoids duplicate recovery when another recovery starts", async () => {
+  const prisma = new TestPrismaService();
+  const confirmationStarted = deferred();
+  const allowConfirmation = deferred();
+  const recoveryDisconnectStarted = deferred();
+  const allowRecoveryDisconnect = deferred();
+  let queryCalls = 0;
+  let disconnectCalls = 0;
+  let connectCalls = 0;
+  prisma.confirmationWait = async () => {
+    confirmationStarted.resolve();
+    await allowConfirmation.promise;
+  };
+  replacePrismaMethod(prisma, "$queryRaw", (async () => {
+    queryCalls += 1;
+    if (queryCalls === 1) throw transientError("P1001");
+    return [{ result: 1 }];
+  }) as unknown as PrismaService["$queryRaw"]);
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    disconnectCalls += 1;
+    recoveryDisconnectStarted.resolve();
+    await allowRecoveryDisconnect.promise;
+  }) as PrismaService["$disconnect"]);
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    connectCalls += 1;
+  }) as PrismaService["$connect"]);
+
+  const heartbeat = prisma.runHeartbeatNow();
+  await confirmationStarted.promise;
+  const recovery = prisma.requestRuntimeRecovery(
+    transientError("P1001"),
+    "exception_filter",
+  );
+  await recoveryDisconnectStarted.promise;
+  allowConfirmation.resolve();
+  await heartbeat;
+
+  assert.equal(queryCalls, 1);
+  assert.equal(disconnectCalls, 1);
+  allowRecoveryDisconnect.resolve();
+  await recovery;
+  assert.equal(connectCalls, 1);
+  assert.equal(queryCalls, 2);
+});
+
+test("shutdown during heartbeat confirmation prevents new recovery", async () => {
+  const prisma = new TestPrismaService();
+  const confirmationStarted = deferred();
+  const allowConfirmation = deferred();
+  let queryCalls = 0;
+  let disconnectCalls = 0;
+  let connectCalls = 0;
+  prisma.confirmationWait = async () => {
+    confirmationStarted.resolve();
+    await allowConfirmation.promise;
+  };
+  replacePrismaMethod(prisma, "$queryRaw", (async () => {
+    queryCalls += 1;
+    throw transientError("P1001");
+  }) as unknown as PrismaService["$queryRaw"]);
+  replacePrismaMethod(prisma, "$disconnect", (async () => {
+    disconnectCalls += 1;
+  }) as PrismaService["$disconnect"]);
+  replacePrismaMethod(prisma, "$connect", (async () => {
+    connectCalls += 1;
+  }) as PrismaService["$connect"]);
+
+  const heartbeat = prisma.runHeartbeatNow();
+  await confirmationStarted.promise;
+  const shutdown = prisma.onModuleDestroy();
+  allowConfirmation.resolve();
+  await Promise.all([heartbeat, shutdown]);
+
+  assert.equal(queryCalls, 1);
+  assert.equal(disconnectCalls, 1);
+  assert.equal(connectCalls, 0);
+});
+
+test("heartbeat executions cannot overlap", async () => {
+  const prisma = new TestPrismaService();
+  const queryStarted = deferred();
+  const allowQuery = deferred();
+  let queryCalls = 0;
+  replacePrismaMethod(prisma, "$queryRaw", (async () => {
+    queryCalls += 1;
+    queryStarted.resolve();
+    await allowQuery.promise;
+    return [{ result: 1 }];
+  }) as unknown as PrismaService["$queryRaw"]);
+
+  const first = prisma.runHeartbeatNow();
+  await queryStarted.promise;
+  await prisma.runHeartbeatNow();
+  allowQuery.resolve();
+  await first;
+
+  assert.equal(queryCalls, 1);
 });
 
 test("additional operational Prisma codes are treated as transient database failures", () => {

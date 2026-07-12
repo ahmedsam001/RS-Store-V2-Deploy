@@ -174,6 +174,7 @@ export class PrismaService
   ];
   protected readonly runtimeRecoveryCooldownMs: number = 30_000;
   protected readonly heartbeatIntervalMs: number = 60_000;
+  protected readonly heartbeatConfirmationDelayMs: number = 1_000;
   protected readonly engineRestartDelayMs: number = 1_000;
 
   private connectionLifecyclePromise: Promise<void> | null = null;
@@ -280,16 +281,64 @@ export class PrismaService
         errorCode: getPrismaErrorCode(error),
       });
 
-      const recovery = this.requestRuntimeRecovery(error, "heartbeat");
-      void recovery?.catch((recoveryError) => {
-        logStructured("error", "database_heartbeat_recovery_failed", {
-          errorName: getPrismaErrorName(recoveryError),
-          errorCode: getPrismaErrorCode(recoveryError),
+      if (isPrismaEnginePanic(error)) {
+        this.startHeartbeatRecovery(error);
+        return;
+      }
+
+      if (!isTransientDatabaseError(error)) {
+        return;
+      }
+
+      await this.waitForHeartbeatConfirmation();
+      if (this.shuttingDown || this.connectionLifecyclePromise !== null) {
+        return;
+      }
+
+      try {
+        await this.$queryRaw`SELECT 1`;
+        logStructured("info", "database_heartbeat_recovered_without_restart", {
+          initialErrorName: getPrismaErrorName(error),
+          initialErrorCode: getPrismaErrorCode(error),
+          confirmationDelayMs: this.heartbeatConfirmationDelayMs,
         });
-      });
+      } catch (confirmationError) {
+        logStructured("warn", "database_heartbeat_confirmation_failed", {
+          initialErrorName: getPrismaErrorName(error),
+          initialErrorCode: getPrismaErrorCode(error),
+          errorName: getPrismaErrorName(confirmationError),
+          errorCode: getPrismaErrorCode(confirmationError),
+          confirmationDelayMs: this.heartbeatConfirmationDelayMs,
+        });
+
+        if (this.shuttingDown || this.connectionLifecyclePromise !== null) {
+          return;
+        }
+
+        if (isPrismaEnginePanic(confirmationError)) {
+          this.startHeartbeatRecovery(confirmationError);
+          return;
+        }
+
+        if (!isTransientDatabaseError(confirmationError)) {
+          return;
+        }
+
+        this.startHeartbeatRecovery(confirmationError);
+      }
     } finally {
       this.heartbeatInFlight = false;
     }
+  }
+
+  private startHeartbeatRecovery(error: unknown): void {
+    const recovery = this.requestRuntimeRecovery(error, "heartbeat");
+    void recovery?.catch((recoveryError) => {
+      logStructured("error", "database_heartbeat_recovery_failed", {
+        errorName: getPrismaErrorName(recoveryError),
+        errorCode: getPrismaErrorCode(recoveryError),
+      });
+    });
   }
 
   private startHeartbeat(): void {
@@ -298,7 +347,12 @@ export class PrismaService
     }
 
     this.heartbeatTimer = setInterval(() => {
-      void this.runHeartbeat();
+      void this.runHeartbeat().catch((error) => {
+        logStructured("error", "database_heartbeat_task_failed", {
+          errorName: getPrismaErrorName(error),
+          errorCode: getPrismaErrorCode(error),
+        });
+      });
     }, this.heartbeatIntervalMs);
     this.heartbeatTimer.unref();
   }
@@ -502,6 +556,10 @@ export class PrismaService
     return new Promise((resolve) => {
       setTimeout(resolve, delayMs);
     });
+  }
+
+  protected waitForHeartbeatConfirmation(): Promise<void> {
+    return this.delay(this.heartbeatConfirmationDelayMs);
   }
 
   protected now(): number {
