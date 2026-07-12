@@ -14,6 +14,8 @@ type CartOwner = { userId: string } | { guestKey: string };
 type PrismaClientLike = PrismaService | Prisma.TransactionClient;
 
 const maxWriteRetries = 2;
+const CART_TRANSACTION_MAX_WAIT_MS = 5_000;
+const CART_TRANSACTION_TIMEOUT_MS = 15_000;
 const visibleProductWhere = {
   status: ProductStatus.ACTIVE,
   deletedAt: null,
@@ -376,6 +378,8 @@ export class CartService {
     for (let attempt = 0; attempt <= maxWriteRetries; attempt += 1) {
       try {
         return await this.prisma.$transaction(operation, {
+          maxWait: CART_TRANSACTION_MAX_WAIT_MS,
+          timeout: CART_TRANSACTION_TIMEOUT_MS,
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
       } catch (error) {

@@ -35,7 +35,6 @@ const TRANSIENT_DATABASE_ERROR_CODES = new Set([
   "P1008",
   "P1011",
   "P2024",
-  "P2028",
   "P2037",
 ]);
 
@@ -60,6 +59,24 @@ const TRANSIENT_DATABASE_MESSAGE_FRAGMENTS = [
   "remaining connection slots are reserved",
   "too many clients already",
   "too many database connections opened",
+] as const;
+
+const P2028_CONNECTION_FAILURE_MESSAGE_FRAGMENTS = [
+  "can't reach database server",
+  "database server was reached but timed out",
+  "error in connector",
+  "connection refused",
+  "connection reset",
+  "connection closed",
+  "server closed the connection unexpectedly",
+  "connection terminated unexpectedly",
+  "terminating connection",
+  "broken pipe",
+  "socket hang up",
+  "error opening a tls connection",
+  "database system is starting up",
+  "database system is shutting down",
+  "database system is in recovery mode",
 ] as const;
 
 export function getPrismaErrorCode(error: unknown): string | undefined {
@@ -112,11 +129,19 @@ export function isPrismaEnginePanic(error: unknown): boolean {
 }
 
 export function isTransientDatabaseError(error: unknown): boolean {
-  if (isTransientDatabaseErrorCode(getPrismaErrorCode(error))) {
+  const code = getPrismaErrorCode(error);
+  const message = getPrismaErrorMessage(error).toLowerCase();
+
+  if (code === "P2028") {
+    return P2028_CONNECTION_FAILURE_MESSAGE_FRAGMENTS.some((fragment) =>
+      message.includes(fragment),
+    );
+  }
+
+  if (isTransientDatabaseErrorCode(code)) {
     return true;
   }
 
-  const message = getPrismaErrorMessage(error).toLowerCase();
   return TRANSIENT_DATABASE_MESSAGE_FRAGMENTS.some((fragment) =>
     message.includes(fragment),
   );

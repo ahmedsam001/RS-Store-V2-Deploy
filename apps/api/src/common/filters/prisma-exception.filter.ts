@@ -73,7 +73,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     exception: FilteredPrismaError,
     code: string | undefined,
   ): number {
-    if (isRecoverableDatabaseError(exception)) {
+    if (isRecoverableDatabaseError(exception) || code === "P2028") {
       return HttpStatus.SERVICE_UNAVAILABLE;
     }
 
@@ -100,7 +100,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     exception: FilteredPrismaError,
     code: string | undefined,
   ): string {
-    if (isRecoverableDatabaseError(exception)) {
+    if (isRecoverableDatabaseError(exception) || code === "P2028") {
       return "Database temporarily unavailable. Please retry shortly";
     }
 

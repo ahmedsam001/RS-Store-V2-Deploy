@@ -10,6 +10,7 @@ import { PrismaExceptionFilter } from "../src/common/filters/prisma-exception.fi
 import { RedisService } from "../src/infrastructure/cache/redis.service";
 import {
   PrismaService,
+  isTransientDatabaseError,
   resolvePrismaDatasourceUrl,
 } from "../src/infrastructure/database/prisma/prisma.service";
 import { HealthService } from "../src/modules/health/health.service";
@@ -103,14 +104,18 @@ function replacePrismaMethod<Key extends keyof PrismaService>(
   });
 }
 
-function transientError(code: string, useInitializationCode = false): Error {
+function transientError(
+  code: string,
+  useInitializationCode = false,
+  message = "request failed",
+): Error {
   return useInitializationCode
     ? new Prisma.PrismaClientInitializationError(
-        "connection failed",
+        message,
         "6.19.3",
         code,
       )
-    : new Prisma.PrismaClientKnownRequestError("request failed", {
+    : new Prisma.PrismaClientKnownRequestError(message, {
         code,
         clientVersion: "6.19.3",
       });
@@ -305,8 +310,68 @@ test("P2002, P2003 and P2025 filter responses do not schedule runtime recovery",
   assert.equal(recoveryCalls, 0);
 });
 
+test("ordinary transaction lifecycle P2028 returns 503 without runtime recovery", () => {
+  let recoveryCalls = 0;
+  const prisma = {
+    requestRuntimeRecovery() {
+      recoveryCalls += 1;
+      return Promise.resolve();
+    },
+  } as unknown as PrismaService;
+  const filter = new PrismaExceptionFilter(prisma);
+  const { host, result } = createHttpHost();
+  const error = transientError(
+    "P2028",
+    false,
+    "Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms.",
+  ) as Prisma.PrismaClientKnownRequestError;
+
+  filter.catch(error, host);
+
+  assert.equal(result.statusCode, 503);
+  assert.equal(
+    result.body?.message,
+    "Database temporarily unavailable. Please retry shortly",
+  );
+  assert.equal(recoveryCalls, 0);
+  assert.equal(isTransientDatabaseError(error), false);
+  assert.equal(
+    isTransientDatabaseError(
+      transientError(
+        "P2028",
+        false,
+        "Transaction API error: connection pool timeout while waiting for an interactive transaction",
+      ),
+    ),
+    false,
+  );
+});
+
+test("P2028 with an independent connection failure indication triggers recovery", () => {
+  const recoveryCalls: unknown[] = [];
+  const prisma = {
+    requestRuntimeRecovery(error: unknown) {
+      recoveryCalls.push(error);
+      return Promise.resolve();
+    },
+  } as unknown as PrismaService;
+  const filter = new PrismaExceptionFilter(prisma);
+  const { host, result } = createHttpHost();
+  const error = transientError(
+    "P2028",
+    false,
+    "Transaction API error: Error in connector: connection reset by peer",
+  ) as Prisma.PrismaClientKnownRequestError;
+
+  filter.catch(error, host);
+
+  assert.equal(result.statusCode, 503);
+  assert.equal(isTransientDatabaseError(error), true);
+  assert.deepEqual(recoveryCalls, [error]);
+});
+
 test("health PostgreSQL failures schedule recovery for every transient Prisma code", async () => {
-  for (const code of ["P1001", "P1002", "P2024", "P2028"]) {
+  for (const code of ["P1001", "P1002", "P2024"]) {
     const recoverySources: string[] = [];
     const prisma = {
       $queryRaw: async () => {
@@ -396,23 +461,20 @@ test("failed recovery is bounded, backs off, cools down, and can restart later",
   }) as PrismaService["$connect"]);
   mockSuccessfulQuery(prisma);
 
-  await prisma.requestRuntimeRecovery(
-    transientError("P2028"),
-    "exception_filter",
-  );
+  await prisma.requestRuntimeRecovery(transientError("P1001"), "exception_filter");
   assert.equal(connectCalls, 3);
   assert.equal(disconnectCalls, 3);
   assert.deepEqual(prisma.recordedDelays, [1, 2]);
 
   const duringCooldown = prisma.requestRuntimeRecovery(
-    transientError("P2028"),
+    transientError("P1001"),
     "exception_filter",
   );
   assert.equal(duringCooldown, undefined);
   assert.equal(connectCalls, 3);
 
   prisma.currentTimeMs = 100;
-  await prisma.requestRuntimeRecovery(transientError("P2028"), "health_check");
+  await prisma.requestRuntimeRecovery(transientError("P1001"), "health_check");
   assert.equal(connectCalls, 6);
 });
 
