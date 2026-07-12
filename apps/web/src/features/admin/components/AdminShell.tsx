@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Menu, PanelLeftClose, Search, X } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, PanelLeftClose, Search, X } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import {
-  ADMIN_MANAGEMENT_LINKS,
   ADMIN_NAV_LINKS,
-  ADMIN_OPERATIONS_LINKS,
   ADMIN_QUICK_JUMP_LINKS,
+  getVisibleAdminNavigation,
+  isAdminNavLinkActive,
   type AdminNavLink,
 } from '@/features/admin/navigation/admin-navigation';
 import { PATHS } from '@/shared/constants/routes';
@@ -19,6 +19,7 @@ import {
   translateAdminText,
   useAdminArabicLocalization,
 } from '@/features/admin/i18n/admin-arabic';
+import type { UserRole } from '@/shared/types/AuthTypes';
 import logoUrl from '@/assets/brand/rs-logo-transparent.webp';
 import '@/styles/admin.css';
 
@@ -35,6 +36,16 @@ export function AdminShell() {
   const pageTitle = useMemo(
     () => translateAdminLabel(resolvePageTitle(location.pathname), language),
     [language, location.pathname],
+  );
+  const visibleAdminLinks = useMemo(() => {
+    const navigation = getVisibleAdminNavigation(user?.role);
+    return [navigation.primary, ...navigation.groups.flatMap((group) => group.children)].filter(
+      (link): link is AdminNavLink => link !== null,
+    );
+  }, [user?.role]);
+  const visibleAdminPaths = useMemo(
+    () => new Set(visibleAdminLinks.map((link) => link.to)),
+    [visibleAdminLinks],
   );
 
   useDocumentMetadata({
@@ -69,6 +80,7 @@ export function AdminShell() {
           compact={isCompact}
           onCompactToggle={() => setCompact((current) => !current)}
           onLogout={handleLogout}
+          role={user?.role}
           userInitials={initials}
           userName={user?.name ?? 'Admin'}
         />
@@ -103,7 +115,7 @@ export function AdminShell() {
             <div className="hidden min-w-[250px] items-center gap-2 rounded-full border border-[#efd6c5] bg-white/78 px-3 py-2 text-sm text-muted-foreground shadow-sm xl:flex">
               <Search className="h-4 w-4 text-[#c7831e]" aria-hidden="true" />
               <div className="flex gap-1 overflow-hidden">
-                {ADMIN_QUICK_JUMP_LINKS.map((link) => (
+                {ADMIN_QUICK_JUMP_LINKS.filter((link) => visibleAdminPaths.has(link.to)).map((link) => (
                   <Link
                     key={link.to + link.labelEn}
                     to={link.to}
@@ -130,7 +142,7 @@ export function AdminShell() {
           </header>
 
           <nav className="admin-mobile-tabs flex gap-2 overflow-x-auto px-3 py-3 lg:hidden">
-            {ADMIN_NAV_LINKS.map((link) => (
+            {visibleAdminLinks.map((link) => (
               <AdminMobileNavLink key={link.to} link={link} />
             ))}
           </nav>
@@ -145,6 +157,7 @@ export function AdminShell() {
         <MobileDrawer
           onClose={() => setMobileOpen(false)}
           onLogout={handleLogout}
+          role={user?.role}
           userInitials={initials}
           userName={user?.name ?? 'Admin'}
         />
@@ -157,12 +170,14 @@ function AdminSidebar({
   compact,
   onCompactToggle,
   onLogout,
+  role,
   userInitials,
   userName,
 }: {
   compact: boolean;
   onCompactToggle: () => void;
   onLogout: () => void;
+  role: UserRole | undefined;
   userInitials: string;
   userName: string;
 }) {
@@ -195,10 +210,12 @@ function AdminSidebar({
           ) : null}
         </div>
 
-        <div className="premium-scrollbar mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto pe-1">
-          <SidebarGroup compact={compact} title={copy.overview} links={ADMIN_MANAGEMENT_LINKS} />
-          <SidebarGroup compact={compact} title={copy.operations} links={ADMIN_OPERATIONS_LINKS} />
-        </div>
+        <AdminNavigation
+          className="premium-scrollbar mt-6 min-h-0 flex-1 overflow-y-auto pe-1"
+          compact={compact}
+          instanceId="desktop"
+          role={role}
+        />
 
         <div className="mt-4 space-y-3">
           <button
@@ -242,28 +259,106 @@ function AdminSidebar({
   );
 }
 
-function SidebarGroup({
-  title,
-  links,
-  compact,
+export function AdminNavigation({
+  className,
+  compact = false,
+  instanceId,
+  onNavigate,
+  role,
 }: {
-  title: string;
-  links: AdminNavLink[];
-  compact: boolean;
+  className?: string;
+  compact?: boolean;
+  instanceId: string;
+  onNavigate?: () => void;
+  role: UserRole | undefined;
 }) {
+  const { language } = useI18n();
+  const location = useLocation();
+  const navigation = useMemo(() => getVisibleAdminNavigation(role), [role]);
+  const activeGroupId = useMemo(
+    () =>
+      navigation.groups.find((group) =>
+        group.children.some((link) => isAdminNavLinkActive(location.pathname, link)),
+      )?.id ?? null,
+    [location.pathname, navigation.groups],
+  );
+  const [openGroupId, setOpenGroupId] = useState<string | null>(activeGroupId);
+
+  useEffect(() => {
+    setOpenGroupId(activeGroupId);
+  }, [activeGroupId, location.pathname]);
+
+  if (!navigation.primary && navigation.groups.length === 0) return null;
+
   return (
-    <div className="space-y-2">
-      {!compact ? (
-        <p className="px-3 text-xs font-black uppercase tracking-wider text-white/40">{title}</p>
+    <nav aria-label={translateAdminLabel('Admin navigation', language)} className={cn('space-y-2', className)}>
+      {navigation.primary ? (
+        <SidebarLink link={navigation.primary} compact={compact} onNavigate={onNavigate} />
       ) : null}
-      {links.map((link) => (
-        <SidebarLink key={link.to} link={link} compact={compact} />
-      ))}
-    </div>
+
+      {navigation.groups.map((group) => {
+        const isExpanded = openGroupId === group.id;
+        const isActive = activeGroupId === group.id;
+        const contentId = `admin-nav-${instanceId}-${group.id}`;
+        const GroupIcon = group.icon;
+        const label = translateAdminLabel(group.labelEn, language);
+
+        return (
+          <div key={group.id} className="space-y-1">
+            <button
+              type="button"
+              aria-controls={contentId}
+              aria-expanded={isExpanded}
+              data-active={isActive ? 'true' : undefined}
+              title={compact ? label : undefined}
+              onClick={() => setOpenGroupId((current) => (current === group.id ? null : group.id))}
+              className={cn(
+                'flex min-h-11 w-full items-center gap-3 rounded-2xl px-3 py-2 text-sm font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
+                isActive
+                  ? 'bg-white/16 text-white ring-1 ring-white/20'
+                  : 'text-white/72 hover:bg-white/10 hover:text-white',
+                compact && 'justify-center px-2',
+              )}
+            >
+              <GroupIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
+              {!compact ? <span className="min-w-0 flex-1 truncate text-start">{label}</span> : null}
+              {!compact ? (
+                <ChevronDown
+                  className={cn('h-4 w-4 shrink-0 transition-transform', isExpanded && 'rotate-180')}
+                  aria-hidden="true"
+                />
+              ) : null}
+            </button>
+
+            <div id={contentId} hidden={!isExpanded} className="space-y-1">
+              {group.children.map((link) => (
+                <SidebarLink
+                  key={link.to}
+                  link={link}
+                  compact={compact}
+                  nested
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </nav>
   );
 }
 
-function SidebarLink({ link, compact }: { link: AdminNavLink; compact: boolean }) {
+function SidebarLink({
+  link,
+  compact,
+  nested = false,
+  onNavigate,
+}: {
+  link: AdminNavLink;
+  compact: boolean;
+  nested?: boolean;
+  onNavigate?: () => void;
+}) {
   const { language } = useI18n();
   const Icon = link.icon;
   const label = translateAdminLabel(link.labelEn, language);
@@ -272,12 +367,14 @@ function SidebarLink({ link, compact }: { link: AdminNavLink; compact: boolean }
       to={link.to}
       end={link.end}
       title={label}
+      onClick={onNavigate}
       className={({ isActive }) =>
         cn(
           'group flex min-h-12 items-center gap-3 rounded-2xl px-3 py-2 text-sm font-bold transition',
           isActive
             ? 'bg-white text-[#241611] shadow-sm'
             : 'text-white/72 hover:bg-white/10 hover:text-white',
+          nested && !compact && 'ms-3 min-h-11 border-s border-white/10 ps-4',
           compact && 'justify-center px-2',
         )
       }
@@ -316,11 +413,13 @@ function AdminMobileNavLink({ link }: { link: AdminNavLink }) {
 function MobileDrawer({
   onClose,
   onLogout,
+  role,
   userInitials,
   userName,
 }: {
   onClose: () => void;
   onLogout: () => void;
+  role: UserRole | undefined;
   userInitials: string;
   userName: string;
 }) {
@@ -357,13 +456,11 @@ function MobileDrawer({
             <X className="h-5 w-5" aria-hidden="true" />
           </Button>
         </div>
-        <div className="premium-scrollbar mt-6 grid gap-2 overflow-y-auto">
-          {ADMIN_NAV_LINKS.map((link) => (
-            <MobileDrawerLink key={link.to} link={link} onClose={onClose} />
-          ))}
+        <div className="premium-scrollbar mt-6 min-h-0 flex-1 overflow-y-auto">
+          <AdminNavigation instanceId="mobile-drawer" onNavigate={onClose} role={role} />
           <a
             href={PATHS.home}
-            className="rounded-2xl px-3 py-2 text-sm font-bold text-white/75 hover:bg-white/10 hover:text-white"
+            className="mt-2 block rounded-2xl px-3 py-2 text-sm font-bold text-white/75 hover:bg-white/10 hover:text-white"
           >
             <span>{copy.viewStore}</span>
           </a>
@@ -392,27 +489,6 @@ function MobileDrawer({
         </div>
       </aside>
     </div>
-  );
-}
-
-function MobileDrawerLink({ link, onClose }: { link: AdminNavLink; onClose: () => void }) {
-  const { language } = useI18n();
-  const Icon = link.icon;
-  return (
-    <NavLink
-      to={link.to}
-      end={link.end}
-      onClick={onClose}
-      className={({ isActive }) =>
-        cn(
-          'flex min-h-12 items-center gap-3 rounded-2xl px-3 py-2 text-sm font-bold transition',
-          isActive ? 'bg-white text-[#241611]' : 'text-white/75 hover:bg-white/10 hover:text-white',
-        )
-      }
-    >
-      <Icon className="h-5 w-5" aria-hidden="true" />
-      <span>{translateAdminLabel(link.labelEn, language)}</span>
-    </NavLink>
   );
 }
 

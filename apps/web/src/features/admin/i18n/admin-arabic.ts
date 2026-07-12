@@ -10,6 +10,7 @@ import type { Language } from "@/shared/i18n";
  */
 export const ADMIN_ARABIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   Dashboard: "لوحة التحكم",
+  "Admin navigation": "تنقل الإدارة",
   Overview: "نظرة عامة",
   Products: "المنتجات",
   Product: "المنتج",
@@ -94,6 +95,7 @@ export const ADMIN_ARABIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   Profit: "الربح",
   Analytics: "التحليلات",
   "Flash Sales": "العروض السريعة",
+  Marketing: "التسويق",
   "Flash Sale": "عرض سريع",
   "Add Flash Sale": "إضافة عرض سريع",
   "Create Flash Sale": "إنشاء عرض سريع",
@@ -129,6 +131,7 @@ export const ADMIN_ARABIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   "Remove image": "إزالة الصورة",
   "Primary image": "الصورة الرئيسية",
   Settings: "الإعدادات",
+  System: "النظام",
   "Store settings": "إعدادات المتجر",
   "General settings": "الإعدادات العامة",
   "Store name": "اسم المتجر",
