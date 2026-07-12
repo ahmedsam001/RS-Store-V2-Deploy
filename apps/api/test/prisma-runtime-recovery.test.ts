@@ -8,8 +8,61 @@ import { Request, Response } from "express";
 import "../src/common/middleware/request-id.middleware";
 import { PrismaExceptionFilter } from "../src/common/filters/prisma-exception.filter";
 import { RedisService } from "../src/infrastructure/cache/redis.service";
-import { PrismaService } from "../src/infrastructure/database/prisma/prisma.service";
+import {
+  PrismaService,
+  resolvePrismaDatasourceUrl,
+} from "../src/infrastructure/database/prisma/prisma.service";
 import { HealthService } from "../src/modules/health/health.service";
+
+test("Heroku PostgreSQL datasource URLs require SSL when sslmode is absent", () => {
+  for (const protocol of ["postgres", "postgresql"]) {
+    const rawUrl = `${protocol}://fake_user:fake_password@db.example.test:5432/rs_store?schema=public`;
+    const resolved = resolvePrismaDatasourceUrl(rawUrl, "web.1");
+    assert.ok(resolved);
+    const parsed = new URL(resolved);
+
+    assert.equal(parsed.searchParams.get("sslmode"), "require");
+    assert.equal(parsed.searchParams.get("schema"), "public");
+    assert.equal(rawUrl.includes("sslmode"), false);
+  }
+});
+
+test("existing Heroku PostgreSQL sslmode values are preserved", () => {
+  const rawUrl =
+    "postgresql://fake_user:fake_password@db.example.test:5432/rs_store?sslmode=verify-full";
+
+  assert.equal(resolvePrismaDatasourceUrl(rawUrl, "worker.1"), rawUrl);
+});
+
+test("datasource URL is unchanged outside Heroku", () => {
+  const rawUrl =
+    "postgresql://fake_user:fake_password@localhost:5432/rs_store?schema=public";
+
+  assert.equal(resolvePrismaDatasourceUrl(rawUrl, undefined), rawUrl);
+});
+
+test("undefined datasource URL remains undefined", () => {
+  assert.equal(resolvePrismaDatasourceUrl(undefined, "web.1"), undefined);
+});
+
+test("non-PostgreSQL datasource URLs are not modified", () => {
+  const rawUrl = "mysql://fake_user:fake_password@db.example.test:3306/rs_store";
+
+  assert.equal(resolvePrismaDatasourceUrl(rawUrl, "web.1"), rawUrl);
+});
+
+test("datasource resolution does not mutate its input or process environment", () => {
+  const rawUrl = "postgresql://fake_user:fake_password@db.example.test:5432/rs_store";
+  const databaseUrlBefore = process.env.DATABASE_URL;
+  const dynoBefore = process.env.DYNO;
+
+  const resolved = resolvePrismaDatasourceUrl(rawUrl, "web.1");
+
+  assert.equal(rawUrl, "postgresql://fake_user:fake_password@db.example.test:5432/rs_store");
+  assert.notEqual(resolved, rawUrl);
+  assert.equal(process.env.DATABASE_URL, databaseUrlBefore);
+  assert.equal(process.env.DYNO, dynoBefore);
+});
 
 class TestPrismaService extends PrismaService {
   protected override readonly connectionRetryDelaysMs = [1, 2, 3];

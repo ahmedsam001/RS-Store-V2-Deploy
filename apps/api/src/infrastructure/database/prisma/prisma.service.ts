@@ -2,6 +2,26 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
 import { logStructured } from "../../../common/logging/structured-logger";
 
+export function resolvePrismaDatasourceUrl(
+  rawDatabaseUrl: string | undefined = process.env.DATABASE_URL,
+  herokuDyno: string | undefined = process.env.DYNO,
+): string | undefined {
+  if (rawDatabaseUrl === undefined || !herokuDyno) {
+    return rawDatabaseUrl;
+  }
+
+  const url = new URL(rawDatabaseUrl);
+  const isPostgres =
+    url.protocol === "postgres:" || url.protocol === "postgresql:";
+
+  if (!isPostgres || url.searchParams.has("sslmode")) {
+    return rawDatabaseUrl;
+  }
+
+  url.searchParams.set("sslmode", "require");
+  return url.toString();
+}
+
 export type DatabaseRecoverySource =
   | "startup"
   | "exception_filter"
@@ -117,6 +137,13 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  constructor() {
+    const datasourceUrl = resolvePrismaDatasourceUrl();
+    super(
+      datasourceUrl === undefined ? undefined : { datasourceUrl },
+    );
+  }
+
   protected readonly connectionRetryDelaysMs: readonly number[] = [
     2_000, 4_000, 6_000, 8_000, 10_000, 12_000,
   ];
