@@ -226,7 +226,7 @@ test("transient Prisma filter responses return 503 without waiting or replaying"
   assert.equal(recoveryCalls[0]?.source, "exception_filter");
 });
 
-test("P2002 and P2025 filter responses do not schedule runtime recovery", () => {
+test("P2002, P2003 and P2025 filter responses do not schedule runtime recovery", () => {
   let recoveryCalls = 0;
   const prisma = {
     requestRuntimeRecovery() {
@@ -238,6 +238,7 @@ test("P2002 and P2025 filter responses do not schedule runtime recovery", () => 
 
   for (const [code, expectedStatus] of [
     ["P2002", 409],
+    ["P2003", 409],
     ["P2025", 404],
   ] as const) {
     const { host, result } = createHttpHost();

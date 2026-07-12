@@ -81,6 +81,10 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       return HttpStatus.CONFLICT;
     }
 
+    if (code === "P2003") {
+      return HttpStatus.CONFLICT;
+    }
+
     if (code === "P2025") {
       return HttpStatus.NOT_FOUND;
     }
@@ -102,6 +106,10 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
     if (code === "P2002") {
       return "A record with the same unique value already exists";
+    }
+
+    if (code === "P2003") {
+      return "The request conflicts with a related record";
     }
 
     if (code === "P2025") {

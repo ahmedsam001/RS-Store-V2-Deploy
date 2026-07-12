@@ -61,7 +61,13 @@ export class OrdersController {
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     await this.cartService.findCurrentCart(request, response);
-    return this.ordersService.checkoutWithDepositProof(user, dto, file, idempotencyKey);
+    return this.ordersService.checkoutWithDepositProof(
+      user,
+      dto,
+      file,
+      idempotencyKey,
+      request.requestId,
+    );
   }
 
   @Post('checkout')
@@ -73,7 +79,7 @@ export class OrdersController {
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     await this.cartService.findCurrentCart(request, response);
-    return this.ordersService.checkout(user, dto, idempotencyKey);
+    return this.ordersService.checkout(user, dto, idempotencyKey, request.requestId);
   }
 
   @Get('my')

@@ -18,9 +18,14 @@ import {
   UserRole,
 } from '@prisma/client';
 import type { PaymentProofStatus } from '@prisma/client';
+import { logStructured } from '../../common/logging/structured-logger';
 import { buildPaginationMeta } from '../../common/pagination/paginated-response';
 import { AuthenticatedUser } from '../../common/types/authenticated-user';
-import { PrismaService } from '../../infrastructure/database/prisma/prisma.service';
+import {
+  getPrismaErrorCode,
+  getPrismaErrorName,
+  PrismaService,
+} from '../../infrastructure/database/prisma/prisma.service';
 import { UploadedImageFile } from '../uploads/upload-file.type';
 import { UploadsService } from '../uploads/uploads.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -143,6 +148,13 @@ type UploadedPaymentProofSnapshot = {
   byteSize?: number | null;
   format?: string | null;
 };
+type CheckoutStage =
+  | 'validate_checkout'
+  | 'upload_payment_proof'
+  | 'create_order_transaction'
+  | 'update_stock'
+  | 'clear_cart';
+type CheckoutLogContext = { requestId?: string; userId: string };
 
 @Injectable()
 export class OrdersService {
@@ -157,8 +169,15 @@ export class OrdersService {
     user: AuthenticatedUser,
     dto: CheckoutOrderDto,
     idempotencyKey?: string | null,
+    requestId?: string,
   ): Promise<OrderWithTimeline> {
-    return this.checkoutInternal(user, this.normalizeCheckoutDto(dto), idempotencyKey, null);
+    return this.checkoutInternal(
+      user,
+      this.normalizeCheckoutDto(dto),
+      idempotencyKey,
+      null,
+      requestId,
+    );
   }
 
   async checkoutWithDepositProof(
@@ -166,44 +185,84 @@ export class OrdersService {
     dto: CheckoutOrderDto,
     file: UploadedImageFile | undefined,
     idempotencyKey?: string | null,
+    requestId?: string,
   ): Promise<OrderWithTimeline> {
-    const normalizedDto = this.normalizeCheckoutDto(dto);
-    const key = normalizeCheckoutIdempotencyKey(idempotencyKey ?? normalizedDto.idempotencyKey);
-    const requestHash = hashCheckoutRequest(normalizedDto);
-    const replay = await this.prisma.checkoutIdempotencyKey.findUnique({
-      where: { userId_key: { userId: user.id, key } },
-      include: { order: { include: orderInclude } },
-    });
-    if (replay) {
-      assertCheckoutIdempotencyReplay(replay.requestHash, requestHash, replay.orderId !== null);
-      if (!replay.order) throw new ConflictException('Checkout is already being processed');
-      return this.attachTimeline(replay.order);
+    const context = { requestId, userId: user.id };
+    const { normalizedDto, key, replayOrder } = await this.runCheckoutStage(
+      'validate_checkout',
+      context,
+      async () => {
+        const normalizedDto = this.normalizeCheckoutDto(dto);
+        const key = normalizeCheckoutIdempotencyKey(
+          idempotencyKey ?? normalizedDto.idempotencyKey,
+        );
+        const requestHash = hashCheckoutRequest(normalizedDto);
+        const replay = await this.prisma.checkoutIdempotencyKey.findUnique({
+          where: { userId_key: { userId: user.id, key } },
+          include: { order: { include: orderInclude } },
+        });
+        if (replay) {
+          assertCheckoutIdempotencyReplay(
+            replay.requestHash,
+            requestHash,
+            replay.orderId !== null,
+          );
+          if (!replay.order) throw new ConflictException('Checkout is already being processed');
+        }
+        return { normalizedDto, key, replayOrder: replay?.order ?? null };
+      },
+    );
+    if (replayOrder) {
+      return this.attachTimeline(replayOrder);
     }
 
-    const uploaded = await this.uploadsService.uploadImage(file, {
-      folder: ORDER_PAYMENT_PROOFS_FOLDER,
-    });
+    const uploaded = await this.runCheckoutStage('upload_payment_proof', context, () =>
+      this.uploadsService.uploadImage(file, {
+        folder: ORDER_PAYMENT_PROOFS_FOLDER,
+      }),
+    );
+    let transactionCommitted = false;
     try {
-      const order = await this.checkoutInternal(user, normalizedDto, key, uploaded);
+      const order = await this.checkoutInternal(
+        user,
+        normalizedDto,
+        key,
+        uploaded,
+        requestId,
+        () => {
+          transactionCommitted = true;
+        },
+      );
       const proofWasAttached = order.paymentProofs.some(
         (proof) => proof.cloudinaryPublicId === uploaded.cloudinaryPublicId,
       );
       if (!proofWasAttached) {
-        await this.uploadsService.deleteImage(uploaded.cloudinaryPublicId).catch(() => undefined);
+        await this.deleteCheckoutUploadAfterFailure(uploaded.cloudinaryPublicId, context);
         return order;
       }
-      await this.notificationsService.createAdminNotification({
-        titleAr: 'New payment proof',
-        titleEn: 'New payment proof',
-        messageAr: `New DEPOSIT proof was uploaded for order ${order.orderNumber}`,
-        messageEn: `New DEPOSIT proof was uploaded for order ${order.orderNumber}`,
-        type: 'ORDER',
-        entityType: 'ORDER',
-        entityId: order.id,
-      });
+      try {
+        await this.notificationsService.createAdminNotification({
+          titleAr: 'New payment proof',
+          titleEn: 'New payment proof',
+          messageAr: `New DEPOSIT proof was uploaded for order ${order.orderNumber}`,
+          messageEn: `New DEPOSIT proof was uploaded for order ${order.orderNumber}`,
+          type: 'ORDER',
+          entityType: 'ORDER',
+          entityId: order.id,
+        });
+      } catch (error) {
+        logStructured('error', 'checkout_notification_failed', {
+          requestId,
+          userId: user.id,
+          errorCode: getPrismaErrorCode(error),
+          errorClass: getPrismaErrorName(error),
+        });
+      }
       return order;
     } catch (error) {
-      await this.uploadsService.deleteImage(uploaded.cloudinaryPublicId).catch(() => undefined);
+      if (!transactionCommitted) {
+        await this.deleteCheckoutUploadAfterFailure(uploaded.cloudinaryPublicId, context);
+      }
       throw error;
     }
   }
@@ -225,13 +284,18 @@ export class OrdersService {
     dto: CheckoutOrderDto,
     idempotencyKey?: string | null,
     depositProof?: UploadedPaymentProofSnapshot | null,
+    requestId?: string,
+    onTransactionCommitted?: () => void,
   ): Promise<OrderWithTimeline> {
     const normalizedDto = this.normalizeCheckoutDto(dto);
     const key = normalizeCheckoutIdempotencyKey(idempotencyKey ?? normalizedDto.idempotencyKey);
     const requestHash = hashCheckoutRequest(normalizedDto);
 
+    const context = { requestId, userId: user.id };
+    const transactionStartedAt = Date.now();
+    let order: OrderWithProofs;
     try {
-      const order = await this.prisma.$transaction(
+      order = await this.prisma.$transaction(
         async (tx) => {
           const existingKey = await tx.checkoutIdempotencyKey.findUnique({
             where: { userId_key: { userId: user.id, key } },
@@ -253,22 +317,28 @@ export class OrdersService {
             select: { id: true },
           });
 
-          const cart = await tx.cart.findUnique({
-            where: { userId: user.id },
-            include: {
-              items: {
-                include: { product: true, productVariant: true, customOrderRequest: true },
-                orderBy: { createdAt: 'asc' },
+          const cart = await this.runCheckoutStage('validate_checkout', context, async () => {
+            const cart = await tx.cart.findUnique({
+              where: { userId: user.id },
+              include: {
+                items: {
+                  include: { product: true, productVariant: true, customOrderRequest: true },
+                  orderBy: { createdAt: 'asc' },
+                },
               },
-            },
+            });
+
+            if (!cart || cart.items.length === 0) {
+              throw new BadRequestException('Cart is empty');
+            }
+
+            await assertCheckoutItems(tx, cart.items);
+            return cart;
           });
 
-          if (!cart || cart.items.length === 0) {
-            throw new BadRequestException('Cart is empty');
-          }
-
-          await assertCheckoutItems(tx, cart.items);
-          await this.reserveInventoryForItems(tx, cart.items);
+          await this.runCheckoutStage('update_stock', context, () =>
+            this.reserveInventoryForItems(tx, cart.items),
+          );
           const hasProductItems = cart.items.some(
             (item) => item.productId && item.productVariantId,
           );
@@ -353,7 +423,9 @@ export class OrdersService {
               data: { convertedOrderId: order.id },
             });
           }
-          await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+          await this.runCheckoutStage('clear_cart', context, () =>
+            tx.cartItem.deleteMany({ where: { cartId: cart.id } }),
+          );
           await tx.auditLog.create({
             data: {
               actorUserId: user.id,
@@ -383,13 +455,21 @@ export class OrdersService {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
 
-      return this.attachTimeline(order);
     } catch (error) {
-      if (this.isUniqueIdempotencyConflict(error)) {
+      if (this.isCheckoutIdempotencyConflict(error)) {
         return this.replayCheckout(user.id, key, requestHash);
       }
+      this.logCheckoutStageFailure(
+        'create_order_transaction',
+        context,
+        transactionStartedAt,
+        error,
+      );
       throw error;
     }
+
+    onTransactionCommitted?.();
+    return this.attachTimeline(order);
   }
 
   private checkoutItemBaseLineAmount(item: CheckoutCartItem): number {
@@ -1223,8 +1303,73 @@ export class OrdersService {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  private isUniqueIdempotencyConflict(error: unknown): boolean {
-    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+  private isCheckoutIdempotencyConflict(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+      return false;
+    }
+
+    const target = error.meta?.target;
+    const fields = Array.isArray(target)
+      ? target.filter((field): field is string => typeof field === 'string')
+      : [];
+    if (fields.length > 0) {
+      const normalizedFields = fields.map((field) => field.replaceAll('"', '').toLowerCase());
+      return (
+        normalizedFields.includes('key') &&
+        (normalizedFields.includes('user_id') || normalizedFields.includes('userid'))
+      );
+    }
+
+    return (
+      typeof target === 'string' &&
+      target.toLowerCase().includes('uq_checkout_idempotency_user_key')
+    );
+  }
+
+  private async runCheckoutStage<T>(
+    stage: CheckoutStage,
+    context: CheckoutLogContext,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const startedAt = Date.now();
+    try {
+      return await operation();
+    } catch (error) {
+      this.logCheckoutStageFailure(stage, context, startedAt, error);
+      throw error;
+    }
+  }
+
+  private logCheckoutStageFailure(
+    stage: CheckoutStage,
+    context: CheckoutLogContext,
+    startedAt: number,
+    error: unknown,
+  ): void {
+    logStructured('error', 'checkout_stage_failed', {
+      requestId: context.requestId,
+      userId: context.userId,
+      stage,
+      durationMs: Date.now() - startedAt,
+      errorCode: getPrismaErrorCode(error),
+      errorClass: getPrismaErrorName(error),
+    });
+  }
+
+  private async deleteCheckoutUploadAfterFailure(
+    publicId: string,
+    context: CheckoutLogContext,
+  ): Promise<void> {
+    try {
+      await this.uploadsService.deleteImage(publicId);
+    } catch (error) {
+      logStructured('error', 'checkout_payment_proof_cleanup_failed', {
+        requestId: context.requestId,
+        userId: context.userId,
+        errorCode: getPrismaErrorCode(error),
+        errorClass: getPrismaErrorName(error),
+      });
+    }
   }
 
   private async createOrderNumber(tx: Prisma.TransactionClient): Promise<string> {
