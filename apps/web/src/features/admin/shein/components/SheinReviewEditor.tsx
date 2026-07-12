@@ -212,7 +212,9 @@ export function SheinReviewEditor({
         {isManualFallback || (shouldShowManualNotice(item) && !hasExtractedData) ? (
           <div className="admin-shein-manual-box">
             <strong>Manual review</strong>
-            <p>{sanitizeSheinAdminMessage(item.errorMessage || MANUAL_REVIEW_MESSAGE)}</p>
+            <p data-no-admin-translate>
+              {sanitizeSheinAdminMessage(item.errorMessage || MANUAL_REVIEW_MESSAGE)}
+            </p>
             <small>Review required data and click Publish Product when complete</small>
           </div>
         ) : null}
@@ -230,8 +232,9 @@ export function SheinReviewEditor({
           <div className="admin-shein-error-box">
             <strong>Category not found in database</strong>
             <p>
-              An active category with slug {selectedCategory?.slug} must exist before publishing to
-              link the product to the store
+              An active category with slug{' '}
+              <span data-no-admin-translate>{selectedCategory?.slug}</span> must exist before
+              publishing to link the product to the store
             </p>
           </div>
         ) : null}
@@ -287,7 +290,11 @@ function SheinEditorActions({
       >
         Open SHEIN link in {countryLabel(marketplace, payload.country)} with SAR
       </a>
-      {item.createdProduct ? <Badge>Product created: {item.createdProduct.nameAr}</Badge> : null}
+      {item.createdProduct ? (
+        <Badge>
+          Product created: <span data-no-admin-translate>{item.createdProduct.nameAr}</span>
+        </Badge>
+      ) : null}
     </div>
   );
 }

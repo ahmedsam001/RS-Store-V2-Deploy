@@ -926,11 +926,13 @@ export function AdminSheinBatchesPage() {
                           {STATUS_LABELS[history.toStatus]}
                         </p>
                         {history.note ? (
-                          <p className="text-sm text-muted-foreground">{history.note}</p>
+                          <p data-no-admin-translate className="text-sm text-muted-foreground">
+                            {history.note}
+                          </p>
                         ) : null}
                         {history.changedBy ? (
                           <p className="text-xs font-semibold text-muted-foreground">
-                            By {history.changedBy.name}
+                            By <span data-no-admin-translate>{history.changedBy.name}</span>
                           </p>
                         ) : null}
                       </div>

@@ -58,7 +58,7 @@ export function SheinEditorForm({
             {categories
               .filter((category) => category.isActive)
               .map((category) => (
-                <option key={category.id} value={category.id}>
+                <option key={category.id} value={category.id} data-no-admin-translate>
                   {category.nameEn || category.nameAr}
                 </option>
               ))}

@@ -57,18 +57,18 @@ function SheinImportHistoryItem({
       className={`admin-shein-history-item ${isSelected ? 'is-active' : ''}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <strong className="truncate">
+        <strong data-no-admin-translate className="truncate">
           {item.editedPayload?.nameAr ??
             item.previewPayload?.nameAr ??
             shortSheinUrl(item.sourceUrl)}
         </strong>
         <Badge>{formatSheinStatus(item.status) ?? item.status}</Badge>
       </div>
-      <p className="truncate text-sm text-muted-foreground" dir="ltr">
+      <p data-no-admin-translate className="truncate text-sm text-muted-foreground" dir="ltr">
         {item.sourceUrl}
       </p>
       {shouldShowManualNotice(item) ? (
-        <p className="mt-1 text-sm text-amber-700">
+        <p data-no-admin-translate className="mt-1 text-sm text-amber-700">
           {sanitizeSheinAdminMessage(item.errorMessage || MANUAL_REVIEW_MESSAGE)}
         </p>
       ) : null}

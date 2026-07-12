@@ -515,6 +515,7 @@ export function AdminFlashSalesPage() {
                                 onChange={() => !isAttached && toggleProductSelection(product.id)}
                               />
                               <ImageWithFallback
+                                data-no-admin-translate
                                 src={primaryImage?.secureUrl}
                                 alt={product.nameAr}
                                 className="h-10 w-10 rounded-lg object-cover"

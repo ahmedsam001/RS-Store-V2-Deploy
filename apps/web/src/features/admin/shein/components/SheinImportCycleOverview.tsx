@@ -52,7 +52,11 @@ export function SheinImportCycleOverview({
             {selected ? (formatSheinStatus(selected.status) ?? selected.status) : 'None'}
           </strong>
           <small>
-            {selected?.createdProduct ? selected.createdProduct.nameAr : 'Select import to review'}
+            {selected?.createdProduct ? (
+              <span data-no-admin-translate>{selected.createdProduct.nameAr}</span>
+            ) : (
+              'Select import to review'
+            )}
           </small>
         </div>
       </div>

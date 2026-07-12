@@ -375,7 +375,10 @@ function CustomOrderAdminCard({
             <Info label="Quantity" value={String(item.quantity)} />
           </div>
           {item.customerNote ? (
-            <p className="rounded-xl bg-muted p-3 text-sm leading-6 text-muted-foreground">
+            <p
+              data-no-admin-translate
+              className="rounded-xl bg-muted p-3 text-sm leading-6 text-muted-foreground"
+            >
               {item.customerNote}
             </p>
           ) : null}

@@ -261,6 +261,7 @@ function ProductCard({
       title={product.nameAr}
       media={
         <ImageWithFallback
+          data-no-admin-translate
           src={primaryImage?.secureUrl}
           alt={product.nameAr}
           className="h-16 w-16 rounded-xl object-cover"
@@ -318,7 +319,7 @@ function FilterPanel({
       >
         <option value="">All categories</option>
         {categories.map((c) => (
-          <option key={c.id} value={c.id}>
+          <option key={c.id} value={c.id} data-no-admin-translate>
             {c.nameAr}
           </option>
         ))}

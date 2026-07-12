@@ -144,6 +144,7 @@ export function ImageUploadGallery({
           <div key={`${image.url}-${index}`} className="admin-shein-image-card">
             <div className="admin-shein-image-frame">
               <ImageWithFallback
+                data-no-admin-translate
                 src={image.url}
                 alt={altText || 'Product image'}
                 className="h-full w-full object-cover"

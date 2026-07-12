@@ -28,4 +28,26 @@ describe('ImageWithFallback', () => {
     const img = document.querySelector('img:not(.rs-image-with-fallback-logo)');
     expect(img).toHaveAttribute('src', 'https://example.com/image.jpg');
   });
+
+  it('propagates the admin no-translate marker to real and fallback images', () => {
+    const view = renderWithRouter(
+      <ImageWithFallback
+        data-no-admin-translate
+        src="https://example.com/image.jpg"
+        alt="Active"
+        fallbackVariant="subcategory"
+      />,
+    );
+    expect(document.querySelector('img:not(.rs-image-with-fallback-logo)')).toHaveAttribute(
+      'data-no-admin-translate',
+    );
+
+    view.unmount();
+    renderWithRouter(
+      <ImageWithFallback data-no-admin-translate fallbackVariant="subcategory" />,
+    );
+    expect(document.querySelector('.rs-image-with-fallback-subcategory')).toHaveAttribute(
+      'data-no-admin-translate',
+    );
+  });
 });

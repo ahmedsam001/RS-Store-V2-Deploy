@@ -176,12 +176,14 @@ function CategoryWithSubcategories({
                 className="h-9 w-9 rounded-lg object-cover"
                 fallbackVariant="category"
               />
-              <span className="font-extrabold">{category.nameAr}</span>
+              <span data-no-admin-translate className="font-extrabold">
+                {category.nameAr}
+              </span>
               <AdminStatusBadge tone={category.isActive ? 'success' : 'neutral'}>
                 {category.isActive ? 'Active' : 'Hidden'}
               </AdminStatusBadge>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground" dir="ltr">
+            <p data-no-admin-translate className="mt-1 text-sm text-muted-foreground" dir="ltr">
               {category.slug}
             </p>
           </div>
@@ -384,13 +386,15 @@ function SubcategoryRow({
             className="h-8 w-8 rounded-lg object-cover"
             fallbackVariant="subcategory"
           />
-          <span className="font-bold">{subcategory.nameAr}</span>
+          <span data-no-admin-translate className="font-bold">
+            {subcategory.nameAr}
+          </span>
           <AdminStatusBadge tone={subcategory.isActive ? 'success' : 'neutral'}>
             {subcategory.isActive ? 'Active' : 'Hidden'}
           </AdminStatusBadge>
         </div>
         <p className="text-xs text-muted-foreground" dir="ltr">
-          {subcategory.slug} • Sort: {subcategory.sortOrder}
+          <span data-no-admin-translate>{subcategory.slug}</span> • Sort: {subcategory.sortOrder}
         </p>
       </div>
       <div className="flex gap-1">

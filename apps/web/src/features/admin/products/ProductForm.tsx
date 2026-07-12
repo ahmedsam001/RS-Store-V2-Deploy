@@ -105,7 +105,7 @@ export function ProductForm({ categories, onSubmit, submitLabel, defaultValues, 
           >
             <option value="">Select category</option>
             {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
+              <option key={cat.id} value={cat.id} data-no-admin-translate>
                 {cat.nameEn || cat.nameAr}
               </option>
             ))}

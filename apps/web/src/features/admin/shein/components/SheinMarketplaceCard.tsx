@@ -57,7 +57,7 @@ export function SheinMarketplaceCard({ marketplace, onSaved }: SheinMarketplaceC
             <span>Country</span>
             <Select value={countryCode} onChange={(event) => setCountryCode(event.target.value)}>
               {marketplace.countries?.map((country) => (
-                <option key={country.code} value={country.code}>
+                <option key={country.code} value={country.code} data-no-admin-translate>
                   {country.nameEn} {country.code}
                 </option>
               ))}

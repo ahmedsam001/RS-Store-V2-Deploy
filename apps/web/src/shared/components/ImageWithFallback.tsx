@@ -8,6 +8,7 @@ type ImageWithFallbackProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> &
   fallbackVariant?: FallbackVariant;
   fallbackLabel?: string;
   showFallbackLabel?: boolean;
+  'data-no-admin-translate'?: boolean | '';
 };
 
 const fallbackLabels: Record<FallbackVariant, string> = {
@@ -29,6 +30,7 @@ export function ImageWithFallback({
   style,
   title,
   width,
+  'data-no-admin-translate': noAdminTranslate,
   ...props
 }: ImageWithFallbackProps) {
   const [hasError, setHasError] = useState(false);
@@ -42,6 +44,7 @@ export function ImageWithFallback({
     return (
       <img
         {...props}
+        data-no-admin-translate={noAdminTranslate}
         src={normalizedSrc}
         alt={alt}
         className={className ? `rs-image-real ${className}` : 'rs-image-real'}
@@ -71,6 +74,7 @@ export function ImageWithFallback({
 
   return (
     <span
+      data-no-admin-translate={noAdminTranslate}
       className={`rs-image-with-fallback rs-image-with-fallback-${fallbackVariant}${className ? ` ${className}` : ''}`}
       style={fallbackStyle}
       title={title ?? label}
