@@ -4,6 +4,7 @@ import { lazyNamed, withRouteLoading } from '@/routes/lazy-route';
 import { PATHS, ROUTES } from '@/shared/constants/routes';
 
 import { StorefrontNavbar } from '@/features/catalog/components/StorefrontNavbar';
+import { CatalogRouteSkeleton } from '@/features/catalog/components/skeletons/CatalogRouteSkeleton';
 import { CustomerProfilePage } from '@/features/auth/pages/CustomerProfilePage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 
@@ -49,7 +50,7 @@ export const storefrontRoutes: RouteObject[] = [
     children: [
       {
         index: true,
-        element: withRouteLoading(<CatalogPage />),
+        element: withRouteLoading(<CatalogPage />, <CatalogRouteSkeleton />),
       },
       {
         path: ROUTES.productDetails,
@@ -57,7 +58,7 @@ export const storefrontRoutes: RouteObject[] = [
       },
       {
         path: ROUTES.categoryDetails,
-        element: withRouteLoading(<CatalogPage />),
+        element: withRouteLoading(<CatalogPage />, <CatalogRouteSkeleton />),
       },
       {
         path: ROUTES.flashSales,

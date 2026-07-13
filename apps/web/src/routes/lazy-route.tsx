@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType, type ReactElement } from 'react';
+import { lazy, Suspense, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import { RouteLoading } from '@/routes/RouteLoading';
 
 export function lazyNamed<TProps extends object>(
@@ -15,6 +15,6 @@ export function lazyNamed<TProps extends object>(
   });
 }
 
-export function withRouteLoading(element: ReactElement) {
-  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
+export function withRouteLoading(element: ReactElement, fallback: ReactNode = <RouteLoading />) {
+  return <Suspense fallback={fallback}>{element}</Suspense>;
 }

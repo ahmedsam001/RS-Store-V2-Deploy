@@ -387,7 +387,7 @@ function isStorefrontSettings(value: unknown): value is StorefrontSettings {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function StorefrontFooter({
+export function StorefrontFooter({
   settings,
   isCustomer,
 }: {

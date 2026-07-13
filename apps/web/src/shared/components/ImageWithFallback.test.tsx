@@ -4,12 +4,21 @@ import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 
 describe('ImageWithFallback', () => {
   it('shows fallback when src is empty', () => {
-    renderWithRouter(<ImageWithFallback src="" fallbackVariant="subcategory" />);
+    renderWithRouter(
+      <ImageWithFallback
+        src=""
+        fallbackVariant="subcategory"
+        width={600}
+        height={750}
+      />,
+    );
     expect(document.querySelector('img.rs-image-with-fallback-logo')).toBeInTheDocument();
-    expect(document.querySelector('.rs-image-with-fallback-subcategory')).toHaveAttribute(
+    const fallback = document.querySelector('.rs-image-with-fallback-subcategory');
+    expect(fallback).toHaveAttribute(
       'title',
       'Subcategory image coming soon',
     );
+    expect(fallback).toHaveStyle({ width: '600px', height: '750px' });
   });
 
   it('shows fallback when src is undefined', () => {

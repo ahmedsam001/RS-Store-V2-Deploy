@@ -2664,7 +2664,7 @@
 
 .product-card__title {
   display: -webkit-box;
-  min-height: 0;
+  min-height: var(--product-card-title-min-height);
   margin-top: 0.55rem;
   overflow: hidden;
   color: #211812;
@@ -3223,6 +3223,11 @@
 
 .rs-catalog-main {
   padding-top: 0.45rem;
+}
+
+.rs-catalog-pagination-slot {
+  min-height: 4.25rem;
+  margin-top: 1rem;
 }
 
 /* Creative compact footer */

@@ -191,6 +191,17 @@ describe('ProductCard discount display', () => {
 });
 
 describe('ProductCard image loading priority', () => {
+  it('reserves the product image dimensions before the asset loads', () => {
+    const product = createProductWithImage('stable-image-product');
+    const view = renderWithRouter(<ProductCard product={product} />);
+
+    const image = screen.getByRole('img');
+    expect(image).toHaveAttribute('width', '600');
+    expect(image).toHaveAttribute('height', '750');
+    expect(image.closest('.rs-product-image-wrap')).not.toBeNull();
+    expect(view.container.querySelector('.product-card__media')).not.toBeNull();
+  });
+
   it('gives only the first product high fetch priority', () => {
     const product = createProductWithImage('priority-product');
     renderWithRouter(<ProductCard product={product} index={0} />);
