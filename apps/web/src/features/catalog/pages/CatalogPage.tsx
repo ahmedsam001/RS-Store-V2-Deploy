@@ -22,7 +22,6 @@ import { ProductGrid } from '@/features/catalog/components/ProductGrid';
 import { FlashSaleHomeStrip } from '@/features/catalog/components/FlashSaleHomeStrip';
 import { SubcategoryNavSkeleton } from '@/features/catalog/components/skeletons/SubcategoryNavSkeleton';
 import { SearchResultSkeleton } from '@/features/catalog/components/skeletons/SearchResultSkeleton';
-import { FlashSaleHomeStripSkeleton } from '@/features/catalog/components/skeletons/FlashSaleHomeStripSkeleton';
 import { localizeKnownLabel, localizeProductText, useI18n } from '@/shared/i18n';
 
 export function CatalogPage() {
@@ -39,7 +38,6 @@ export function CatalogPage() {
   const [error, setError] = useState<string | null>(null);
   const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [isSubCategoriesLoading, setIsSubCategoriesLoading] = useState(true);
-  const [isFlashSalesLoading, setIsFlashSalesLoading] = useState(isHomePage);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -77,7 +75,6 @@ export function CatalogPage() {
       setFeaturedSubCategories([]);
       setHomeFlashSales([]);
       setIsSubCategoriesLoading(true);
-      setIsFlashSalesLoading(true);
 
       void getFeaturedSubCategories(abortController.signal)
         .then((subCategoryItems) => {
@@ -108,18 +105,12 @@ export function CatalogPage() {
           if (!abortController.signal.aborted) {
             setHomeFlashSales([]);
           }
-        })
-        .finally(() => {
-          if (!abortController.signal.aborted) {
-            setIsFlashSalesLoading(false);
-          }
         });
     } else if (categorySlug) {
       setFeaturedSubCategories([]);
       setHomeFlashSales([]);
       setActiveCategory(null);
       setIsSubCategoriesLoading(true);
-      setIsFlashSalesLoading(false);
 
       void getCatalogCategory(categorySlug, abortController.signal)
         .then((category) => {
@@ -230,8 +221,7 @@ export function CatalogPage() {
       </section>
 
       <div className="rs-container rs-catalog-main">
-        {isHomePage && isFlashSalesLoading ? <FlashSaleHomeStripSkeleton /> : null}
-        {isHomePage && !isFlashSalesLoading && homeFlashSales.length > 0 ? (
+        {isHomePage && homeFlashSales.length > 0 ? (
           <FlashSaleHomeStrip sales={homeFlashSales} />
         ) : null}
 

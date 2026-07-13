@@ -1,13 +1,8 @@
-import { useParams } from 'react-router-dom';
-import { FlashSaleHomeStripSkeleton } from '@/features/catalog/components/skeletons/FlashSaleHomeStripSkeleton';
 import { SearchResultSkeleton } from '@/features/catalog/components/skeletons/SearchResultSkeleton';
 import { SubcategoryNavSkeleton } from '@/features/catalog/components/skeletons/SubcategoryNavSkeleton';
 import { Skeleton } from '@/shared/components/ui/Skeleton';
 
 export function CatalogRouteSkeleton() {
-  const { categorySlug } = useParams();
-  const isHomePage = !categorySlug || categorySlug.toLowerCase() === 'all';
-
   return (
     <div className="rs-catalog-redesign">
       <section className="rs-storefront-showcase-wrap" aria-hidden="true">
@@ -17,7 +12,10 @@ export function CatalogRouteSkeleton() {
               <div className="mx-auto w-full max-w-xl space-y-3 px-4">
                 <Skeleton className="mx-auto h-3 w-28 rounded-full" />
                 <Skeleton className="mx-auto h-9 w-48 rounded-xl" />
-                <Skeleton className="mx-auto h-3 w-4/5 rounded-full" />
+                <div className="mx-auto flex h-12 w-4/5 flex-col justify-center gap-2">
+                  <Skeleton className="h-3 w-full rounded-full" />
+                  <Skeleton className="mx-auto h-3 w-4/5 rounded-full" />
+                </div>
               </div>
             </section>
             <div className="rs-subcategory-dock">
@@ -33,13 +31,16 @@ export function CatalogRouteSkeleton() {
       </section>
 
       <div className="rs-container rs-catalog-main">
-        {isHomePage ? <FlashSaleHomeStripSkeleton /> : null}
         <div className="rs-catalog-filter-shell" aria-hidden="true">
           <div className="rs-catalog-toolbar">
-            <Skeleton className="h-[2.35rem] w-full rounded-full" />
-            <Skeleton className="h-[2.35rem] w-20 rounded-full" />
-            <Skeleton className="h-[2.35rem] w-24 rounded-full" />
-            <Skeleton className="h-[2.35rem] w-full rounded-full" />
+            <div className="rs-search-control">
+              <Skeleton className="rs-search-input h-11 w-full rounded-full" />
+            </div>
+            <Skeleton className="rs-toolbar-action rs-search-submit h-[2.35rem] w-20 rounded-full" />
+            <Skeleton className="rs-toolbar-action rs-filter-toggle h-[2.35rem] w-24 rounded-full" />
+            <div className="rs-sort-control">
+              <Skeleton className="rs-sort-select h-11 w-full rounded-full" />
+            </div>
           </div>
         </div>
         <SearchResultSkeleton />

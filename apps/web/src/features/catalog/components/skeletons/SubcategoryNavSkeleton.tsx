@@ -3,7 +3,7 @@ import { Skeleton } from '@/shared/components/ui/Skeleton';
 export function SubcategoryNavSkeleton() {
   return (
     <div className="rs-subcategory-circle-nav" aria-hidden="true">
-      {Array.from({ length: 6 }, (_, index) => (
+      {Array.from({ length: 4 }, (_, index) => (
         <div key={index} className="rs-subcategory-circle-item">
           <div className="rs-subcategory-circle-link">
             <Skeleton className="rs-subcategory-circle-image rounded-full" />

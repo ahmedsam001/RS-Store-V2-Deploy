@@ -38,7 +38,9 @@ describe('catalog layout stability', () => {
 
     expect(view.container.querySelector('.rs-storefront-showcase-card')).not.toBeNull();
     expect(view.container.querySelector('.rs-catalog-filter-shell')).not.toBeNull();
+    expect(view.container.querySelector('.rs-search-submit')).not.toBeNull();
+    expect(view.container.querySelectorAll('.rs-subcategory-circle-item')).toHaveLength(4);
     expect(view.container.querySelectorAll('.rs-product-card')).toHaveLength(20);
-    expect(view.container.querySelector('.rs-flash-compact')).not.toBeNull();
+    expect(view.container.querySelector('.rs-flash-compact')).toBeNull();
   });
 });

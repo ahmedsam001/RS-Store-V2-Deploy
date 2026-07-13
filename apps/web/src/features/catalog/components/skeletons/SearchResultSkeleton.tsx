@@ -11,7 +11,7 @@ export function SearchResultSkeleton({ count = 20 }: { count?: number }) {
       <div className="rs-products-bar" aria-hidden="true">
         <div className="space-y-2">
           <Skeleton className="h-2.5 w-24 rounded-full" />
-          <Skeleton className="h-7 w-36 rounded-lg" />
+          <Skeleton className="h-9 w-36 rounded-lg" />
         </div>
         <Skeleton className="h-8 w-24 rounded-full" />
       </div>
