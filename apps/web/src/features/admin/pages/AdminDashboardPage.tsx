@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PATHS } from '@/shared/constants/routes';
 import {
@@ -34,6 +34,7 @@ import { useAuth } from '@/features/auth';
 import {
   formatAdminCurrency,
   formatAdminDateTime,
+  formatAdminNumber,
 } from '@/features/admin/utils/admin-format';
 import { useI18n, type Language } from '@/shared/i18n';
 
@@ -66,16 +67,27 @@ export function AdminDashboardPage() {
 
   const health = useMemo(() => {
     if (!data)
-      return { label: 'Loading', tone: 'neutral' as const, message: 'Loading store status' };
+      return {
+        label: 'Loading',
+        tone: 'neutral' as const,
+        message: 'Loading store status',
+        taskCount: null,
+      };
     const blockers =
       data.pendingPaymentProofsCount + data.failedSheinImportsCount + data.lowStockVariantsCount;
     if (blockers > 0)
       return {
         label: 'Needs attention',
         tone: 'warning' as const,
-        message: `${blockers} task${blockers > 1 ? 's' : ''} need review`,
+        message: 'Tasks need review',
+        taskCount: blockers,
       };
-    return { label: 'Healthy', tone: 'success' as const, message: 'All systems are stable' };
+    return {
+      label: 'Healthy',
+      tone: 'success' as const,
+      message: 'All systems are stable',
+      taskCount: null,
+    };
   }, [data]);
 
   if (error)
@@ -186,7 +198,11 @@ export function AdminDashboardPage() {
           <div className="space-y-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-black text-white ring-1 ring-white/15">
-                <span data-no-admin-translate>{health.message}</span>
+                <HealthMessage
+                  language={language}
+                  message={health.message}
+                  taskCount={health.taskCount}
+                />
               </span>
               <span data-no-admin-translate className="text-sm text-white/60" dir="auto">
                 {formatAdminDateTime(new Date(), language)}
@@ -232,8 +248,13 @@ export function AdminDashboardPage() {
             <HeroStat
               icon={CheckCircle2}
               label="System Status"
-              value={health.message}
-              protectValue
+              value={
+                <HealthMessage
+                  language={language}
+                  message={health.message}
+                  taskCount={health.taskCount}
+                />
+              }
             />
             <HeroStat
               icon={Bell}
@@ -519,12 +540,10 @@ function HeroStat({
   icon: Icon,
   label,
   value,
-  protectValue = false,
 }: {
   icon: LucideIcon;
   label: string;
-  value: string;
-  protectValue?: boolean;
+  value: ReactNode;
 }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/10 p-4">
@@ -534,15 +553,31 @@ function HeroStat({
         </div>
         <div>
           <p className="text-xs text-white/50">{label}</p>
-          <p
-            data-no-admin-translate={protectValue ? true : undefined}
-            className="text-sm font-bold text-white"
-          >
-            {value}
-          </p>
+          <p className="text-sm font-bold text-white">{value}</p>
         </div>
       </div>
     </div>
+  );
+}
+
+function HealthMessage({
+  language,
+  message,
+  taskCount,
+}: {
+  language: Language;
+  message: string;
+  taskCount: number | null;
+}) {
+  return (
+    <>
+      {taskCount === null ? null : (
+        <>
+          <span data-no-admin-translate>{formatAdminNumber(taskCount, language)}</span>{' '}
+        </>
+      )}
+      {message}
+    </>
   );
 }
 

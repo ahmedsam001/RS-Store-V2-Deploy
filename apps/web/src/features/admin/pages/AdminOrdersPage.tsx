@@ -1,4 +1,4 @@
-import { FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
@@ -22,9 +22,28 @@ import {
 } from '@/features/admin/components/AdminFeedback';
 import { AdminMobileDataCard, AdminMobileField } from '@/features/admin/components/AdminMobileList';
 import { AdminPagination } from '@/features/admin/components/AdminPagination';
-import { AdminEmpty, AdminLoading } from '@/features/admin/components/AdminState';
+import { AdminEmpty, AdminError, AdminLoading } from '@/features/admin/components/AdminState';
+import { translateAdminText } from '@/features/admin/i18n/admin-arabic';
+import {
+  ORDER_WORKFLOW_TABS,
+  buildOrderQuery,
+  buildOrderUrlSearchParams,
+  getAdminOrderNextAction,
+  getAdminOrderStatusPresentation,
+  getAdminPaymentStatusPresentation,
+  getOrderFiltersFromSearchParams,
+  hasActiveOrderFilters,
+  type AdminOrderFilters,
+  type OrderWorkflowTab,
+} from '@/features/admin/orders/admin-orders-presentation';
+import {
+  formatAdminCurrency,
+  formatAdminDateTime,
+  formatAdminNumber,
+} from '@/features/admin/utils/admin-format';
 import { useAuth } from '@/features/auth';
 import { PATHS } from '@/shared/constants/routes';
+import { useI18n, type Language } from '@/shared/i18n';
 
 const ITEM_TRANSITIONS: Record<string, string[]> = {
   PENDING: ['SHEIN', 'CANCELLED'],
@@ -45,52 +64,28 @@ const ORDER_TRANSITIONS: Record<string, string[]> = {
   CANCELLED: [],
 };
 
-type OrderWorkflowTab =
-  | 'READY_FOR_SHEIN_BATCH'
-  | 'IN_SHEIN_BATCH'
-  | 'WAITING_FINAL_PAYMENT'
-  | 'READY_TO_DELIVER'
-  | 'COMPLETED'
-  | 'CANCELLED';
-
-const ORDER_WORKFLOW_TABS: Array<{
-  key: OrderWorkflowTab;
-  label: string;
-  description: string;
-}> = [
-  {
-    key: 'READY_FOR_SHEIN_BATCH',
-    label: 'Ready For SHEIN Batch',
-    description: 'Deposit approved and ready to be grouped',
-  },
-  {
-    key: 'IN_SHEIN_BATCH',
-    label: 'In SHEIN Batch',
-    description: 'Already grouped and being tracked',
-  },
-  {
-    key: 'WAITING_FINAL_PAYMENT',
-    label: 'Waiting Final Payment',
-    description: 'Items arrived or final payment is under review',
-  },
-  {
-    key: 'READY_TO_DELIVER',
-    label: 'Ready To Deliver',
-    description: 'Fully paid and ready for handover',
-  },
-  { key: 'COMPLETED', label: 'Completed', description: 'Closed customer orders' },
-  { key: 'CANCELLED', label: 'Cancelled', description: 'Cancelled customer orders' },
-];
-
 export function AdminOrdersPage() {
   const { csrfToken } = useAuth();
+  const { language } = useI18n();
+  const ordersLoadErrorMessage =
+    language === 'ar' ? translateAdminText('Could not load orders').trim() : 'Could not load orders';
+  const summaryLoadErrorMessage =
+    language === 'ar'
+      ? translateAdminText('Could not load order summary').trim()
+      : 'Could not load order summary';
+  const ordersLoadErrorMessageRef = useRef(ordersLoadErrorMessage);
+  ordersLoadErrorMessageRef.current = ordersLoadErrorMessage;
   const [searchParams, setSearchParams] = useSearchParams();
   const [response, setResponse] = useState<AdminPaginated<AdminOrder> | null>(null);
   const [reports, setReports] = useState<AdminReports | null>(null);
   const [selected, setSelected] = useState<AdminOrder | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [filters, setFilters] = useState(() => getOrderFiltersFromSearchParams(searchParams));
+  const filters = useMemo(() => getOrderFiltersFromSearchParams(searchParams), [searchParams]);
+  const [searchDraft, setSearchDraft] = useState(filters.search);
   const [notice, setNotice] = useState<AdminNoticeState>(null);
+  const [loadError, setLoadError] = useState(false);
+  const requestSequence = useRef(0);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const orders = useMemo(() => response?.items ?? [], [response?.items]);
   const currentTab =
     ORDER_WORKFLOW_TABS.find((tab) => tab.key === filters.workflow) ?? ORDER_WORKFLOW_TABS[0];
@@ -100,16 +95,23 @@ export function AdminOrdersPage() {
   );
 
   async function load(next = filters) {
-    const orderResponse = await adminApi.ordersPage(buildOrderQuery(next));
-    setResponse(orderResponse);
-    if (orderResponse.items[0]) {
-      const stillExists = selected
-        ? orderResponse.items.some((order) => order.id === selected.id)
-        : false;
-      if (!selected || !stillExists) await selectOrder(orderResponse.items[0].id);
-    } else {
-      setSelected(null);
-      setDetailsOpen(false);
+    const requestId = ++requestSequence.current;
+    try {
+      const orderResponse = await adminApi.ordersPage(buildOrderQuery(next));
+      if (requestId !== requestSequence.current) return;
+      setResponse(orderResponse);
+      setLoadError(false);
+      setSelected((current) => {
+        if (current && !orderResponse.items.some((order) => order.id === current.id)) {
+          setDetailsOpen(false);
+          return null;
+        }
+        return current;
+      });
+    } catch {
+      if (requestId !== requestSequence.current) return;
+      setLoadError(true);
+      throw new Error('Could not load orders');
     }
   }
 
@@ -117,8 +119,18 @@ export function AdminOrdersPage() {
     setReports(await adminApi.reports());
   }
 
-  async function selectOrder(id: string) {
-    setSelected(await adminApi.order(id));
+  async function openOrderSummary(id: string) {
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    try {
+      setSelected(await adminApi.order(id));
+      setDetailsOpen(true);
+    } catch {
+      setNotice({
+        type: 'error',
+        message: summaryLoadErrorMessage,
+      });
+    }
   }
 
   async function run(action: () => Promise<unknown>, success: string) {
@@ -127,45 +139,61 @@ export function AdminOrdersPage() {
       setNotice({ type: 'success', message: success });
       await load();
       await loadBadgeCounts();
-      if (selected) await selectOrder(selected.id);
+      if (selected) setSelected(await adminApi.order(selected.id));
     } catch (error) {
       setNotice(toNotice(error));
     }
   }
 
-  function syncUrl(next: { search: string; workflow: OrderWorkflowTab; page: number }) {
+  function syncUrl(next: AdminOrderFilters) {
     setSearchParams(buildOrderUrlSearchParams(next));
   }
 
   async function submitFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const next = { ...filters, page: 1 };
-    setFilters(next);
+    const next = { ...filters, search: searchDraft.trim(), page: 1 };
     syncUrl(next);
     setDetailsOpen(false);
-    await load(next);
   }
 
   async function changeWorkflow(workflow: OrderWorkflowTab) {
     const next = { ...filters, workflow, page: 1 };
-    setFilters(next);
     syncUrl(next);
     setDetailsOpen(false);
-    await load(next);
   }
 
-  async function changePage(page: number) {
+  function changePage(page: number) {
     const next = { ...filters, page };
-    setFilters(next);
     syncUrl(next);
-    await load(next);
+  }
+
+  function clearFilters() {
+    setSearchDraft('');
+    setSearchParams(new URLSearchParams());
+    setDetailsOpen(false);
   }
 
   useEffect(() => {
-    load().catch((error) => setNotice(toNotice(error)));
-    loadBadgeCounts().catch((error) => setNotice(toNotice(error)));
+    setSearchDraft(filters.search);
+    setDetailsOpen(false);
+    load().catch(() =>
+      setNotice({ type: 'error', message: ordersLoadErrorMessageRef.current }),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.page, filters.search, filters.workflow]);
+
+  useEffect(() => {
+    loadBadgeCounts().catch(() => undefined);
   }, []);
+
+  if (loadError && !response) {
+    return (
+      <AdminError
+        message={ordersLoadErrorMessage}
+        onRetry={() => load().catch(() => undefined)}
+      />
+    );
+  }
   if (!response) return <AdminLoading />;
 
   return (
@@ -186,8 +214,8 @@ export function AdminOrdersPage() {
               variant="outline"
               type="button"
               onClick={() =>
-                Promise.all([load(), loadBadgeCounts()]).catch((error) =>
-                  setNotice(toNotice(error)),
+                Promise.all([load(), loadBadgeCounts()]).catch(() =>
+                  setNotice({ type: 'error', message: ordersLoadErrorMessage }),
                 )
               }
             >
@@ -198,7 +226,21 @@ export function AdminOrdersPage() {
       />
       <AdminFeedback notice={notice} />
 
-      <AdminCard title="Order Workflow" description="Choose the exact step you want to work on">
+      <AdminCard
+        title="Orders toolbar"
+        description="Search and choose the workflow step you want to review"
+        actions={
+          <span
+            aria-live="polite"
+            className="inline-flex items-center gap-1 text-sm font-black text-[#6f4a17]"
+          >
+            <span data-no-admin-translate>
+              {formatAdminNumber(response.meta.total, language)}
+            </span>
+            <span>Results</span>
+          </span>
+        }
+      >
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {ORDER_WORKFLOW_TABS.map((tab) => {
             const active = filters.workflow === tab.key;
@@ -206,7 +248,8 @@ export function AdminOrdersPage() {
               <button
                 key={tab.key}
                 type="button"
-                className={`rounded-2xl border p-4 text-left transition ${
+                aria-pressed={active}
+                className={`min-h-11 rounded-2xl border p-4 text-start transition ${
                   active
                     ? 'border-[#b98b2b] bg-[#fff7df] shadow-sm'
                     : 'border-[#eadfcb] bg-white hover:border-[#d8b85f] hover:bg-[#fffaf0]'
@@ -224,54 +267,87 @@ export function AdminOrdersPage() {
             );
           })}
         </div>
-      </AdminCard>
 
-      <AdminCard title={currentTab.label} description={currentTab.description}>
-        <AdminFilterBar onSubmit={submitFilters}>
+        <AdminFilterBar className="mt-4" onSubmit={submitFilters}>
+          <label className="sr-only" htmlFor="admin-orders-search">
+            Search orders
+          </label>
           <Input
-            value={filters.search}
-            onChange={(event) =>
-              setFilters((current) => ({ ...current, search: event.target.value }))
-            }
+            id="admin-orders-search"
+            aria-label="Search orders"
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
             placeholder="Search order number, customer name, phone, or email"
+            maxLength={120}
           />
           <Button type="submit">Search</Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!hasActiveOrderFilters(filters) && !searchDraft}
+            onClick={clearFilters}
+          >
+            Clear filters
+          </Button>
         </AdminFilterBar>
+        <p className="mt-3 text-sm font-bold text-muted-foreground">
+          {currentTab.label}: {currentTab.description}
+        </p>
       </AdminCard>
 
       <div className="grid gap-4">
         <AdminCard
           title="Orders"
-          description={`${response.meta.total} order in ${currentTab.label}`}
+          description="Orders in the selected workflow"
           contentClassName="grid gap-3"
         >
-          {orders.length === 0 ? <AdminEmpty message="No orders found in this step" /> : null}
+          {orders.length === 0 ? (
+            <AdminEmpty
+              message={
+                hasActiveOrderFilters(filters)
+                  ? 'No orders match the current filters'
+                  : 'No orders exist in this workflow yet'
+              }
+              action={
+                hasActiveOrderFilters(filters)
+                  ? { label: 'Clear filters', onClick: clearFilters }
+                  : undefined
+              }
+            />
+          ) : null}
+          {orders.length > 0 ? (
+            <div className="hidden gap-4 px-4 text-xs font-black uppercase tracking-wide text-muted-foreground md:grid md:grid-cols-[minmax(150px,1.1fr)_minmax(150px,1fr)_minmax(120px,0.7fr)_minmax(180px,1.1fr)_auto]">
+              <span>Order</span>
+              <span>Customer</span>
+              <span>Total</span>
+              <span>Status and next action</span>
+              <span>Actions</span>
+            </div>
+          ) : null}
           {orders.map((order) => (
             <OrderListCard
               key={order.id}
+              language={language}
               order={order}
               selected={selectedInList?.id === order.id}
-              onSelect={() =>
-                selectOrder(order.id)
-                  .then(() => setDetailsOpen(true))
-                  .catch((error) => setNotice(toNotice(error)))
-              }
+              onSelect={() => openOrderSummary(order.id)}
             />
           ))}
           <AdminPagination
             meta={response.meta}
-            onPageChange={(page) => changePage(page).catch((error) => setNotice(toNotice(error)))}
+            onPageChange={changePage}
           />
         </AdminCard>
       </div>
 
       {selected && detailsOpen ? (
         <AdminDetailsOverlay
-          title="Order details"
-          closeLabel="Close order details"
+          title="Order summary"
+          closeLabel="Close order summary"
+          returnFocusTo={returnFocusRef.current}
           onClose={() => setDetailsOpen(false)}
         >
-          <OrderDetails order={selected} csrfToken={csrfToken} run={run} />
+          <OrderDetails order={selected} csrfToken={csrfToken} language={language} run={run} />
         </AdminDetailsOverlay>
       ) : null}
     </div>
@@ -282,19 +358,73 @@ function AdminDetailsOverlay({
   title,
   closeLabel,
   onClose,
+  returnFocusTo,
   children,
 }: {
   title: string;
   closeLabel: string;
   onClose: () => void;
+  returnFocusTo: HTMLElement | null;
   children: ReactNode;
 }) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = Array.from(
+        drawerRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      returnFocusTo?.focus();
+    };
+  }, [returnFocusTo]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/40 p-3 sm:p-6" role="dialog" aria-modal="true">
-      <div className="mx-auto flex max-h-[calc(100vh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
+    <div className="fixed inset-0 z-50 bg-slate-950/40" role="presentation">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label={closeLabel}
+        onClick={onClose}
+      />
+      <aside
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-order-summary-title"
+        className="relative ms-auto flex h-full w-[min(94vw,760px)] flex-col overflow-hidden bg-white shadow-2xl"
+      >
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+          <h2 id="admin-order-summary-title" className="text-base font-semibold text-slate-900">
+            {title}
+          </h2>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             className="rounded-full border border-slate-200 px-3 py-1 text-lg font-semibold leading-none text-slate-600 hover:bg-slate-50"
@@ -304,66 +434,129 @@ function AdminDetailsOverlay({
           </button>
         </div>
         <div className="overflow-y-auto p-4">{children}</div>
-      </div>
+      </aside>
     </div>
   );
 }
 
-function OrderListCard({
+export function OrderListCard({
+  language,
   order,
   selected,
   onSelect,
 }: {
+  language: Language;
   order: AdminOrder;
   selected: boolean;
   onSelect: () => void;
 }) {
-  const action = getNextAction(order);
+  const action = getAdminOrderNextAction(order, language);
+  const orderStatus = getAdminOrderStatusPresentation(order.status, language);
+  const paymentStatus = getAdminPaymentStatusPresentation(order.paymentStatus, language);
+  const total = formatAdminCurrency(order.totalAmount, order.currency, language);
+  const created = formatAdminDateTime(order.createdAt, language);
+
   return (
-    <AdminMobileDataCard
-      title={order.orderNumber}
-      badge={<AdminStatusBadge value={order.paymentStatus}>{action.badge}</AdminStatusBadge>}
-      meta={
-        <span>
-          {order.customerNameSnapshot ?? '-'} ·{' '}
-          <span dir="ltr">{order.customerPhoneSnapshot ?? '-'}</span>
-        </span>
-      }
-      selected={selected}
-      onClick={onSelect}
-      ariaLabel={`Select order ${order.orderNumber}`}
-    >
-      <AdminMobileField label="Items" value={order.items?.length ?? 0} />
-      <AdminMobileField label="Total" value={formatMoney(order.totalAmount, order.currency)} />
-      <AdminMobileField label="Paid" value={formatMoney(getPaidAmount(order), order.currency)} />
-      <AdminMobileField
-        label="Remaining"
-        value={formatMoney(getRemainingAmount(order), order.currency)}
-      />
-      <AdminMobileField label="Next action" value={action.title} />
-      <div className="admin-mobile-field-full">
-        <CustomerWhatsappButton
-          phone={order.customerPhoneSnapshot}
-          customerName={order.customerNameSnapshot}
-          orderNumber={order.orderNumber}
-          orderStatus={order.status}
-          paymentStatus={order.paymentStatus}
-        />
+    <>
+      <div className="md:hidden">
+        <AdminMobileDataCard
+          title={order.orderNumber}
+          badge={
+            <span className="flex flex-wrap gap-1">
+              <AdminStatusBadge value={order.status} tone={orderStatus.tone}>
+                {orderStatus.label}
+              </AdminStatusBadge>
+              <AdminStatusBadge value={order.paymentStatus} tone={paymentStatus.tone}>
+                {paymentStatus.label}
+              </AdminStatusBadge>
+            </span>
+          }
+          meta={
+            <span>
+              {order.customerNameSnapshot ?? '-'} ·{' '}
+              <span dir="ltr">{order.customerPhoneSnapshot ?? '-'}</span>
+            </span>
+          }
+          selected={selected}
+          actions={
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" onClick={onSelect}>
+                Quick view
+              </Button>
+              <CustomerWhatsappButton
+                phone={order.customerPhoneSnapshot}
+                customerName={order.customerNameSnapshot}
+                orderNumber={order.orderNumber}
+                orderStatus={order.status}
+                paymentStatus={order.paymentStatus}
+              />
+            </div>
+          }
+        >
+          <AdminMobileField label="Items" value={formatAdminNumber(order.items?.length ?? 0, language)} />
+          <AdminMobileField label="Total" value={total} />
+          <AdminMobileField label="Next action" value={action.title} />
+          <AdminMobileField label="Created" value={created} />
+        </AdminMobileDataCard>
       </div>
-    </AdminMobileDataCard>
+
+      <article
+        className={`hidden gap-4 rounded-2xl border p-4 md:grid md:grid-cols-[minmax(150px,1.1fr)_minmax(150px,1fr)_minmax(120px,0.7fr)_minmax(180px,1.1fr)_auto] md:items-center ${
+          selected ? 'border-[#b98b2b] bg-[#fffaf0]' : 'border-[#eadfcb] bg-white'
+        }`}
+      >
+        <div className="min-w-0">
+          <strong data-no-admin-translate className="block truncate text-[#241611]">
+            {order.orderNumber}
+          </strong>
+          <span data-no-admin-translate className="mt-1 block text-xs text-muted-foreground" dir="auto">
+            {created}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <p data-no-admin-translate className="truncate text-sm font-bold text-[#241611]">
+            {order.customerNameSnapshot ?? '-'}
+          </p>
+          <p data-no-admin-translate className="truncate text-xs text-muted-foreground" dir="ltr">
+            {order.customerPhoneSnapshot ?? '-'}
+          </p>
+        </div>
+        <strong data-no-admin-translate className="text-sm text-[#241611]" dir="auto">
+          {total}
+        </strong>
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap gap-1">
+            <AdminStatusBadge value={order.status} tone={orderStatus.tone}>
+              {orderStatus.label}
+            </AdminStatusBadge>
+            <AdminStatusBadge value={order.paymentStatus} tone={paymentStatus.tone}>
+              {paymentStatus.label}
+            </AdminStatusBadge>
+          </div>
+          <p className="truncate text-xs font-black text-[#6f4a17]">{action.title}</p>
+        </div>
+        <Button type="button" size="sm" variant="outline" onClick={onSelect}>
+          Quick view
+        </Button>
+      </article>
+    </>
   );
 }
 
 function OrderDetails({
   order,
   csrfToken,
+  language,
   run,
 }: {
   order: AdminOrder;
   csrfToken: string | null;
+  language: Language;
   run: (action: () => Promise<unknown>, success: string) => Promise<void>;
 }) {
-  const action = getNextAction(order);
+  const action = getAdminOrderNextAction(order, language);
+  const orderStatus = getAdminOrderStatusPresentation(order.status, language);
+  const paymentStatus = getAdminPaymentStatusPresentation(order.paymentStatus, language);
   const batchCodes = getBatchCodes(order);
   return (
     <AdminCard
@@ -380,7 +573,9 @@ function OrderDetails({
             <h3 className="text-lg font-black text-[#241611]">{action.title}</h3>
             <p className="mt-1 text-sm font-bold text-muted-foreground">{action.description}</p>
           </div>
-          <AdminStatusBadge value={order.paymentStatus}>{action.badge}</AdminStatusBadge>
+          <AdminStatusBadge value={order.paymentStatus} tone={action.tone}>
+            {action.badge}
+          </AdminStatusBadge>
         </div>
         {action.href ? (
           <Button asChild size="sm" variant="outline">
@@ -401,19 +596,32 @@ function OrderDetails({
       <section className="grid gap-3 sm:grid-cols-2">
         <AdminInfoItem label="Customer" value={order.customerNameSnapshot ?? '-'} />
         <AdminInfoItem label="Phone" value={order.customerPhoneSnapshot ?? '-'} dir="ltr" />
-        <AdminInfoItem label="Order total" value={formatMoney(order.totalAmount, order.currency)} />
-        <AdminInfoItem label="Paid" value={formatMoney(getPaidAmount(order), order.currency)} />
+        <AdminInfoItem
+          label="Order total"
+          value={formatAdminCurrency(order.totalAmount, order.currency, language)}
+        />
+        <AdminInfoItem
+          label="Paid"
+          value={formatAdminCurrency(getPaidAmount(order), order.currency, language)}
+        />
         <AdminInfoItem
           label="Remaining"
-          value={formatMoney(getRemainingAmount(order), order.currency)}
+          value={formatAdminCurrency(getRemainingAmount(order), order.currency, language)}
         />
-        <AdminInfoItem label="Created" value={new Date(order.createdAt).toLocaleString()} />
+        <AdminInfoItem
+          label="Created"
+          value={formatAdminDateTime(order.createdAt, language)}
+        />
         <div className="sm:col-span-2">
           <AdminInfoItem label="Address" value={order.shippingAddressSnapshot ?? '-'} />
         </div>
         <div className="flex flex-wrap gap-2 sm:col-span-2">
-          <AdminStatusBadge value={order.status} />
-          <AdminStatusBadge value={order.paymentStatus} />
+          <AdminStatusBadge value={order.status} tone={orderStatus.tone}>
+            {orderStatus.label}
+          </AdminStatusBadge>
+          <AdminStatusBadge value={order.paymentStatus} tone={paymentStatus.tone}>
+            {paymentStatus.label}
+          </AdminStatusBadge>
           {batchCodes.map((batchCode) => (
             <AdminStatusBadge key={batchCode} value="ORDERED_FROM_SHEIN">
               {batchCode}
@@ -440,7 +648,8 @@ function OrderDetails({
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 {item.productVariantSizeSnapshot ?? '-'} · {item.productVariantColorSnapshot ?? '-'}{' '}
-                · Qty {item.quantity} · {formatMoney(item.lineTotalAmount, order.currency)}
+                · Qty {item.quantity} ·{' '}
+                {formatAdminCurrency(item.lineTotalAmount, order.currency, language)}
               </p>
               {item.sheinBatchItems?.length ? (
                 <p className="mt-2 text-xs font-black text-[#6f4a17]">
@@ -499,19 +708,19 @@ function OrderDetails({
         <div className="grid gap-3 sm:grid-cols-2">
           <AdminInfoItem
             label="Deposit required"
-            value={formatMoney(order.depositAmount, order.currency)}
+            value={formatAdminCurrency(order.depositAmount, order.currency, language)}
           />
           <AdminInfoItem
             label="Deposit paid"
-            value={formatMoney(order.depositPaidAmount, order.currency)}
+            value={formatAdminCurrency(order.depositPaidAmount, order.currency, language)}
           />
           <AdminInfoItem
             label="Final paid"
-            value={formatMoney(order.finalPaidAmount, order.currency)}
+            value={formatAdminCurrency(order.finalPaidAmount, order.currency, language)}
           />
           <AdminInfoItem
             label="Remaining"
-            value={formatMoney(getRemainingAmount(order), order.currency)}
+            value={formatAdminCurrency(getRemainingAmount(order), order.currency, language)}
           />
         </div>
         <p className="text-sm font-bold text-muted-foreground">
@@ -549,12 +758,12 @@ function OrderDetails({
         </div>
       </section>
 
-      <OrderTimeline order={order} />
+      <OrderTimeline language={language} order={order} />
     </AdminCard>
   );
 }
 
-function OrderTimeline({ order }: { order: AdminOrder }) {
+function OrderTimeline({ language, order }: { language: Language; order: AdminOrder }) {
   const timeline = order.timeline ?? [];
   return (
     <section className="space-y-3">
@@ -567,8 +776,8 @@ function OrderTimeline({ order }: { order: AdminOrder }) {
                 <strong data-no-admin-translate className="text-[#241611]">
                   {event.message}
                 </strong>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(event.createdAt).toLocaleString()}
+                <span data-no-admin-translate className="text-xs text-muted-foreground" dir="auto">
+                  {formatAdminDateTime(event.createdAt, language)}
                 </span>
               </div>
               {event.actorName ? (
@@ -581,95 +790,6 @@ function OrderTimeline({ order }: { order: AdminOrder }) {
         <AdminEmpty message="No timeline events yet" />
       )}
     </section>
-  );
-}
-
-function getNextAction(order: AdminOrder): {
-  title: string;
-  description: string;
-  badge: string;
-  href?: string;
-  cta?: string;
-} {
-  if (order.status === 'CANCELLED') {
-    return {
-      title: 'Cancelled order',
-      description: 'This order is closed and should not move through batching or delivery.',
-      badge: 'Cancelled',
-    };
-  }
-  if (order.status === 'COMPLETED') {
-    return {
-      title: 'Completed order',
-      description: 'The customer order is fully closed.',
-      badge: 'Completed',
-    };
-  }
-  if (order.paymentStatus === 'FINAL_PAYMENT_SUBMITTED') {
-    return {
-      title: 'Review final payment',
-      description: 'The customer uploaded final payment proof. Review it from Payments Review.',
-      badge: 'Needs payment review',
-      href: PATHS.adminPaymentsReview,
-      cta: 'Open Payments Review',
-    };
-  }
-  if (
-    order.paymentStatus === 'FINAL_PAYMENT_PENDING' &&
-    order.finalPaymentMethod === 'CASH_AT_SHOP'
-  ) {
-    return {
-      title: 'Review cash final payment',
-      description:
-        'The customer selected cash at store. Confirm the received amount from Payments Review.',
-      badge: 'Cash review',
-      href: PATHS.adminPaymentsReview,
-      cta: 'Open Payments Review',
-    };
-  }
-  if (
-    order.paymentStatus === 'FINAL_PAYMENT_PENDING' ||
-    order.paymentStatus === 'FINAL_PAYMENT_REJECTED'
-  ) {
-    return {
-      title: 'Waiting final payment',
-      description: 'The customer should pay the remaining amount before delivery.',
-      badge: 'Waiting final payment',
-    };
-  }
-  if (order.paymentStatus === 'PAID') {
-    return {
-      title: 'Ready to deliver',
-      description: 'The order is fully paid. Mark it completed after handover.',
-      badge: 'Ready to deliver',
-    };
-  }
-  if (hasActiveBatch(order)) {
-    return {
-      title: 'Track in SHEIN Batch',
-      description:
-        'This order is already inside a SHEIN batch. Track shipment progress from SHEIN Batches.',
-      badge: 'In batch',
-      href: PATHS.adminSheinBatches,
-      cta: 'Open SHEIN Batches',
-    };
-  }
-  return {
-    title: 'Add to SHEIN Batch',
-    description: 'Deposit is approved. Add this order or its products to the next SHEIN batch.',
-    badge: 'Ready for batch',
-    href: PATHS.adminSheinBatches,
-    cta: 'Open SHEIN Batches',
-  };
-}
-
-function hasActiveBatch(order: AdminOrder): boolean {
-  return Boolean(
-    order.items?.some((item) =>
-      item.sheinBatchItems?.some(
-        (tracking) => !['CANCELLED', 'DELIVERED'].includes(tracking.batch.status),
-      ),
-    ),
   );
 }
 
@@ -762,10 +882,6 @@ function labelStatus(status: string) {
   return labelBatchStatus(status);
 }
 
-function isOrderWorkflowTab(value: string | null): value is OrderWorkflowTab {
-  return ORDER_WORKFLOW_TABS.some((tab) => tab.key === value);
-}
-
 function getOrderWorkflowBadgeCount(
   reports: AdminReports | null,
   workflow: OrderWorkflowTab,
@@ -780,43 +896,4 @@ function getOrderWorkflowBadgeCount(
     CANCELLED: reports.orders.cancelled,
   };
   return map[workflow];
-}
-
-function getOrderFiltersFromSearchParams(params: URLSearchParams): {
-  search: string;
-  workflow: OrderWorkflowTab;
-  page: number;
-} {
-  const workflow = isOrderWorkflowTab(params.get('workflow'))
-    ? (params.get('workflow') as OrderWorkflowTab)
-    : 'READY_FOR_SHEIN_BATCH';
-  const pageValue = Number(params.get('page') ?? '1');
-  return {
-    search: params.get('search') ?? '',
-    workflow,
-    page: Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1,
-  };
-}
-
-function buildOrderUrlSearchParams(filters: {
-  search: string;
-  workflow: OrderWorkflowTab;
-  page: number;
-}) {
-  const params = new URLSearchParams({ workflow: filters.workflow });
-  if (filters.search.trim()) params.set('search', filters.search.trim());
-  if (filters.page > 1) params.set('page', String(filters.page));
-  return params;
-}
-
-function buildOrderQuery(filters: { search: string; workflow: OrderWorkflowTab; page: number }) {
-  const params = new URLSearchParams({ page: String(filters.page), workflow: filters.workflow });
-  if (filters.search.trim()) params.set('search', filters.search.trim());
-  return `&${params.toString()}`;
-}
-
-function formatMoney(amount: string | number | undefined, currency: string): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(
-    Number(amount ?? 0) / 100,
-  );
 }

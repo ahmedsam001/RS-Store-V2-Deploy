@@ -10,6 +10,25 @@ import type { Language } from "@/shared/i18n";
  */
 export const ADMIN_ARABIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   Dashboard: "لوحة التحكم",
+  "Tasks need review": "مهام تحتاج مراجعة",
+  "Orders toolbar": "أدوات الطلبات",
+  "Search and choose the workflow step you want to review":
+    "ابحث واختر مرحلة سير العمل التي تريد مراجعتها",
+  "Search orders": "البحث في الطلبات",
+  "No orders match the current filters": "لا توجد طلبات تطابق عوامل التصفية الحالية",
+  "No orders exist in this workflow yet": "لا توجد طلبات في مسار العمل هذا بعد",
+  "Quick view": "عرض سريع",
+  "Order summary": "ملخص الطلب",
+  "Status and next action": "الحالة والإجراء التالي",
+  "Close order summary": "إغلاق ملخص الطلب",
+  "Unknown order status": "حالة طلب غير معروفة",
+  "Unknown payment status": "حالة دفع غير معروفة",
+  "Review order details": "مراجعة تفاصيل الطلب",
+  "The current status does not identify a safe next action.":
+    "الحالة الحالية لا تحدد إجراءً تاليًا آمنًا.",
+  "Review required": "تحتاج إلى مراجعة",
+  "Could not load orders": "تعذر تحميل الطلبات",
+  "Could not load order summary": "تعذر تحميل ملخص الطلب",
   "Admin navigation": "تنقل الإدارة",
   Overview: "نظرة عامة",
   Products: "المنتجات",
@@ -204,6 +223,7 @@ export const ADMIN_ARABIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   of: "من",
   Showing: "عرض",
   results: "نتائج",
+  "Orders in the selected workflow": "الطلبات في المرحلة المحددة",
   Name: "الاسم",
   Title: "العنوان",
   Type: "النوع",
