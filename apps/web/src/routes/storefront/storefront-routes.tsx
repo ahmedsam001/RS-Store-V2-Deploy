@@ -5,6 +5,7 @@ import { PATHS, ROUTES } from '@/shared/constants/routes';
 
 import { StorefrontNavbar } from '@/features/catalog/components/StorefrontNavbar';
 import { CatalogRouteSkeleton } from '@/features/catalog/components/skeletons/CatalogRouteSkeleton';
+import { catalogRouteLoader } from '@/features/catalog/routes/catalog-route-loader';
 import { CustomerProfilePage } from '@/features/auth/pages/CustomerProfilePage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 
@@ -50,6 +51,7 @@ export const storefrontRoutes: RouteObject[] = [
     children: [
       {
         index: true,
+        loader: catalogRouteLoader,
         element: withRouteLoading(<CatalogPage />, <CatalogRouteSkeleton />),
       },
       {
@@ -58,6 +60,7 @@ export const storefrontRoutes: RouteObject[] = [
       },
       {
         path: ROUTES.categoryDetails,
+        loader: catalogRouteLoader,
         element: withRouteLoading(<CatalogPage />, <CatalogRouteSkeleton />),
       },
       {

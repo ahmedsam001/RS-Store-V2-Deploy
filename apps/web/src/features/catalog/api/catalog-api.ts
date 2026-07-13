@@ -69,7 +69,7 @@ function buildCatalogCategoriesPath(search?: string): string {
   return `/catalog/categories${suffix ? `?${suffix}` : ''}`;
 }
 
-function buildCatalogProductsPath(query: CatalogProductsQuery): string {
+export function buildCatalogProductsPath(query: CatalogProductsQuery): string {
   const params = new URLSearchParams();
   if (query.page) params.set('page', String(query.page));
   if (query.limit) params.set('limit', String(query.limit));

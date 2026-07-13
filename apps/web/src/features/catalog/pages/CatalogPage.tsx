@@ -3,10 +3,13 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useDocumentMetadata } from '@/shared/seo/use-document-metadata';
 import {
   getCatalogCategory,
-  getCatalogProducts,
   getFeaturedSubCategories,
   getActiveFlashSales,
 } from '@/features/catalog/api/catalog-api';
+import {
+  getCatalogProductsRequest,
+  releaseCatalogProductsRequest,
+} from '@/features/catalog/api/catalog-products-request';
 import type {
   CatalogCategory,
   CatalogProductsQuery,
@@ -22,6 +25,11 @@ import { ProductGrid } from '@/features/catalog/components/ProductGrid';
 import { FlashSaleHomeStrip } from '@/features/catalog/components/FlashSaleHomeStrip';
 import { SubcategoryNavSkeleton } from '@/features/catalog/components/skeletons/SubcategoryNavSkeleton';
 import { SearchResultSkeleton } from '@/features/catalog/components/skeletons/SearchResultSkeleton';
+import {
+  clearCatalogImagePreload,
+  syncCatalogImagePreload,
+} from '@/features/catalog/performance/catalog-image-preload';
+import { parseCatalogProductsQuery } from '@/features/catalog/utils/catalog-query';
 import { localizeKnownLabel, localizeProductText, useI18n } from '@/shared/i18n';
 
 export function CatalogPage() {
@@ -29,7 +37,10 @@ export function CatalogPage() {
   const { categorySlug } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const query = useMemo(() => parseQuery(searchParams, categorySlug), [categorySlug, searchParams]);
+  const query = useMemo(
+    () => parseCatalogProductsQuery(searchParams, categorySlug),
+    [categorySlug, searchParams],
+  );
   const isHomePage = !categorySlug || categorySlug.toLowerCase() === 'all';
   const [featuredSubCategories, setFeaturedSubCategories] = useState<FeaturedSubCategory[]>([]);
   const [homeFlashSales, setHomeFlashSales] = useState<CatalogFlashSale[]>([]);
@@ -41,6 +52,7 @@ export function CatalogPage() {
 
   useEffect(() => {
     const abortController = new AbortController();
+    const productsRequest = getCatalogProductsRequest(query, abortController.signal);
 
     async function loadProducts() {
       try {
@@ -48,15 +60,18 @@ export function CatalogPage() {
         setError(null);
         setProducts(null);
 
-        const productItems = await getCatalogProducts(query, abortController.signal);
+        const productItems = await productsRequest.promise;
         if (!abortController.signal.aborted) {
+          syncCatalogImagePreload(productItems.items[0], productsRequest.key);
           setProducts(productItems);
         }
       } catch (caughtError) {
         if (!abortController.signal.aborted) {
+          clearCatalogImagePreload(productsRequest.key);
           setError(caughtError instanceof Error ? caughtError.message : t('catalog.emptyMessage'));
         }
       } finally {
+        releaseCatalogProductsRequest(productsRequest);
         if (!abortController.signal.aborted) {
           setIsProductsLoading(false);
         }
@@ -64,7 +79,10 @@ export function CatalogPage() {
     }
 
     void loadProducts();
-    return () => abortController.abort();
+    return () => {
+      abortController.abort();
+      clearCatalogImagePreload(productsRequest.key);
+    };
   }, [query, t]);
 
   useEffect(() => {
@@ -287,19 +305,6 @@ function displayTitleFromSlug(slug?: string): string | undefined {
     .join(' ');
 }
 
-function parseQuery(params: URLSearchParams, categorySlug?: string): CatalogProductsQuery {
-  return {
-    categorySlug,
-    subCategorySlug: readString(params, 'subCategorySlug') ?? readString(params, 'subcategorySlug'),
-    page: readNumber(params, 'page', 1),
-    limit: readNumber(params, 'limit', 20),
-    search: readString(params, 'search'),
-    minPrice: readString(params, 'minPrice'),
-    maxPrice: readString(params, 'maxPrice'),
-    sort: readString(params, 'sort') as CatalogProductsQuery['sort'],
-  };
-}
-
 function buildSearchParams(query: CatalogProductsQuery): string {
   const params = new URLSearchParams();
   const entries: Array<[string, string | number | undefined]> = [
@@ -319,16 +324,6 @@ function buildSearchParams(query: CatalogProductsQuery): string {
   });
 
   return params.toString();
-}
-
-function readString(params: URLSearchParams, key: string): string | undefined {
-  const value = params.get(key);
-  return value && value.trim() ? value.trim() : undefined;
-}
-
-function readNumber(params: URLSearchParams, key: string, fallback: number): number {
-  const value = Number(params.get(key));
-  return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
 function buildCatalogStructuredData(): Record<string, unknown> {

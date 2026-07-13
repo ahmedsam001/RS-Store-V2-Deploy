@@ -6,6 +6,12 @@ import { CatalogProductCard } from '@/shared/types/CatalogTypes';
 import { formatPrice, getProductUrl } from '@/features/catalog/utils/format';
 import { CatalogLink } from '@/features/catalog/components/CatalogLink';
 import { ResponsiveImage } from '@/features/catalog/components/ResponsiveImage';
+import {
+  PRODUCT_CARD_IMAGE_HEIGHT,
+  PRODUCT_CARD_IMAGE_SIZES,
+  PRODUCT_CARD_IMAGE_WIDTH,
+  PRODUCT_CARD_IMAGE_WIDTHS,
+} from '@/features/catalog/components/product-card-image';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
 import { localizeKnownLabel, localizeProductText, useI18n } from '@/shared/i18n';
 
@@ -116,7 +122,6 @@ export const ProductCard = memo(function ProductCard({
   const { language, t } = useI18n();
   const hasPurchasableVariants = product.variantCount > 0;
   const isLcpImage = index === 0;
-  const isAboveFoldImage = index < 2;
   const productUrl = getProductUrl(product.slug);
   const priceDisplay = getProductPriceDisplay(product);
   const productName = localizeProductText(product.name, language);
@@ -146,20 +151,21 @@ export const ProductCard = memo(function ProductCard({
               src={product.primaryImage.url}
               alt={productAlt}
               className="rs-product-image"
-              widths={[280, 400, 520, 640]}
-              sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-              width={600}
-              height={750}
-              loading={isAboveFoldImage ? 'eager' : 'lazy'}
+              widths={[...PRODUCT_CARD_IMAGE_WIDTHS]}
+              sizes={PRODUCT_CARD_IMAGE_SIZES}
+              width={PRODUCT_CARD_IMAGE_WIDTH}
+              height={PRODUCT_CARD_IMAGE_HEIGHT}
+              loading={isLcpImage ? 'eager' : 'lazy'}
               fetchPriority={isLcpImage ? 'high' : undefined}
+              decoding={isLcpImage ? 'sync' : 'async'}
             />
           ) : (
             <ImageWithFallback
               src={null}
               alt={productName}
               className="rs-product-image"
-              width={600}
-              height={750}
+              width={PRODUCT_CARD_IMAGE_WIDTH}
+              height={PRODUCT_CARD_IMAGE_HEIGHT}
               fallbackVariant="product"
             />
           )}

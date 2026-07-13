@@ -1,5 +1,6 @@
 import { type ImgHTMLAttributes } from 'react';
 import { ImageWithFallback } from '@/shared/components/ImageWithFallback';
+import { buildResponsiveImageSources } from '@/features/catalog/components/responsive-image-sources';
 
 type ResponsiveImageProps = Omit<
   ImgHTMLAttributes<HTMLImageElement>,
@@ -15,6 +16,7 @@ type ResponsiveImageProps = Omit<
 
 export function ResponsiveImage({
   alt,
+  decoding = 'async',
   fallbackLabel,
   fallbackVariant = 'product',
   fetchPriority,
@@ -27,14 +29,7 @@ export function ResponsiveImage({
   width,
   ...props
 }: ResponsiveImageProps) {
-  const normalizedWidths = [...new Set(widths)].sort((first, second) => first - second);
-  const fallbackWidth = Number(
-    width ?? normalizedWidths[Math.floor(normalizedWidths.length / 2)] ?? 800,
-  );
-  const fallbackSrc = transformCloudinaryUrl(src, fallbackWidth);
-  const srcSet = normalizedWidths
-    .map((imageWidth) => `${transformCloudinaryUrl(src, imageWidth)} ${imageWidth}w`)
-    .join(', ');
+  const { src: fallbackSrc, srcSet } = buildResponsiveImageSources(src, widths, width);
 
   return (
     <ImageWithFallback
@@ -47,18 +42,10 @@ export function ResponsiveImage({
       height={height}
       loading={loading}
       fetchPriority={fetchPriority}
-      decoding="async"
+      decoding={decoding}
       fallbackVariant={fallbackVariant}
       fallbackLabel={fallbackLabel}
       showFallbackLabel={showFallbackLabel}
     />
   );
-}
-
-function transformCloudinaryUrl(src: string, width: number): string {
-  if (!src.includes('/upload/')) {
-    return src;
-  }
-
-  return src.replace('/upload/', `/upload/f_auto,q_auto,c_fill,w_${width}/`);
 }

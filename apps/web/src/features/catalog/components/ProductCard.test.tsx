@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { renderWithRouter, createMockProduct } from '@/test/test-utils';
 import { ProductCard } from '@/features/catalog/components/ProductCard';
+import { ProductGrid } from '@/features/catalog/components/ProductGrid';
 
 function LocationProbe() {
   const location = useLocation();
@@ -191,6 +192,23 @@ describe('ProductCard discount display', () => {
 });
 
 describe('ProductCard image loading priority', () => {
+  it('gives exactly one grid image eager loading and high priority', () => {
+    const products = [
+      createProductWithImage('first-product'),
+      createProductWithImage('second-product'),
+      createProductWithImage('third-product'),
+    ];
+    renderWithRouter(<ProductGrid products={products} />);
+
+    const images = screen.getAllByRole('img');
+    expect(images.filter((image) => image.getAttribute('loading') === 'eager')).toHaveLength(1);
+    expect(images.filter((image) => image.getAttribute('fetchpriority') === 'high')).toHaveLength(1);
+    expect(images.slice(1).every((image) => image.getAttribute('loading') === 'lazy')).toBe(true);
+    expect(images[0]).toHaveAttribute('decoding', 'sync');
+    expect(images.slice(1).every((image) => image.getAttribute('decoding') === 'async')).toBe(true);
+    expect(images[0]).toHaveAccessibleName('Product image');
+  });
+
   it('reserves the product image dimensions before the asset loads', () => {
     const product = createProductWithImage('stable-image-product');
     const view = renderWithRouter(<ProductCard product={product} />);
@@ -211,12 +229,12 @@ describe('ProductCard image loading priority', () => {
     expect(image).toHaveAttribute('fetchpriority', 'high');
   });
 
-  it('loads the second product eagerly without high fetch priority', () => {
+  it('lazy-loads the second product without high fetch priority', () => {
     const product = createProductWithImage('second-product');
     renderWithRouter(<ProductCard product={product} index={1} />);
 
     const image = screen.getByRole('img');
-    expect(image).toHaveAttribute('loading', 'eager');
+    expect(image).toHaveAttribute('loading', 'lazy');
     expect(image).not.toHaveAttribute('fetchpriority', 'high');
   });
 
