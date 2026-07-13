@@ -31,9 +31,15 @@ import {
 } from '@/features/admin/components/AdminDesign';
 import { AdminError, AdminLoading } from '@/features/admin/components/AdminState';
 import { useAuth } from '@/features/auth';
+import {
+  formatAdminCurrency,
+  formatAdminDateTime,
+} from '@/features/admin/utils/admin-format';
+import { useI18n, type Language } from '@/shared/i18n';
 
 export function AdminDashboardPage() {
   const { csrfToken } = useAuth();
+  const { language } = useI18n();
   const [data, setData] = useState<AdminOverview | null>(null);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +100,7 @@ export function AdminDashboardPage() {
     {
       title: 'Today Revenue',
       titleEn: 'Today revenue',
-      value: formatMoney(data.todayRevenueAmount, 'EGP'),
+      value: formatAdminCurrency(data.todayRevenueAmount, 'EGP', language),
       icon: TrendingUp,
       href: PATHS.adminOrders,
       hint: `${data.todayOrdersCount} order${data.todayOrdersCount > 1 ? 's' : ''} today`,
@@ -182,7 +188,9 @@ export function AdminDashboardPage() {
               <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-black text-white ring-1 ring-white/15">
                 <span data-no-admin-translate>{health.message}</span>
               </span>
-              <span className="text-sm text-white/60">{new Date().toLocaleString('en-US')}</span>
+              <span data-no-admin-translate className="text-sm text-white/60" dir="auto">
+                {formatAdminDateTime(new Date(), language)}
+              </span>
             </div>
             <div>
               <h2 className="text-2xl font-black tracking-tight sm:text-4xl">
@@ -283,6 +291,7 @@ export function AdminDashboardPage() {
             <NotificationRow
               key={item.id}
               item={item}
+              language={language}
               onRead={() => adminApi.markNotificationRead(item.id, { csrfToken }).then(load)}
             />
           ))}
@@ -304,7 +313,7 @@ export function AdminDashboardPage() {
             <EmptyInline icon={ShoppingBag} title="No orders yet" />
           ) : null}
           {data.recentOrders.map((order) => (
-            <RecentOrderRow key={order.id} order={order} />
+            <RecentOrderRow key={order.id} language={language} order={order} />
           ))}
         </AdminCard>
 
@@ -323,7 +332,7 @@ export function AdminDashboardPage() {
               <EmptyInline icon={Sparkles} title="No imports yet" />
             ) : null}
             {data.recentSheinImports.map((item) => (
-              <SheinImportRow key={item.id} item={item} />
+              <SheinImportRow key={item.id} item={item} language={language} />
             ))}
           </AdminCard>
 
@@ -395,9 +404,11 @@ function Operation({ operation }: { operation: OperationCard }) {
 
 function NotificationRow({
   item,
+  language,
   onRead,
 }: {
   item: AdminNotification;
+  language: Language;
   onRead: () => Promise<unknown>;
 }) {
   return (
@@ -409,7 +420,9 @@ function NotificationRow({
             <Badge variant="secondary">{item.type}</Badge>
           </div>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.messageAr}</p>
-          <p className="mt-2 text-xs text-muted-foreground">{formatDate(item.createdAt)}</p>
+          <p data-no-admin-translate className="mt-2 text-xs text-muted-foreground" dir="auto">
+            {formatAdminDateTime(item.createdAt, language)}
+          </p>
         </div>
         {item.readAt ? (
           <AdminStatusBadge tone="success">Read</AdminStatusBadge>
@@ -423,7 +436,13 @@ function NotificationRow({
   );
 }
 
-function RecentOrderRow({ order }: { order: AdminOverview['recentOrders'][number] }) {
+export function RecentOrderRow({
+  language,
+  order,
+}: {
+  language: Language;
+  order: AdminOverview['recentOrders'][number];
+}) {
   return (
     <Link
       to={PATHS.adminOrders}
@@ -439,17 +458,23 @@ function RecentOrderRow({ order }: { order: AdminOverview['recentOrders'][number
         </div>
         <p data-no-admin-translate className="mt-1 truncate text-sm text-muted-foreground">
           {order.customerNameSnapshot ?? '-'} · {order.customerPhoneSnapshot ?? '-'} ·{' '}
-          {formatDate(order.createdAt)}
+          {formatAdminDateTime(order.createdAt, language)}
         </p>
       </div>
-      <p className="text-lg font-black text-[#241611]">
-        {formatMoney(order.totalAmount, order.currency)}
+      <p data-no-admin-translate className="text-lg font-black text-[#241611]" dir="auto">
+        {formatAdminCurrency(order.totalAmount, order.currency, language)}
       </p>
     </Link>
   );
 }
 
-function SheinImportRow({ item }: { item: AdminOverview['recentSheinImports'][number] }) {
+function SheinImportRow({
+  item,
+  language,
+}: {
+  item: AdminOverview['recentSheinImports'][number];
+  language: Language;
+}) {
   return (
     <Link to={PATHS.adminShein} className="admin-list-card block transition hover:bg-[#fff8ef]">
       <div className="flex items-center justify-between gap-2">
@@ -461,7 +486,9 @@ function SheinImportRow({ item }: { item: AdminOverview['recentSheinImports'][nu
       <p data-no-admin-translate className="mt-1 truncate text-xs text-muted-foreground">
         {item.errorMessage ?? item.sourceUrl}
       </p>
-      <p className="mt-2 text-xs text-muted-foreground">{formatDate(item.createdAt)}</p>
+      <p data-no-admin-translate className="mt-2 text-xs text-muted-foreground" dir="auto">
+        {formatAdminDateTime(item.createdAt, language)}
+      </p>
     </Link>
   );
 }
@@ -526,14 +553,4 @@ function EmptyInline({ icon: Icon, title }: { icon: LucideIcon; title: string })
       <p className="text-sm font-bold">{title}</p>
     </div>
   );
-}
-
-function formatMoney(amount: string | number | undefined, currency: string): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(
-    Number(amount ?? 0) / 100,
-  );
-}
-
-function formatDate(value: string | Date): string {
-  return new Date(value).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 }

@@ -22,7 +22,12 @@ import {
 import { AdminMobileDataCard, AdminMobileField } from '@/features/admin/components/AdminMobileList';
 import { AdminPagination } from '@/features/admin/components/AdminPagination';
 import { AdminEmpty, AdminLoading } from '@/features/admin/components/AdminState';
+import {
+  formatAdminCurrency,
+  formatAdminDateTime,
+} from '@/features/admin/utils/admin-format';
 import { useAuth } from '@/features/auth';
+import { useI18n, type Language } from '@/shared/i18n';
 import { cn } from '@/shared/utils/cn';
 
 type PaymentReviewStatus =
@@ -80,6 +85,7 @@ const PAYMENT_REVIEW_TABS: PaymentReviewTab[] = [
 
 export function AdminPaymentsReviewPage() {
   const { csrfToken } = useAuth();
+  const { language } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const [response, setResponse] = useState<AdminPaginated<AdminOrder> | null>(null);
   const [reports, setReports] = useState<AdminReports | null>(null);
@@ -237,6 +243,7 @@ export function AdminPaymentsReviewPage() {
           {orders.map((order) => (
             <PaymentReviewListCard
               key={order.id}
+              language={language}
               order={order}
               selected={selectedInList?.id === order.id}
               onSelect={() =>
@@ -261,6 +268,7 @@ export function AdminPaymentsReviewPage() {
         >
           <PaymentReviewDetails
             order={selected}
+            language={language}
             queue={filters.queue}
             rejectingProofId={rejectingProofId}
             setRejectingProofId={setRejectingProofId}
@@ -306,11 +314,13 @@ function AdminDetailsOverlay({
   );
 }
 
-function PaymentReviewListCard({
+export function PaymentReviewListCard({
+  language,
   order,
   selected,
   onSelect,
 }: {
+  language: Language;
   order: AdminOrder;
   selected: boolean;
   onSelect: () => void;
@@ -329,14 +339,20 @@ function PaymentReviewListCard({
       onClick={onSelect}
       ariaLabel={`Select payment ${order.orderNumber}`}
     >
-      <AdminMobileField label="Total" value={formatMoney(order.totalAmount, order.currency)} />
-      <AdminMobileField label="Deposit" value={formatMoney(order.depositAmount, order.currency)} />
+      <AdminMobileField
+        label="Total"
+        value={formatAdminCurrency(order.totalAmount, order.currency, language)}
+      />
+      <AdminMobileField
+        label="Deposit"
+        value={formatAdminCurrency(order.depositAmount, order.currency, language)}
+      />
       <AdminMobileField
         label="Remaining"
-        value={formatMoney(getRemainingAmount(order), order.currency)}
+        value={formatAdminCurrency(getRemainingAmount(order), order.currency, language)}
       />
       <AdminMobileField label="Final method" value={paymentMethodLabel(order.finalPaymentMethod)} />
-      <AdminMobileField label="Date" value={new Date(order.createdAt).toLocaleString()} />
+      <AdminMobileField label="Date" value={formatAdminDateTime(order.createdAt, language)} />
       <div className="admin-mobile-field-full">
         <CustomerWhatsappButton
           phone={order.customerPhoneSnapshot}
@@ -351,6 +367,7 @@ function PaymentReviewListCard({
 }
 
 function PaymentReviewDetails({
+  language,
   order,
   queue,
   rejectingProofId,
@@ -360,6 +377,7 @@ function PaymentReviewDetails({
   csrfToken,
   run,
 }: {
+  language: Language;
   order: AdminOrder;
   queue: PaymentReviewQueue;
   rejectingProofId: string | null;
@@ -399,13 +417,16 @@ function PaymentReviewDetails({
       <section className="grid gap-3 sm:grid-cols-3">
         <AdminInfoItem
           label="Amount to review"
-          value={formatMoney(getReviewAmount(order, queue), order.currency)}
+          value={formatAdminCurrency(getReviewAmount(order, queue), order.currency, language)}
         />
         <AdminInfoItem
           label="Payment method"
           value={paymentMethodLabel(reviewPaymentMethod(order, queue))}
         />
-        <AdminInfoItem label="Order total" value={formatMoney(order.totalAmount, order.currency)} />
+        <AdminInfoItem
+          label="Order total"
+          value={formatAdminCurrency(order.totalAmount, order.currency, language)}
+        />
       </section>
 
       <details className="admin-disclosure">
@@ -415,17 +436,24 @@ function PaymentReviewDetails({
           <AdminInfoItem label="Phone" value={order.customerPhoneSnapshot ?? '-'} dir="ltr" />
           <AdminInfoItem
             label="Deposit paid"
-            value={formatMoney(order.depositPaidAmount, order.currency)}
+            value={formatAdminCurrency(order.depositPaidAmount, order.currency, language)}
           />
           <AdminInfoItem
             label="Remaining"
-            value={formatMoney(getRemainingAmount(order), order.currency)}
+            value={formatAdminCurrency(getRemainingAmount(order), order.currency, language)}
           />
           <AdminInfoItem
             label="Final due"
-            value={formatMoney(order.finalAmountDue ?? order.remainingAmount, order.currency)}
+            value={formatAdminCurrency(
+              order.finalAmountDue ?? order.remainingAmount,
+              order.currency,
+              language,
+            )}
           />
-          <AdminInfoItem label="Created" value={new Date(order.createdAt).toLocaleString()} />
+          <AdminInfoItem
+            label="Created"
+            value={formatAdminDateTime(order.createdAt, language)}
+          />
           <div className="sm:col-span-2">
             <AdminInfoItem label="Address" value={order.shippingAddressSnapshot ?? '-'} />
           </div>
@@ -457,7 +485,11 @@ function PaymentReviewDetails({
             <div className="grid gap-3 sm:grid-cols-2">
               <AdminInfoItem
                 label="Amount to collect"
-                value={formatMoney(order.finalAmountDue ?? order.remainingAmount, order.currency)}
+                value={formatAdminCurrency(
+                  order.finalAmountDue ?? order.remainingAmount,
+                  order.currency,
+                  language,
+                )}
               />
               <AdminInfoItem label="Payment method" value="Cash at store" />
             </div>
@@ -498,7 +530,11 @@ function PaymentReviewDetails({
                     details={[
                       `Order: ${order.orderNumber}`,
                       `Customer: ${order.customerNameSnapshot ?? '-'}`,
-                      `Amount affected: ${formatMoney(order.finalAmountDue ?? order.remainingAmount, order.currency)}`,
+                      `Amount affected: ${formatAdminCurrency(
+                        order.finalAmountDue ?? order.remainingAmount,
+                        order.currency,
+                        language,
+                      )}`,
                       'The customer will need admin follow-up before delivery can continue.',
                     ]}
                     onSubmit={(reason) =>
@@ -532,7 +568,10 @@ function PaymentReviewDetails({
                   <AdminStatusBadge value={proof.status} />
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Uploaded {new Date(proof.createdAt).toLocaleString()}
+                  Uploaded{' '}
+                  <span data-no-admin-translate dir="auto">
+                    {formatAdminDateTime(proof.createdAt, language)}
+                  </span>
                 </p>
                 <a href={proof.secureUrl} target="_blank" rel="noreferrer">
                   <img
@@ -839,10 +878,4 @@ function getRemainingAmount(order: AdminOrder): string | number {
     return order.finalAmountDue ?? order.remainingAmount ?? 0;
   }
   return order.remainingAmount ?? order.finalAmountDue ?? 0;
-}
-
-function formatMoney(amount: string | number | undefined, currency: string): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(
-    Number(amount ?? 0) / 100,
-  );
 }
