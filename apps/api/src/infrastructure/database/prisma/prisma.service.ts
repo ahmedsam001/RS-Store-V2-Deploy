@@ -1,5 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
+
 import { logStructured } from "../../../common/logging/structured-logger";
 
 export function resolvePrismaDatasourceUrl(
@@ -27,13 +28,23 @@ export type DatabaseRecoverySource =
   | "exception_filter"
   | "health_check"
   | "heartbeat";
-type ConnectionLifecycleOperation = "startup" | "runtime_recovery";
+
+type ConnectionLifecycleOperation =
+  | "startup"
+  | "runtime_recovery"
+  | "dead_engine_recovery";
+
+type PendingDeadEngineRecovery = {
+  error: unknown;
+  source: DatabaseRecoverySource;
+};
 
 const TRANSIENT_DATABASE_ERROR_CODES = new Set([
   "P1001",
   "P1002",
   "P1008",
   "P1011",
+  "P1017",
   "P2024",
   "P2037",
 ]);
@@ -61,6 +72,11 @@ const TRANSIENT_DATABASE_MESSAGE_FRAGMENTS = [
   "too many database connections opened",
 ] as const;
 
+const DEAD_ENGINE_MESSAGE_FRAGMENTS = [
+  "engine is not yet connected",
+  "response from the engine was empty",
+] as const;
+
 const P2028_CONNECTION_FAILURE_MESSAGE_FRAGMENTS = [
   "can't reach database server",
   "database server was reached but timed out",
@@ -78,6 +94,12 @@ const P2028_CONNECTION_FAILURE_MESSAGE_FRAGMENTS = [
   "database system is shutting down",
   "database system is in recovery mode",
 ] as const;
+
+const MAX_ERROR_SUMMARY_LENGTH = 300;
+const POSTGRES_URL_CREDENTIALS_PATTERN =
+  /\b(postgres(?:ql)?:\/\/)([^@\s/]+)@/gi;
+const LABELED_QUERY_PATTERN =
+  /\b(query|sql)\s*[:=]\s*(?:"[^"]*"|'[^']*'|`[^`]*`|[^\r\n]*)/gi;
 
 export function getPrismaErrorCode(error: unknown): string | undefined {
   if (typeof error !== "object" || error === null) {
@@ -124,8 +146,55 @@ function getPrismaErrorMessage(error: unknown): string {
   return "";
 }
 
+function extractNestedErrorMessage(message: string): string {
+  const trimmed = message.trim();
+
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+    return trimmed;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as { message?: unknown };
+    return typeof parsed.message === "string" ? parsed.message : trimmed;
+  } catch {
+    return trimmed;
+  }
+}
+
+function sanitizePrismaErrorMessage(message: string): string {
+  return extractNestedErrorMessage(message)
+    .replace(POSTGRES_URL_CREDENTIALS_PATTERN, "$1***@")
+    .replace(LABELED_QUERY_PATTERN, "$1: [REDACTED]")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+export function getPrismaErrorSummary(error: unknown): string {
+  const name = getPrismaErrorName(error);
+  const message = sanitizePrismaErrorMessage(getPrismaErrorMessage(error));
+  const summary = message ? `${name}: ${message}` : name;
+
+  if (summary.length <= MAX_ERROR_SUMMARY_LENGTH) {
+    return summary;
+  }
+
+  return `${summary.slice(0, MAX_ERROR_SUMMARY_LENGTH - 3)}...`;
+}
+
 export function isPrismaEnginePanic(error: unknown): boolean {
   return getPrismaErrorName(error) === "PrismaClientRustPanicError";
+}
+
+export function isDeadPrismaEngineError(error: unknown): boolean {
+  if (isPrismaEnginePanic(error)) {
+    return true;
+  }
+
+  const message = getPrismaErrorMessage(error).toLowerCase();
+  return DEAD_ENGINE_MESSAGE_FRAGMENTS.some((fragment) =>
+    message.includes(fragment),
+  );
 }
 
 export function isTransientDatabaseError(error: unknown): boolean {
@@ -148,7 +217,7 @@ export function isTransientDatabaseError(error: unknown): boolean {
 }
 
 export function isRecoverableDatabaseError(error: unknown): boolean {
-  return isTransientDatabaseError(error) || isPrismaEnginePanic(error);
+  return isTransientDatabaseError(error) || isDeadPrismaEngineError(error);
 }
 
 export function isTransientDatabaseErrorCode(
@@ -164,13 +233,16 @@ export class PrismaService
 {
   constructor() {
     const datasourceUrl = resolvePrismaDatasourceUrl();
-    super(
-      datasourceUrl === undefined ? undefined : { datasourceUrl },
-    );
+    super(datasourceUrl === undefined ? undefined : { datasourceUrl });
   }
 
   protected readonly connectionRetryDelaysMs: readonly number[] = [
-    2_000, 4_000, 6_000, 8_000, 10_000, 12_000,
+    2_000,
+    4_000,
+    6_000,
+    8_000,
+    10_000,
+    12_000,
   ];
   protected readonly runtimeRecoveryCooldownMs: number = 30_000;
   protected readonly heartbeatIntervalMs: number = 60_000;
@@ -180,6 +252,8 @@ export class PrismaService
   private connectionLifecyclePromise: Promise<void> | null = null;
   private connectionLifecycleOperation: ConnectionLifecycleOperation | null =
     null;
+  private deadEngineFollowUpPromise: Promise<void> | null = null;
+  private pendingDeadEngineRecovery: PendingDeadEngineRecovery | null = null;
   private nextRuntimeRecoveryAllowedAtMs = 0;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private engineRestartTimer: NodeJS.Timeout | null = null;
@@ -193,10 +267,10 @@ export class PrismaService
       "startup",
       () => this.connectWithRetry(),
     );
+
     void startupConnection.catch((error) => {
       logStructured("error", "database_connect_background_failed", {
-        errorName: getPrismaErrorName(error),
-        errorCode: getPrismaErrorCode(error),
+        errorSummary: getPrismaErrorSummary(error),
       });
     });
   }
@@ -206,12 +280,16 @@ export class PrismaService
     this.stopHeartbeat();
     this.cancelScheduledEngineRestart();
 
-    try {
-      await this.connectionLifecyclePromise;
-    } catch {
-      // Startup failures are already logged by onModuleInit; shutdown must still disconnect cleanly.
-    }
+    await Promise.allSettled([
+      this.connectionLifecyclePromise ?? Promise.resolve(),
+      this.deadEngineFollowUpPromise ?? Promise.resolve(),
+    ]);
+
     await this.$disconnect();
+  }
+
+  engineRestartPending(): boolean {
+    return this.engineRestartTimer !== null;
   }
 
   requestRuntimeRecovery(
@@ -227,11 +305,39 @@ export class PrismaService
       return Promise.resolve();
     }
 
+    if (isDeadPrismaEngineError(error)) {
+      if (
+        this.connectionLifecyclePromise &&
+        this.connectionLifecycleOperation === "dead_engine_recovery"
+      ) {
+        return this.connectionLifecyclePromise;
+      }
+
+      if (this.connectionLifecyclePromise || this.deadEngineFollowUpPromise) {
+        return this.queueDeadEngineRecoveryAfterActive(error, source);
+      }
+
+      return this.startConnectionLifecycleOperation(
+        "dead_engine_recovery",
+        () => this.handleDeadEngine(error, source),
+      );
+    }
+
     if (!isTransientDatabaseError(error)) {
       return undefined;
     }
 
     const errorCode = getPrismaErrorCode(error);
+
+    if (this.deadEngineFollowUpPromise) {
+      logStructured("info", "database_runtime_recovery_joined", {
+        source,
+        errorCode,
+        activeOperation: "dead_engine_recovery",
+      });
+      return this.deadEngineFollowUpPromise;
+    }
+
     if (this.connectionLifecyclePromise) {
       logStructured("info", "database_runtime_recovery_joined", {
         source,
@@ -254,7 +360,7 @@ export class PrismaService
     logStructured("warn", "database_runtime_recovery_started", {
       source,
       errorCode,
-      errorName: getPrismaErrorName(error),
+      errorSummary: getPrismaErrorSummary(error),
       maxAttempts: this.connectionRetryDelaysMs.length,
     });
 
@@ -267,21 +373,22 @@ export class PrismaService
     if (
       this.shuttingDown ||
       this.heartbeatInFlight ||
-      this.connectionLifecyclePromise !== null
+      this.connectionLifecyclePromise !== null ||
+      this.deadEngineFollowUpPromise !== null
     ) {
       return;
     }
 
     this.heartbeatInFlight = true;
+
     try {
       await this.$queryRaw`SELECT 1`;
     } catch (error) {
       logStructured("warn", "database_heartbeat_failed", {
-        errorName: getPrismaErrorName(error),
-        errorCode: getPrismaErrorCode(error),
+        errorSummary: getPrismaErrorSummary(error),
       });
 
-      if (isPrismaEnginePanic(error)) {
+      if (isDeadPrismaEngineError(error)) {
         this.startHeartbeatRecovery(error);
         return;
       }
@@ -291,36 +398,37 @@ export class PrismaService
       }
 
       await this.waitForHeartbeatConfirmation();
-      if (this.shuttingDown || this.connectionLifecyclePromise !== null) {
+
+      if (
+        this.shuttingDown ||
+        this.connectionLifecyclePromise !== null ||
+        this.deadEngineFollowUpPromise !== null
+      ) {
         return;
       }
 
       try {
         await this.$queryRaw`SELECT 1`;
         logStructured("info", "database_heartbeat_recovered_without_restart", {
-          initialErrorName: getPrismaErrorName(error),
-          initialErrorCode: getPrismaErrorCode(error),
+          initialErrorSummary: getPrismaErrorSummary(error),
           confirmationDelayMs: this.heartbeatConfirmationDelayMs,
         });
       } catch (confirmationError) {
         logStructured("warn", "database_heartbeat_confirmation_failed", {
-          initialErrorName: getPrismaErrorName(error),
-          initialErrorCode: getPrismaErrorCode(error),
-          errorName: getPrismaErrorName(confirmationError),
-          errorCode: getPrismaErrorCode(confirmationError),
+          initialErrorSummary: getPrismaErrorSummary(error),
+          errorSummary: getPrismaErrorSummary(confirmationError),
           confirmationDelayMs: this.heartbeatConfirmationDelayMs,
         });
 
-        if (this.shuttingDown || this.connectionLifecyclePromise !== null) {
+        if (
+          this.shuttingDown ||
+          this.connectionLifecyclePromise !== null ||
+          this.deadEngineFollowUpPromise !== null
+        ) {
           return;
         }
 
-        if (isPrismaEnginePanic(confirmationError)) {
-          this.startHeartbeatRecovery(confirmationError);
-          return;
-        }
-
-        if (!isTransientDatabaseError(confirmationError)) {
+        if (!isRecoverableDatabaseError(confirmationError)) {
           return;
         }
 
@@ -335,8 +443,7 @@ export class PrismaService
     const recovery = this.requestRuntimeRecovery(error, "heartbeat");
     void recovery?.catch((recoveryError) => {
       logStructured("error", "database_heartbeat_recovery_failed", {
-        errorName: getPrismaErrorName(recoveryError),
-        errorCode: getPrismaErrorCode(recoveryError),
+        errorSummary: getPrismaErrorSummary(recoveryError),
       });
     });
   }
@@ -349,11 +456,11 @@ export class PrismaService
     this.heartbeatTimer = setInterval(() => {
       void this.runHeartbeat().catch((error) => {
         logStructured("error", "database_heartbeat_task_failed", {
-          errorName: getPrismaErrorName(error),
-          errorCode: getPrismaErrorCode(error),
+          errorSummary: getPrismaErrorSummary(error),
         });
       });
     }, this.heartbeatIntervalMs);
+
     this.heartbeatTimer.unref();
   }
 
@@ -373,20 +480,21 @@ export class PrismaService
     if (this.engineRestartTimer || this.shuttingDown) {
       logStructured("warn", "database_engine_restart_already_scheduled", {
         source,
-        errorName: getPrismaErrorName(error),
+        errorSummary: getPrismaErrorSummary(error),
       });
       return;
     }
 
     logStructured("error", "database_engine_restart_scheduled", {
       source,
-      errorName: getPrismaErrorName(error),
+      errorSummary: getPrismaErrorSummary(error),
       delayMs: this.engineRestartDelayMs,
     });
 
     this.engineRestartTimer = setTimeout(() => {
       this.exitProcess(1);
     }, this.engineRestartDelayMs);
+
     this.engineRestartTimer.unref();
   }
 
@@ -419,6 +527,51 @@ export class PrismaService
     return trackedPromise;
   }
 
+  private queueDeadEngineRecoveryAfterActive(
+    error: unknown,
+    source: DatabaseRecoverySource,
+  ): Promise<void> {
+    if (!this.pendingDeadEngineRecovery) {
+      this.pendingDeadEngineRecovery = { error, source };
+    }
+
+    if (this.deadEngineFollowUpPromise) {
+      return this.deadEngineFollowUpPromise;
+    }
+
+    const activeOperation =
+      this.connectionLifecyclePromise ?? Promise.resolve();
+
+    const followUpPromise: Promise<void> = activeOperation
+      .catch(() => undefined)
+      .then(async () => {
+        if (this.shuttingDown || this.engineRestartTimer) {
+          this.pendingDeadEngineRecovery = null;
+          return;
+        }
+
+        const pending = this.pendingDeadEngineRecovery;
+        this.pendingDeadEngineRecovery = null;
+
+        if (!pending) {
+          return;
+        }
+
+        await this.startConnectionLifecycleOperation(
+          "dead_engine_recovery",
+          () => this.handleDeadEngine(pending.error, pending.source),
+        );
+      })
+      .finally(() => {
+        if (this.deadEngineFollowUpPromise === followUpPromise) {
+          this.deadEngineFollowUpPromise = null;
+        }
+      });
+
+    this.deadEngineFollowUpPromise = followUpPromise;
+    return followUpPromise;
+  }
+
   private async connectWithRetry(): Promise<void> {
     for (
       let attempt = 1;
@@ -439,8 +592,7 @@ export class PrismaService
         const payload = {
           attempt,
           maxAttempts: this.connectionRetryDelaysMs.length,
-          errorName: getPrismaErrorName(error),
-          errorCode: getPrismaErrorCode(error),
+          errorSummary: getPrismaErrorSummary(error),
         };
 
         if (isPrismaEnginePanic(error)) {
@@ -475,19 +627,12 @@ export class PrismaService
       attempt += 1
     ) {
       try {
-        await this.disconnectForRuntimeRecovery(
-          triggeringErrorCode,
-          source,
-          attempt,
-          maxAttempts,
-        );
-        if (this.shuttingDown) return;
-
         await this.$connect();
         if (this.shuttingDown) return;
 
         await this.$queryRaw`SELECT 1`;
         this.nextRuntimeRecoveryAllowedAtMs = 0;
+
         logStructured("info", "database_runtime_recovery_success", {
           source,
           triggeringErrorCode,
@@ -501,13 +646,18 @@ export class PrismaService
           return;
         }
 
+        if (isDeadPrismaEngineError(error)) {
+          this.pendingDeadEngineRecovery = null;
+          await this.handleDeadEngine(error, source);
+          return;
+        }
+
         const payload = {
           source,
           triggeringErrorCode,
           attempt,
           maxAttempts,
-          errorName: getPrismaErrorName(error),
-          errorCode: getPrismaErrorCode(error),
+          errorSummary: getPrismaErrorSummary(error),
         };
 
         if (attempt === maxAttempts) {
@@ -532,23 +682,36 @@ export class PrismaService
     }
   }
 
-  private async disconnectForRuntimeRecovery(
-    triggeringErrorCode: string | undefined,
+  private async handleDeadEngine(
+    error: unknown,
     source: DatabaseRecoverySource,
-    attempt: number,
-    maxAttempts: number,
   ): Promise<void> {
+    if (this.engineRestartTimer || this.shuttingDown) {
+      return;
+    }
+
+    logStructured("warn", "database_dead_engine_recovery_started", {
+      source,
+      errorSummary: getPrismaErrorSummary(error),
+    });
+
     try {
-      await this.$disconnect();
-    } catch (error) {
-      logStructured("warn", "database_runtime_recovery_disconnect_failed", {
+      await this.$connect();
+      if (this.shuttingDown) return;
+
+      await this.$queryRaw`SELECT 1`;
+      this.nextRuntimeRecoveryAllowedAtMs = 0;
+
+      logStructured("info", "database_dead_engine_recovery_success", {
         source,
-        triggeringErrorCode,
-        attempt,
-        maxAttempts,
-        errorName: getPrismaErrorName(error),
-        errorCode: getPrismaErrorCode(error),
+        errorSummary: getPrismaErrorSummary(error),
       });
+    } catch (reconnectError) {
+      logStructured("error", "database_dead_engine_recovery_failed", {
+        source,
+        errorSummary: getPrismaErrorSummary(reconnectError),
+      });
+      this.scheduleEngineRestart(error, source);
     }
   }
 

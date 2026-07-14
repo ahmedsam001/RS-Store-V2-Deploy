@@ -2,6 +2,7 @@ import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { DeadEngineExceptionFilter } from './common/filters/dead-engine-exception.filter';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { logStructured } from './common/logging/structured-logger';
@@ -38,7 +39,14 @@ async function bootstrap(): Promise<void> {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-  app.useGlobalFilters(new PrismaExceptionFilter(prisma), new HttpExceptionFilter());
+
+  // Nest evaluates global filters in reverse registration order. Keep the
+  // catch-all fallback first so Prisma and HttpException filters stay authoritative.
+  app.useGlobalFilters(
+    new DeadEngineExceptionFilter(prisma),
+    new HttpExceptionFilter(),
+    new PrismaExceptionFilter(prisma),
+  );
 
   app.enableShutdownHooks();
   const port = configService.getOrThrow<number>('PORT');

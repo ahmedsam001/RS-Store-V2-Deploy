@@ -1,11 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { v2 as Cloudinary } from "cloudinary";
+
 import { logStructured } from "../../common/logging/structured-logger";
 import { RedisService } from "../../infrastructure/cache/redis.service";
 import {
-  getPrismaErrorCode,
-  getPrismaErrorName,
+  getPrismaErrorSummary,
   isRecoverableDatabaseError,
   PrismaService,
 } from "../../infrastructure/database/prisma/prisma.service";
@@ -29,14 +29,29 @@ export class HealthService {
   ) {}
 
   async check(): Promise<{ statusCode: number; body: HealthCheckResult }> {
+    const postgres = await this.checkPostgres();
+    const redis = await this.checkRedis();
+    const cloudinary = this.checkCloudinaryConfig();
+    const restartPending = this.prisma.engineRestartPending();
+    const databaseUnavailable = postgres.status === "unhealthy";
     const checks = {
-      postgres: await this.checkPostgres(),
-      redis: await this.checkRedis(),
-      cloudinary: this.checkCloudinaryConfig(),
-      application: {
-        status: "healthy" as const,
-        message: "Application process is ready",
-      },
+      postgres,
+      redis,
+      cloudinary,
+      application: restartPending
+        ? {
+            status: "unhealthy" as const,
+            message: "Database engine restart pending",
+          }
+        : databaseUnavailable
+          ? {
+              status: "unhealthy" as const,
+              message: "Database connection unavailable",
+            }
+          : {
+              status: "healthy" as const,
+              message: "Application process is ready",
+            },
     };
 
     const statuses = Object.values(checks).map((check) => check.status);
@@ -45,8 +60,7 @@ export class HealthService {
       : statuses.includes("degraded")
         ? "degraded"
         : "healthy";
-    const statusCode =
-      status === "healthy" ? 200 : status === "degraded" ? 200 : 503;
+    const statusCode = status === "unhealthy" ? 503 : 200;
 
     return {
       statusCode,
@@ -60,8 +74,7 @@ export class HealthService {
       return { status: "healthy" as const };
     } catch (error) {
       logStructured("warn", "health_postgres_unavailable", {
-        errorName: getPrismaErrorName(error),
-        errorCode: getPrismaErrorCode(error),
+        errorSummary: getPrismaErrorSummary(error),
       });
 
       if (isRecoverableDatabaseError(error)) {
@@ -71,11 +84,11 @@ export class HealthService {
         );
         void recovery?.catch((recoveryError) => {
           logStructured("error", "health_postgres_recovery_failed", {
-            errorName: getPrismaErrorName(recoveryError),
-            errorCode: getPrismaErrorCode(recoveryError),
+            errorSummary: getPrismaErrorSummary(recoveryError),
           });
         });
       }
+
       return {
         status: "unhealthy" as const,
         message: "PostgreSQL connection check failed",
@@ -110,6 +123,7 @@ export class HealthService {
     const configured = Boolean(
       cloudName && apiKey && apiSecret && this.cloudinary.config().cloud_name,
     );
+
     return configured
       ? { status: "healthy" as const }
       : {

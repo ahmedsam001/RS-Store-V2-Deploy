@@ -6,9 +6,10 @@ import {
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { Request, Response } from "express";
+
 import {
   getPrismaErrorCode,
-  getPrismaErrorName,
+  getPrismaErrorSummary,
   isRecoverableDatabaseError,
   PrismaService,
 } from "../../infrastructure/database/prisma/prisma.service";
@@ -45,8 +46,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         logStructured("error", "database_recovery_trigger_failed", {
           requestId: request.requestId,
           source: "exception_filter",
-          errorName: getPrismaErrorName(error),
-          errorCode: getPrismaErrorCode(error),
+          errorSummary: getPrismaErrorSummary(error),
         });
       });
     }
@@ -55,7 +55,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       requestId: request.requestId,
       statusCode,
       code,
-      errorName: getPrismaErrorName(exception),
+      errorSummary: getPrismaErrorSummary(exception),
       path: request.url,
     });
 
@@ -77,11 +77,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       return HttpStatus.SERVICE_UNAVAILABLE;
     }
 
-    if (code === "P2002") {
-      return HttpStatus.CONFLICT;
-    }
-
-    if (code === "P2003") {
+    if (code === "P2002" || code === "P2003") {
       return HttpStatus.CONFLICT;
     }
 
